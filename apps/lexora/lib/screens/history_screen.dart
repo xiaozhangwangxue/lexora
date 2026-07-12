@@ -1,6 +1,6 @@
 import 'dart:io';
 
-import 'package:file_picker/file_picker.dart';
+import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
 
@@ -26,14 +26,18 @@ class _HistoryScreenState extends State<HistoryScreen> {
   }
 
   Future<void> _export(GeneratedBook book) async {
-    final output = await FilePicker.saveFile(
-      dialogTitle: 'Export Lexora PDF',
-      fileName: book.title,
-      type: FileType.custom,
-      allowedExtensions: const ['pdf'],
+    const pdfType = XTypeGroup(
+      label: 'PDF',
+      extensions: ['pdf'],
+      mimeTypes: ['application/pdf'],
+      uniformTypeIdentifiers: ['com.adobe.pdf'],
+    );
+    final output = await getSaveLocation(
+      suggestedName: book.title,
+      acceptedTypeGroups: const [pdfType],
     );
     if (output == null) return;
-    await File(book.path).copy(output);
+    await File(book.path).copy(output.path);
   }
 
   Future<void> _share(GeneratedBook book) async {
