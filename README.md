@@ -10,7 +10,7 @@
   [![License](https://img.shields.io/github/license/xiaozhangwangxue/lexora?style=flat-square)](LICENSE)
   [![Platforms](https://img.shields.io/badge/platform-Android%20%7C%20macOS%20%7C%20Windows%20%7C%20Linux-10131d?style=flat-square)](#下载与安装)
 
-  [官方网站](https://lexora.12323456.xyz) · [备用站点](https://lexora-app.xiaozhangwangx300474.chatgpt.site) · [下载应用](https://lexora-app.xiaozhangwangx300474.chatgpt.site/#download) · [捐款支持](https://lexora-app.xiaozhangwangx300474.chatgpt.site/donate) · [English](README.en.md)
+  [官方网站](https://lexora.12323456.xyz) · [下载应用](https://lexora.12323456.xyz/#download) · [捐款支持](https://lexora.12323456.xyz/donate) · [English](README.en.md)
 </div>
 
 <p align="center">
@@ -43,14 +43,14 @@ Lexora 是一款面向 Android、macOS、Windows 与 Linux 的英语单词整理
 
 ## 下载与安装
 
-推荐从[官方网站下载区](https://lexora-app.xiaozhangwangx300474.chatgpt.site/#download)获取由 GitHub Actions 在对应原生系统中构建的安装包。下载文件同时镜像到 Cloudflare R2，国内访问无需打开 GitHub。
+推荐从[官方网站下载区](https://lexora.12323456.xyz/#download)获取由 GitHub Actions 在对应原生系统中构建的安装包。下载文件同时镜像到 Cloudflare R2，国内访问无需打开 GitHub。
 
 | 平台 | 安装包 | 系统要求 | 下载 |
 | --- | --- | --- | --- |
-| Android | APK | Android 8.0+ | [官网下载](https://lexora-app.xiaozhangwangx300474.chatgpt.site/downloads/lexora-android.apk) |
-| macOS | ZIP 应用包 | macOS 12+ | [官网下载](https://lexora-app.xiaozhangwangx300474.chatgpt.site/downloads/lexora-macos.zip) |
-| Windows | ZIP | Windows 10 / 11 | [官网下载](https://lexora-app.xiaozhangwangx300474.chatgpt.site/downloads/lexora-windows.zip) |
-| Linux | tar.gz | 64 位 Linux | [官网下载](https://lexora-app.xiaozhangwangx300474.chatgpt.site/downloads/lexora-linux.tar.gz) |
+| Android | APK | Android 8.0+ | [官网下载](https://lexora.12323456.xyz/downloads/lexora-android.apk) |
+| macOS | ZIP 应用包 | macOS 12+ | [官网下载](https://lexora.12323456.xyz/downloads/lexora-macos.zip) |
+| Windows | ZIP | Windows 10 / 11 | [官网下载](https://lexora.12323456.xyz/downloads/lexora-windows.zip) |
+| Linux | tar.gz | 64 位 Linux | [官网下载](https://lexora.12323456.xyz/downloads/lexora-linux.tar.gz) |
 
 <details>
 <summary><strong>首次安装被系统拦截怎么办？</strong></summary>
@@ -121,7 +121,7 @@ docs/              架构、数据来源与隐私说明
 
 ## 捐款支持
 
-如果 Lexora 帮你节省了整理时间，可以自愿支持跨平台适配、数据服务和长期维护。也可以打开更适合手机扫码的[独立捐款页面](https://lexora-app.xiaozhangwangx300474.chatgpt.site/donate)。
+如果 Lexora 帮你节省了整理时间，可以自愿支持跨平台适配、数据服务和长期维护。也可以打开更适合手机扫码的[独立捐款页面](https://lexora.12323456.xyz/donate)。
 
 | 微信支付 | 支付宝 |
 | :---: | :---: |

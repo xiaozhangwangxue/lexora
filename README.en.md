@@ -10,7 +10,7 @@
   [![License](https://img.shields.io/github/license/xiaozhangwangxue/lexora?style=flat-square)](LICENSE)
   [![Platforms](https://img.shields.io/badge/platform-Android%20%7C%20macOS%20%7C%20Windows%20%7C%20Linux-10131d?style=flat-square)](#download-and-install)
 
-  [Official website](https://lexora.12323456.xyz) · [Live fallback](https://lexora-app.xiaozhangwangx300474.chatgpt.site) · [Download](https://lexora-app.xiaozhangwangx300474.chatgpt.site/#download) · [Donate](https://lexora-app.xiaozhangwangx300474.chatgpt.site/donate) · [简体中文](README.md)
+  [Official website](https://lexora.12323456.xyz) · [Download](https://lexora.12323456.xyz/#download) · [Donate](https://lexora.12323456.xyz/donate) · [简体中文](README.md)
 </div>
 
 <p align="center">
@@ -43,14 +43,14 @@ Lexora is an English vocabulary organizer for Android, macOS, Windows, and Linux
 
 ## Download and install
 
-Use the [official download section](https://lexora-app.xiaozhangwangx300474.chatgpt.site/#download) for binaries built by GitHub Actions on each platform’s native runner. Files are mirrored to Cloudflare R2 so downloads do not depend on GitHub access.
+Use the [official download section](https://lexora.12323456.xyz/#download) for binaries built by GitHub Actions on each platform’s native runner. Files are mirrored to Cloudflare R2 so downloads do not depend on GitHub access.
 
 | Platform | Package | Requirement | Download |
 | --- | --- | --- | --- |
-| Android | APK | Android 8.0+ | [Official mirror](https://lexora-app.xiaozhangwangx300474.chatgpt.site/downloads/lexora-android.apk) |
-| macOS | ZIP app bundle | macOS 12+ | [Official mirror](https://lexora-app.xiaozhangwangx300474.chatgpt.site/downloads/lexora-macos.zip) |
-| Windows | ZIP | Windows 10 / 11 | [Official mirror](https://lexora-app.xiaozhangwangx300474.chatgpt.site/downloads/lexora-windows.zip) |
-| Linux | tar.gz | 64-bit Linux | [Official mirror](https://lexora-app.xiaozhangwangx300474.chatgpt.site/downloads/lexora-linux.tar.gz) |
+| Android | APK | Android 8.0+ | [Official mirror](https://lexora.12323456.xyz/downloads/lexora-android.apk) |
+| macOS | ZIP app bundle | macOS 12+ | [Official mirror](https://lexora.12323456.xyz/downloads/lexora-macos.zip) |
+| Windows | ZIP | Windows 10 / 11 | [Official mirror](https://lexora.12323456.xyz/downloads/lexora-windows.zip) |
+| Linux | tar.gz | 64-bit Linux | [Official mirror](https://lexora.12323456.xyz/downloads/lexora-linux.tar.gz) |
 
 ## Three steps to a vocabulary book
 
@@ -96,7 +96,7 @@ npm run dev
 
 ## Support Lexora
 
-If Lexora saves you time, you can voluntarily support cross-platform testing, data services, signing, and long-term maintenance on the [dedicated donation page](https://lexora-app.xiaozhangwangx300474.chatgpt.site/donate).
+If Lexora saves you time, you can voluntarily support cross-platform testing, data services, signing, and long-term maintenance on the [dedicated donation page](https://lexora.12323456.xyz/donate).
 
 | WeChat Pay | Alipay |
 | :---: | :---: |
