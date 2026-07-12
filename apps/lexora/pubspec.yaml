@@ -34,7 +34,7 @@ flutter:
 flutter_launcher_icons:
   image_path: assets/icon/lexora-icon.png
   android: true
-  ios: true
+  ios: false
   windows:
     generate: true
   macos:
