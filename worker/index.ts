@@ -5,6 +5,7 @@ import handler from "vinext/server/app-router-entry";
 interface Env {
   ASSETS: Fetcher;
   DOWNLOADS?: R2Bucket;
+  DOWNLOAD_UPLOAD_TOKEN?: string;
   DB: D1Database;
   IMAGES: {
     input(stream: ReadableStream): {
@@ -29,6 +30,25 @@ interface ExecutionContext {
 const worker = {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
+
+    if (url.pathname.startsWith("/api/admin/downloads/") && request.method === "PUT") {
+      const token = request.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
+      if (!env.DOWNLOAD_UPLOAD_TOKEN || token !== env.DOWNLOAD_UPLOAD_TOKEN) {
+        return new Response("Unauthorized", { status: 401 });
+      }
+      if (!env.DOWNLOADS) return new Response("Download storage is unavailable", { status: 503 });
+      const key = decodeURIComponent(url.pathname.slice("/api/admin/downloads/".length));
+      if (!key || key.includes("/") || key.includes("..") || !request.body) {
+        return new Response("Invalid upload", { status: 400 });
+      }
+      await env.DOWNLOADS.put(key, request.body, {
+        httpMetadata: {
+          contentType: request.headers.get("content-type") ?? "application/octet-stream",
+          contentDisposition: `attachment; filename="${key}"`,
+        },
+      });
+      return Response.json({ ok: true, key });
+    }
 
     if (url.pathname.startsWith("/downloads/")) {
       const key = decodeURIComponent(url.pathname.slice("/downloads/".length));

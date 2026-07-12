@@ -52,7 +52,9 @@ jobs:
         run: flutter create --project-name lexora --platforms=android,linux,macos,windows .
       - name: Allow Android network lookups
         if: matrix.platform == 'android'
-        run: sed -i '/<manifest/a\\    <uses-permission android:name="android.permission.INTERNET" />' android/app/src/main/AndroidManifest.xml
+        run: |
+          sed -i '/<manifest/a\\    <uses-permission android:name="android.permission.INTERNET" />' android/app/src/main/AndroidManifest.xml
+          sed -i 's/compileSdk = flutter.compileSdkVersion/compileSdk = 36/' android/app/build.gradle.kts
       - name: Allow macOS network lookups
         if: matrix.platform == 'macos'
         run: /usr/libexec/PlistBuddy -c "Add :com.apple.security.network.client bool true" macos/Runner/Release.entitlements || /usr/libexec/PlistBuddy -c "Set :com.apple.security.network.client true" macos/Runner/Release.entitlements
