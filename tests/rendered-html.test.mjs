@@ -21,6 +21,9 @@ test("server-renders the finished Lexora landing page", async () => {
   assert.match(html, /Make your words worth keeping/);
   assert.match(html, /Start generating/);
   assert.match(html, /macOS/);
+  assert.match(html, /Donation channels/);
+  assert.match(html, /WeChat Pay/);
+  assert.match(html, /Alipay/);
   assert.doesNotMatch(html, /codex-preview|react-loading-skeleton|Starter Project/);
 });
 

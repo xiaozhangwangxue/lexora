@@ -2,10 +2,12 @@
 
 import { FormEvent, useMemo, useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 
 type SortMode = "custom" | "alphabetical" | "length" | "difficulty";
 
 const seedWords = ["serendipity", "lucid", "resilient", "wanderlust"];
+const donationQrBase = "https://raw.githubusercontent.com/xiaozhangwangxue/autoword/main/assets/donate";
 
 const platforms = [
   { name: "macOS", note: "Apple silicon & Intel", icon: "⌘", file: "lexora-macos.zip" },
@@ -68,7 +70,7 @@ export default function Home() {
         <div className="navLinks">
           <a href="#how">{zh ? "工作方式" : "How it works"}</a>
           <a href="#download">{zh ? "下载" : "Download"}</a>
-          <a href="/donate">{zh ? "捐款" : "Donate"}</a>
+          <Link href="/donate">{zh ? "捐款" : "Donate"}</Link>
           <a href="https://github.com/" target="_blank" rel="noreferrer">GitHub</a>
           <button className="language" onClick={() => setLanguage(zh ? "en" : "zh")}>
             {zh ? "EN" : "中文"}
@@ -196,14 +198,33 @@ export default function Home() {
             <h2>{zh ? "让 Lexora 继续变得更好。" : "Help Lexora keep getting better."}</h2>
             <p>{zh ? "Lexora 免费使用。你的自愿支持会用于词典数据、跨平台测试、签名与长期维护。" : "Lexora is free to use. Voluntary support helps cover dictionary data, cross-platform testing, signing, and long-term maintenance."}</p>
           </div>
-          <a className="supportButton" href="/donate">{zh ? "打开捐款页面" : "Open donation page"} <span>↗</span></a>
+          <Link className="supportButton" href="/donate">{zh ? "打开捐款页面" : "Open donation page"} <span>↗</span></Link>
+        </div>
+      </section>
+
+      <section className="homeDonateChannels wrap" aria-labelledby="donation-channels-title">
+        <div className="homeDonateIntro">
+          <p className="sectionLabel">{zh ? "捐款渠道" : "Donation channels"}</p>
+          <h2 id="donation-channels-title">{zh ? "谢谢你支持 Lexora。" : "Thank you for supporting Lexora."}</h2>
+          <p>{zh ? "捐款完全自愿，不会解锁额外付费功能。可直接扫码，或打开独立捐款页面查看大图。" : "Donations are entirely optional and never unlock paid features. Scan here, or open the donation page for full-size codes."}</p>
+          <Link href="/donate">{zh ? "查看完整捐款页面 →" : "Open the full donation page →"}</Link>
+        </div>
+        <div className="homeQrGrid">
+          <Link href="/donate" aria-label={zh ? "打开微信支付捐款二维码" : "Open WeChat Pay donation code"}>
+            <Image src={`${donationQrBase}/wechat.png`} alt="微信支付收款码" width={300} height={300} unoptimized />
+            <span><b>微信支付</b><small>WeChat Pay</small></span>
+          </Link>
+          <Link href="/donate" aria-label={zh ? "打开支付宝捐款二维码" : "Open Alipay donation code"}>
+            <Image src={`${donationQrBase}/alipay.jpg`} alt="支付宝收款码" width={300} height={300} unoptimized />
+            <span><b>支付宝</b><small>Alipay</small></span>
+          </Link>
         </div>
       </section>
 
       <footer className="wrap">
         <a className="brand" href="#top"><Image src="/lexora-icon-192.png" alt="" width={30} height={30} /><span>Lexora</span></a>
         <p>{zh ? "把单词变成值得保存的东西。" : "Make your words worth keeping."}</p>
-        <span>© 2026 Lexora · <a href="/donate">{zh ? "支持项目" : "Support"}</a></span>
+        <span>© 2026 Lexora · <Link href="/donate">{zh ? "支持项目" : "Support"}</Link></span>
       </footer>
     </main>
   );
