@@ -1,0 +1,116 @@
+name: Build and release Lexora
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build ${{ matrix.platform }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: android
+            os: ubuntu-latest
+            command: flutter build apk --release
+            source: build/app/outputs/flutter-apk/app-release.apk
+            artifact: lexora-android.apk
+          - platform: linux
+            os: ubuntu-latest
+            command: flutter build linux --release
+            source: build/linux/x64/release/bundle
+            artifact: lexora-linux
+          - platform: windows
+            os: windows-latest
+            command: flutter build windows --release
+            source: build/windows/x64/runner/Release
+            artifact: lexora-windows
+          - platform: macos
+            os: macos-latest
+            command: flutter build macos --release
+            source: build/macos/Build/Products/Release/lexora.app
+            artifact: Lexora.app
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: apps/lexora
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Install Linux build libraries
+        if: matrix.platform == 'linux'
+        run: sudo apt-get update && sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev
+      - name: Generate platform shells
+        run: flutter create --project-name lexora --platforms=android,linux,macos,windows .
+      - name: Allow Android network lookups
+        if: matrix.platform == 'android'
+        run: sed -i '/<manifest/a\\    <uses-permission android:name="android.permission.INTERNET" />' android/app/src/main/AndroidManifest.xml
+      - name: Allow macOS network lookups
+        if: matrix.platform == 'macos'
+        run: /usr/libexec/PlistBuddy -c "Add :com.apple.security.network.client bool true" macos/Runner/Release.entitlements || /usr/libexec/PlistBuddy -c "Set :com.apple.security.network.client true" macos/Runner/Release.entitlements
+      - run: flutter pub get
+      - run: dart run flutter_launcher_icons
+      - run: flutter analyze
+      - run: ${{ matrix.command }}
+      - name: Package Unix desktop build
+        if: matrix.platform == 'linux'
+        run: tar -C build/linux/x64/release/bundle -czf lexora-linux.tar.gz .
+      - name: Package macOS build
+        if: matrix.platform == 'macos'
+        run: ditto -c -k --sequesterRsrc --keepParent "${{ matrix.source }}" lexora-macos.zip
+      - name: Package Windows build
+        if: matrix.platform == 'windows'
+        shell: pwsh
+        run: Compress-Archive -Path "${{ matrix.source }}\*" -DestinationPath lexora-windows.zip
+      - name: Stage Android build
+        if: matrix.platform == 'android'
+        run: cp "${{ matrix.source }}" lexora-android.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: lexora-${{ matrix.platform }}
+          path: |
+            apps/lexora/lexora-android.apk
+            apps/lexora/lexora-linux.tar.gz
+            apps/lexora/lexora-macos.zip
+            apps/lexora/lexora-windows.zip
+          if-no-files-found: error
+
+  publish:
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - uses: actions/download-artifact@v4
+        with:
+          merge-multiple: true
+      - uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: lexora-*
+      - name: Mirror downloads to Cloudflare R2
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          R2_BUCKET: ${{ secrets.CLOUDFLARE_R2_BUCKET }}
+        run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ] || [ -z "$CLOUDFLARE_ACCOUNT_ID" ] || [ -z "$R2_BUCKET" ]; then
+            echo "R2 secrets are not configured; GitHub Release remains the download source."
+            exit 0
+          fi
+          for file in lexora-android.apk lexora-linux.tar.gz lexora-macos.zip lexora-windows.zip; do
+            npx wrangler r2 object put "$R2_BUCKET/$file" --file "$file" --remote
+          done
