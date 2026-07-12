@@ -26,7 +26,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
   }
 
   Future<void> _export(GeneratedBook book) async {
-    final output = await FilePicker.platform.saveFile(
+    final output = await FilePicker.saveFile(
       dialogTitle: 'Export Lexora PDF',
       fileName: book.title,
       type: FileType.custom,

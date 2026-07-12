@@ -68,6 +68,7 @@ export default function Home() {
         <div className="navLinks">
           <a href="#how">{zh ? "工作方式" : "How it works"}</a>
           <a href="#download">{zh ? "下载" : "Download"}</a>
+          <a href="/donate">{zh ? "捐款" : "Donate"}</a>
           <a href="https://github.com/" target="_blank" rel="noreferrer">GitHub</a>
           <button className="language" onClick={() => setLanguage(zh ? "en" : "zh")}>
             {zh ? "EN" : "中文"}
@@ -187,10 +188,22 @@ export default function Home() {
         </div>
       </section>
 
+      <section className="support">
+        <div className="wrap supportInner">
+          <div className="supportMark">♥</div>
+          <div>
+            <p className="sectionLabel">{zh ? "支持独立开发" : "Support independent work"}</p>
+            <h2>{zh ? "让 Lexora 继续变得更好。" : "Help Lexora keep getting better."}</h2>
+            <p>{zh ? "Lexora 免费使用。你的自愿支持会用于词典数据、跨平台测试、签名与长期维护。" : "Lexora is free to use. Voluntary support helps cover dictionary data, cross-platform testing, signing, and long-term maintenance."}</p>
+          </div>
+          <a className="supportButton" href="/donate">{zh ? "打开捐款页面" : "Open donation page"} <span>↗</span></a>
+        </div>
+      </section>
+
       <footer className="wrap">
         <a className="brand" href="#top"><Image src="/lexora-icon-192.png" alt="" width={30} height={30} /><span>Lexora</span></a>
         <p>{zh ? "把单词变成值得保存的东西。" : "Make your words worth keeping."}</p>
-        <span>© 2026 Lexora · Open source</span>
+        <span>© 2026 Lexora · <a href="/donate">{zh ? "支持项目" : "Support"}</a></span>
       </footer>
     </main>
   );

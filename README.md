@@ -1,63 +1,136 @@
-# Lexora
+<div align="center">
+  <img src="public/lexora-icon-192.png" alt="Lexora 图标" width="128" height="128">
 
-[English](README.en.md) · 简体中文
+  # Lexora · 双语词汇书
 
-> 输入单词，得到一本值得阅读的双语词汇书。
+  **输入单词，得到一本值得阅读的双语词汇书。**
 
-Lexora 是一款面向 Android、macOS、Windows 与 Linux 的开源英语单词整理软件。它把零散的单词列表补全为包含难度、词频、英美音标、近义词、反义词、例句与中文翻译的紧凑 PDF，并保存在可直接阅读、导出与分享的历史记录中。
+  [![Release](https://img.shields.io/github/v/release/xiaozhangwangxue/lexora?style=flat-square&color=2444c8)](https://github.com/xiaozhangwangxue/lexora/releases/latest)
+  [![Build](https://img.shields.io/github/actions/workflow/status/xiaozhangwangxue/lexora/build-release.yml?branch=main&style=flat-square&label=4-platform%20build)](https://github.com/xiaozhangwangxue/lexora/actions/workflows/build-release.yml)
+  [![License](https://img.shields.io/github/license/xiaozhangwangxue/lexora?style=flat-square)](LICENSE)
+  [![Platforms](https://img.shields.io/badge/platform-Android%20%7C%20macOS%20%7C%20Windows%20%7C%20Linux-10131d?style=flat-square)](#下载与安装)
 
-![Lexora 图标](public/lexora-icon-192.png)
+  [官方网站](https://lexora.12323456.xyz) · [备用站点](https://lexora-app.xiaozhangwangx300474.chatgpt.site) · [下载应用](https://lexora-app.xiaozhangwangx300474.chatgpt.site/#download) · [捐款支持](https://lexora-app.xiaozhangwangx300474.chatgpt.site/donate) · [English](README.en.md)
+</div>
 
-## 功能
+<p align="center">
+  <img src="public/og.png" alt="Lexora — Make your words worth keeping" width="900">
+</p>
 
-- 在类似搜索引擎的简洁主页中输入单词，按回车添加。
-- 长按拖动调整顺序，向左滑动删除。
-- 支持自定义顺序、字母顺序、长度和估算难度排序。
-- 联网获取定义、词频、难度、英美音标、近反义词与例句。
-- 自动补充中文释义和例句翻译。
-- 生成适合屏幕阅读与打印的双语 PDF。
-- 在历史页面直接打开 PDF；桌面端可导出或分享，Android 调用系统分享面板。
-- 根据平台自适应导航、控件密度、窗口布局和交互反馈。
+---
 
-## 项目结构
+Lexora 是一款面向 Android、macOS、Windows 与 Linux 的英语单词整理软件。把零散的单词按顺序输入后，它会联网补全难度、词频、英美音标、近义词、反义词、例句与完整中文翻译，再排版成紧凑、清晰、适合阅读和打印的双语 PDF。
+
+> [!IMPORTANT]
+> Lexora 不要求账号。单词列表、历史记录和生成的 PDF 默认保存在设备本地；只有点击“开始生成”后，待查询的单词、释义和例句才会发送给公开词典与翻译服务。
+
+## 为什么选择 Lexora
+
+| ✍️ 像搜索一样输入 | ↕️ 像播放列表一样整理 | ✦ 自动补全语境 | 📖 直接得到成品 |
+| --- | --- | --- | --- |
+| 输入单词后按回车即可添加 | 长按拖动、滑动删除、四种排序 | 音标、词频、难度、近反义词与双语例句 | 自动生成美观紧凑的 PDF 词汇书 |
+
+## 核心功能
+
+- **快速收集**：搜索式主页，按回车添加单词，自动阻止重复和无效输入。
+- **自由整理**：长按调整顺序、向左滑动删除，支持自定义、A–Z、长度和估算难度排序。
+- **完整查词**：获取英文定义、公开语料词频信号、美式与英式音标、近义词、反义词和例句。
+- **完整中译**：释义、例句及近反义词均带中文结果；PDF 标签也采用中英双语。
+- **精美 PDF**：使用支持中文的 Noto Sans SC 字体，自动分页、编号、难度标签、词频标签与例句引用块。
+- **历史阅读**：在应用内直接阅读已生成 PDF，并可打印、分享或删除。
+- **原生分享**：桌面端支持“导出到…”，Android 直接调用系统分享页。
+- **平台自适应**：移动端使用底部导航，桌面端使用侧边导航，并按 macOS、Windows、Linux 与 Android 调整视觉反馈。
+
+## 下载与安装
+
+推荐从[官方网站下载区](https://lexora-app.xiaozhangwangx300474.chatgpt.site/#download)获取由 GitHub Actions 在对应原生系统中构建的安装包。下载文件同时镜像到 Cloudflare R2，国内访问无需打开 GitHub。
+
+| 平台 | 安装包 | 系统要求 | 下载 |
+| --- | --- | --- | --- |
+| Android | APK | Android 8.0+ | [官网下载](https://lexora-app.xiaozhangwangx300474.chatgpt.site/downloads/lexora-android.apk) |
+| macOS | ZIP 应用包 | macOS 12+ | [官网下载](https://lexora-app.xiaozhangwangx300474.chatgpt.site/downloads/lexora-macos.zip) |
+| Windows | ZIP | Windows 10 / 11 | [官网下载](https://lexora-app.xiaozhangwangx300474.chatgpt.site/downloads/lexora-windows.zip) |
+| Linux | tar.gz | 64 位 Linux | [官网下载](https://lexora-app.xiaozhangwangx300474.chatgpt.site/downloads/lexora-linux.tar.gz) |
+
+<details>
+<summary><strong>首次安装被系统拦截怎么办？</strong></summary>
+
+- **Android**：允许当前浏览器或文件管理器“安装未知应用”，再选择 APK。
+- **macOS**：解压后把 Lexora 拖入“应用程序”；若被拦截，按住 Control 点击应用并选择“打开”。
+- **Windows**：如果 SmartScreen 出现提示，选择“更多信息”→“仍要运行”。
+- **Linux**：解压后为 `lexora` 主程序添加执行权限，再启动。
+
+</details>
+
+## 三步生成词汇书
+
+1. 输入一个英文单词并按回车，继续添加所需单词。
+2. 长按调整顺序或选择排序方式，然后点击“开始生成”。
+3. 在“历史”页面阅读 PDF，或通过右侧菜单导出与分享。
 
 ```text
-apps/lexora/       Flutter 跨平台客户端
-app/               Lexora 官网（React / vinext）
-worker/            Cloudflare Worker 与 R2 下载代理
-.github/workflows/ 四平台构建、GitHub Release 与 R2 镜像
-docs/              架构、数据来源与隐私说明
+word list → dictionary + corpus + translation → bilingual layout → local PDF → history / export / share
 ```
 
-## 本地运行客户端
+## 数据来源与准确性
 
-需要 Flutter stable 与对应平台的工具链。
+| 内容 | 来源 | 说明 |
+| --- | --- | --- |
+| 定义、音标、例句 | [Dictionary API](https://dictionaryapi.dev/) | 免费公开英文词典接口 |
+| 相关词、词频信号 | [Datamuse](https://www.datamuse.com/api/) | 用于近义词补充、相对词频和难度估算 |
+| 中文翻译 | [MyMemory](https://mymemory.translated.net/) | 用于释义、例句及相关词中译 |
+| PDF 中文字体 | Noto Sans SC | 首次生成时获取并缓存 |
+
+难度是基于词频和词形长度的学习级别估算，并非官方考试分级。第三方服务可能限流或暂时不可用；Lexora 会显示明确错误，不会伪造查询结果。详见 [数据来源与隐私](docs/DATA_SOURCES.zh-CN.md)。
+
+## 从源码运行
+
+需要 Flutter stable 与目标平台工具链：
 
 ```bash
-cd apps/lexora
+git clone https://github.com/xiaozhangwangxue/lexora.git
+cd lexora/apps/lexora
 flutter create --project-name lexora --platforms=android,linux,macos,windows .
 flutter pub get
 dart run flutter_launcher_icons
 flutter run
 ```
 
-## 本地运行官网
-
-需要 Node.js 22 或更新版本。
+官网需要 Node.js 22 或更新版本：
 
 ```bash
+cd lexora
 npm install
 npm run dev
 ```
 
-## 数据说明
+<details>
+<summary><strong>项目结构与发布流程</strong></summary>
 
-当前版本从 Dictionary API 获取词典内容，从 Datamuse 获取相关词与公开语料词频信号，并通过 MyMemory 提供中译。PDF 字体由 `printing` 包按需缓存。第三方服务可能限流或暂时不可用；Lexora 会显示明确错误，不会伪造词典结果。完整说明见 [docs/DATA_SOURCES.zh-CN.md](docs/DATA_SOURCES.zh-CN.md)。
+```text
+apps/lexora/       Flutter 跨平台客户端
+app/               Lexora 宣传官网与捐款页面
+worker/            Cloudflare Worker、R2 下载与受保护上传通道
+.github/workflows/ 四平台构建、GitHub Release 与 R2 镜像
+docs/              架构、数据来源与隐私说明
+```
 
-## 发布
+推送 `v*` 标签会分别在 Android、Linux、Windows 与 macOS 原生 runner 中执行静态检查、图标生成、Release 构建与打包，再发布 GitHub Release；配置 Cloudflare 凭据后可自动同步 R2。
 
-推送 `v*` 标签会触发 GitHub Actions，分别在 Android、Linux、Windows 与 macOS 原生环境中构建并发布文件。配置 `CLOUDFLARE_API_TOKEN`、`CLOUDFLARE_ACCOUNT_ID` 与 `CLOUDFLARE_R2_BUCKET` 后，Release 文件会同步到 R2，并由官网 `/downloads/*` 下载入口提供服务。
+</details>
 
-## 许可证
+## 捐款支持
 
-[MIT](LICENSE)
+如果 Lexora 帮你节省了整理时间，可以自愿支持跨平台适配、数据服务和长期维护。也可以打开更适合手机扫码的[独立捐款页面](https://lexora-app.xiaozhangwangx300474.chatgpt.site/donate)。
+
+| 微信支付 | 支付宝 |
+| :---: | :---: |
+| <img src="https://raw.githubusercontent.com/xiaozhangwangxue/autoword/main/assets/donate/wechat.png" alt="微信支付收款码" width="260"> | <img src="https://raw.githubusercontent.com/xiaozhangwangxue/autoword/main/assets/donate/alipay.jpg" alt="支付宝收款码" width="260"> |
+
+## 参与项目
+
+欢迎提交 [Issue](https://github.com/xiaozhangwangxue/lexora/issues) 与 Pull Request。Lexora 基于 [MIT License](LICENSE) 发布。
+
+<div align="center">
+  <sub>Make your words worth keeping. · 把单词变成值得保存的东西。</sub>
+</div>
