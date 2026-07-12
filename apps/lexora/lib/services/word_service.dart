@@ -1,6 +1,8 @@
 import 'dart:convert';
+import 'dart:math';
 
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/word_entry.dart';
 
@@ -15,9 +17,46 @@ class WordService {
   WordService({http.Client? client}) : _client = client ?? http.Client();
 
   final http.Client _client;
+  static const _cachePrefix = 'lexora.word.v3';
+  static const _cacheLifetime = Duration(days: 14);
+
+  /// Looks up several words concurrently while preserving their input order.
+  ///
+  /// Dictionary work is network-bound, so a small pool of asynchronous workers
+  /// is faster and lighter than creating CPU isolates. The limit also avoids
+  /// overwhelming the public dictionary and translation services.
+  Future<List<WordEntry>> lookupAll(
+    List<String> words, {
+    int exampleCount = 1,
+    int maxConcurrency = 4,
+    void Function(int completed, int total, String word)? onProgress,
+  }) async {
+    if (words.isEmpty) return const [];
+    final results = List<WordEntry?>.filled(words.length, null);
+    var nextIndex = 0;
+    var completed = 0;
+
+    Future<void> worker() async {
+      while (true) {
+        final index = nextIndex++;
+        if (index >= words.length) return;
+        results[index] = await lookup(words[index], exampleCount: exampleCount);
+        completed++;
+        onProgress?.call(completed, words.length, words[index]);
+      }
+    }
+
+    final workerCount = min(max(1, maxConcurrency), words.length);
+    await Future.wait(List.generate(workerCount, (_) => worker()));
+    return results.cast<WordEntry>();
+  }
 
   Future<WordEntry> lookup(String rawWord, {int exampleCount = 1}) async {
     final word = rawWord.trim().toLowerCase();
+    final preferences = await SharedPreferences.getInstance();
+    final cacheKey = '$_cachePrefix.$exampleCount.$word';
+    final cached = _readCache(preferences.getString(cacheKey));
+    if (cached != null) return cached;
     final dictionaryUri = Uri.https(
       'api.dictionaryapi.dev',
       '/api/v2/entries/en/$word',
@@ -98,7 +137,7 @@ class WordService {
     final synonymsZh = synonyms.isEmpty ? '—' : translations[translationIndex++];
     final antonymsZh = antonyms.isEmpty ? '—' : translations[translationIndex++];
 
-    return WordEntry(
+    final entry = WordEntry(
       word: word,
       difficulty: _difficulty(word, frequency),
       frequency: frequency,
@@ -113,6 +152,25 @@ class WordService {
       examples: examples,
       examplesZh: examplesZh,
     );
+    await preferences.setString(cacheKey, jsonEncode({
+      'cachedAt': DateTime.now().toUtc().toIso8601String(),
+      'entry': entry.toJson(),
+    }));
+    return entry;
+  }
+
+  WordEntry? _readCache(String? value) {
+    if (value == null) return null;
+    try {
+      final json = jsonDecode(value) as Map<String, dynamic>;
+      final cachedAt = DateTime.parse(json['cachedAt'] as String);
+      if (DateTime.now().toUtc().difference(cachedAt) > _cacheLifetime) {
+        return null;
+      }
+      return WordEntry.fromJson(json['entry'] as Map<String, dynamic>);
+    } catch (_) {
+      return null;
+    }
   }
 
   String? _phoneticFor(List<Map<String, dynamic>> phonetics, String suffix) {

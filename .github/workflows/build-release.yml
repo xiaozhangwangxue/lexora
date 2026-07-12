@@ -9,6 +9,9 @@ on:
 permissions:
   contents: write
 
+env:
+  RELEASE_VERSION: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || 'dev' }}
+
 jobs:
   build:
     name: Build ${{ matrix.platform }}
@@ -56,6 +59,21 @@ jobs:
         run: |
           sed -i '/<manifest/a\\    <uses-permission android:name="android.permission.INTERNET" />' android/app/src/main/AndroidManifest.xml
           sed -i 's/compileSdk = flutter.compileSdkVersion/compileSdk = 36/' android/app/build.gradle.kts
+      - name: Restore stable Android signing key
+        if: matrix.platform == 'android'
+        shell: bash
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          if [ -z "$ANDROID_KEYSTORE_BASE64" ] || [ -z "$ANDROID_KEYSTORE_PASSWORD" ] || [ -z "$ANDROID_KEY_ALIAS" ] || [ -z "$ANDROID_KEY_PASSWORD" ]; then
+            echo "One or more Android signing secrets are not configured."
+            exit 1
+          fi
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > android/release.keystore
+          dart run tool/configure_android_signing.dart
       - name: Allow macOS network lookups
         if: matrix.platform == 'macos'
         run: |
@@ -64,28 +82,38 @@ jobs:
       - run: flutter pub get
       - run: dart run flutter_launcher_icons
       - run: flutter analyze
-      - run: ${{ matrix.command }}
+      - name: Run Flutter tests
+        if: matrix.platform == 'linux'
+        run: flutter test
+      - name: Build application
+        run: ${{ matrix.command }}
+        env:
+          ANDROID_KEYSTORE_PATH: ${{ github.workspace }}/apps/lexora/android/release.keystore
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
       - name: Package Unix desktop build
         if: matrix.platform == 'linux'
-        run: tar -C build/linux/x64/release/bundle -czf lexora-linux.tar.gz .
+        run: tar -C build/linux/x64/release/bundle -czf "lexora-linux-${RELEASE_VERSION}.tar.gz" .
       - name: Package macOS build
         if: matrix.platform == 'macos'
-        run: ditto -c -k --sequesterRsrc --keepParent "${{ matrix.source }}" lexora-macos.zip
+        run: |
+          ditto -c -k --sequesterRsrc --keepParent "${{ matrix.source }}" "lexora-macos-${RELEASE_VERSION}.zip"
+          bash tool/create_macos_dmg.sh \
+            "${{ matrix.source }}" \
+            packaging/macos/dmg-background.png \
+            "lexora-macos-${RELEASE_VERSION}.dmg"
       - name: Package Windows build
         if: matrix.platform == 'windows'
         shell: pwsh
-        run: Compress-Archive -Path "${{ matrix.source }}\*" -DestinationPath lexora-windows.zip
+        run: Compress-Archive -Path "${{ matrix.source }}\*" -DestinationPath "lexora-windows-$env:RELEASE_VERSION.zip"
       - name: Stage Android build
         if: matrix.platform == 'android'
-        run: cp "${{ matrix.source }}" lexora-android.apk
+        run: cp "${{ matrix.source }}" "lexora-android-${RELEASE_VERSION}.apk"
       - uses: actions/upload-artifact@v4
         with:
           name: lexora-${{ matrix.platform }}
-          path: |
-            apps/lexora/lexora-android.apk
-            apps/lexora/lexora-linux.tar.gz
-            apps/lexora/lexora-macos.zip
-            apps/lexora/lexora-windows.zip
+          path: apps/lexora/lexora-*
           if-no-files-found: error
 
   publish:
@@ -116,6 +144,6 @@ jobs:
             echo "R2 secrets are not configured; GitHub Release remains the download source."
             exit 0
           fi
-          for file in lexora-android.apk lexora-linux.tar.gz lexora-macos.zip lexora-windows.zip; do
+          for file in lexora-*; do
             npx wrangler r2 object put "$R2_BUCKET/$file" --file "$file" --remote
           done

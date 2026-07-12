@@ -6,16 +6,37 @@ import Link from "next/link";
 import { useSiteLanguage } from "./use-site-language";
 
 type SortMode = "custom" | "alphabetical" | "length" | "difficulty";
+type PlatformKey = "macos" | "windows" | "linux" | "android";
 
 const seedWords = ["serendipity", "lucid", "resilient", "wanderlust"];
 const donationQrBase = "https://raw.githubusercontent.com/xiaozhangwangxue/autoword/main/assets/donate";
 
-const platforms = [
-  { name: "macOS", note: "Apple silicon & Intel", icon: "⌘", file: "lexora-macos.zip" },
-  { name: "Windows", note: "Windows 10 / 11", icon: "⊞", file: "lexora-windows.zip" },
-  { name: "Linux", note: "64-bit bundle", icon: "◇", file: "lexora-linux.tar.gz" },
-  { name: "Android", note: "Android 8+", icon: "◒", file: "lexora-android.apk" },
+const currentVersion = "v0.3.0";
+const platforms: Array<{ key: PlatformKey; name: string; note: string; icon: string; file: string }> = [
+  { key: "macos", name: "macOS", note: "Drag-to-install DMG", icon: "⌘", file: `lexora-macos-${currentVersion}.dmg` },
+  { key: "windows", name: "Windows", note: "Windows 10 / 11", icon: "⊞", file: `lexora-windows-${currentVersion}.zip` },
+  { key: "linux", name: "Linux", note: "64-bit bundle", icon: "◇", file: `lexora-linux-${currentVersion}.tar.gz` },
+  { key: "android", name: "Android", note: "Android 8+", icon: "◒", file: `lexora-android-${currentVersion}.apk` },
 ];
+
+const installGuides: Record<PlatformKey, { zh: string[]; en: string[] }> = {
+  macos: {
+    zh: ["打开 DMG，按背景箭头将 Lexora 拖到 Applications 文件夹。", "首次启动时进入“应用程序”，按住 Control 点击 Lexora，选择“打开”。", "若 macOS 提示未验证开发者，在确认文件来自本官网后再选择打开。"],
+    en: ["Open the DMG and follow the background arrow to drag Lexora into Applications.", "Control-click Lexora in Applications the first time, then choose Open.", "If macOS warns about an unidentified developer, verify this official site first, then confirm Open."],
+  },
+  windows: {
+    zh: ["解压 ZIP 后运行 Lexora。", "若 SmartScreen 出现提示，先确认下载域名为 lexora.12323456.xyz。", "点击“更多信息”，然后选择“仍要运行”。"],
+    en: ["Extract the ZIP and run Lexora.", "If SmartScreen appears, first verify that the file came from lexora.12323456.xyz.", "Choose More info, then Run anyway."],
+  },
+  linux: {
+    zh: ["解压 tar.gz 文件。", "若无法启动，在文件属性中允许作为程序执行，或使用 chmod +x。", "启动 lexora 可执行文件。"],
+    en: ["Extract the tar.gz archive.", "If needed, allow the lexora file to run as a program or use chmod +x.", "Launch the lexora executable."],
+  },
+  android: {
+    zh: ["重要：从 v0.2.0 升级到 v0.3.0 需先卸载旧版并重新安装一次；v0.3.0 以后可直接覆盖更新。", "下载 APK，系统询问时允许浏览器安装未知来源应用。", "确认文件来自本官网后，选择“仍要安装”；安装后可关闭该权限。"],
+    en: ["Important: upgrading from v0.2.0 to v0.3.0 requires one uninstall and reinstall. Updates after v0.3.0 can install over the existing app.", "Download the APK and allow your browser to install unknown apps when Android asks.", "After verifying this official site, choose Install anyway. You can revoke that permission afterward."],
+  },
+};
 
 function difficultyScore(word: string) {
   return word.length + [...word].filter((letter) => "qxzj".includes(letter)).length * 2;
@@ -27,6 +48,8 @@ export default function Home() {
   const [sort, setSort] = useState<SortMode>("custom");
   const { language, setLanguage, zh } = useSiteLanguage();
   const [progress, setProgress] = useState<number | null>(null);
+  const [downloadChoice, setDownloadChoice] = useState<PlatformKey | null>(null);
+  const selectedPlatform = platforms.find((platform) => platform.key === downloadChoice);
 
   const visibleWords = useMemo(() => {
     const next = [...words];
@@ -70,7 +93,10 @@ export default function Home() {
           <a href="#how">{zh ? "工作方式" : "How it works"}</a>
           <a href="#download">{zh ? "下载" : "Download"}</a>
           <Link href="/donate">{zh ? "捐款" : "Donate"}</Link>
-          <a href="https://github.com/" target="_blank" rel="noreferrer">GitHub</a>
+          <a className="githubProfileButton" href="https://github.com/xiaozhangwangxue/lexora" target="_blank" rel="noreferrer">
+            <span className="githubProfileIcon"><Image src="/github-mark.png" alt="" width={25} height={25} unoptimized /><Image src="/github-avatar.png" alt="" width={15} height={15} unoptimized /></span>
+            GitHub
+          </a>
           <button className="language" onClick={() => setLanguage(language === "zh" ? "en" : "zh")}>
             {zh ? "EN" : "中文"}
           </button>
@@ -100,7 +126,7 @@ export default function Home() {
             <aside>
               <button className="active"><span>◫</span> {zh ? "单词" : "Words"}</button>
               <button><span>↺</span> {zh ? "历史" : "History"}</button>
-              <div className="asideFoot">v0.2 · Open source</div>
+              <div className="asideFoot">{currentVersion} · Open source</div>
             </aside>
             <section className="composer">
               <div className="composerHead">
@@ -180,7 +206,7 @@ export default function Home() {
         </div>
         <div className="platformGrid">
           {platforms.map((platform) => (
-            <a key={platform.name} href={`/downloads/${platform.file}`}>
+            <a key={platform.name} href={`/downloads/${platform.file}`} onClick={(event) => { event.preventDefault(); setDownloadChoice(platform.key); }}>
               <span className="platformIcon">{platform.icon}</span>
               <span><strong>{platform.name}</strong><small>{platform.note}</small></span>
               <span className="downloadArrow">↓</span>
@@ -188,6 +214,29 @@ export default function Home() {
           ))}
         </div>
       </section>
+
+      {selectedPlatform && downloadChoice && (
+        <div className="installOverlay" role="presentation" onMouseDown={() => setDownloadChoice(null)}>
+          <section className="installDialog" role="dialog" aria-modal="true" aria-labelledby="install-title" onMouseDown={(event) => event.stopPropagation()}>
+            <button className="installClose" aria-label={zh ? "关闭" : "Close"} onClick={() => setDownloadChoice(null)}>×</button>
+            <p className="sectionLabel">{zh ? "安装说明" : "Installation guide"}</p>
+            <h2 id="install-title">{zh ? `安装 Lexora for ${selectedPlatform.name}` : `Install Lexora for ${selectedPlatform.name}`}</h2>
+            <div className="riskNotice">
+              <strong>{zh ? "可能出现系统风险提示" : "Your system may show a risk warning"}</strong>
+              <p>{zh ? "Lexora 尚未上架应用商店，也未购买所有平台的商业签名。请先确认当前域名和 GitHub 仓库，然后按下面步骤选择“仍要安装/运行”。" : "Lexora is not yet distributed through app stores and does not have commercial signing for every platform. Verify this domain and GitHub repository first, then follow the steps below to continue."}</p>
+            </div>
+            <ol>
+              {installGuides[downloadChoice][zh ? "zh" : "en"].map((step) => <li key={step}>{step}</li>)}
+            </ol>
+            <div className="installActions">
+              <button onClick={() => setDownloadChoice(null)}>{zh ? "取消" : "Cancel"}</button>
+              <a href={`/downloads/${selectedPlatform.file}`} download onClick={() => setDownloadChoice(null)}>
+                {zh ? "我已了解，继续下载" : "I understand, continue download"} <span>↓</span>
+              </a>
+            </div>
+          </section>
+        </div>
+      )}
 
       <section className="support">
         <div className="wrap supportInner">

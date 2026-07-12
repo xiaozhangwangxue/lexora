@@ -44,6 +44,22 @@ class WordEntry {
         'examples': examples,
         'examplesZh': examplesZh,
       };
+
+  factory WordEntry.fromJson(Map<String, dynamic> json) => WordEntry(
+        word: json['word'] as String,
+        difficulty: json['difficulty'] as String,
+        frequency: (json['frequency'] as num).toDouble(),
+        usPhonetic: json['usPhonetic'] as String,
+        ukPhonetic: json['ukPhonetic'] as String,
+        definition: json['definition'] as String,
+        definitionZh: json['definitionZh'] as String,
+        synonyms: (json['synonyms'] as List).cast<String>(),
+        synonymsZh: json['synonymsZh'] as String,
+        antonyms: (json['antonyms'] as List).cast<String>(),
+        antonymsZh: json['antonymsZh'] as String,
+        examples: (json['examples'] as List).cast<String>(),
+        examplesZh: (json['examplesZh'] as List).cast<String>(),
+      );
 }
 
 class GeneratedBook {

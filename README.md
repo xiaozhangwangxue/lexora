@@ -35,12 +35,13 @@ Lexora 是一款面向 Android、macOS、Windows 与 Linux 的英语单词整理
 - **快速收集**：搜索式主页，按回车添加单词，自动阻止重复和无效输入。
 - **自由整理**：长按调整顺序、向左滑动删除，支持自定义、A–Z、长度和估算难度排序。
 - **完整查词**：获取英文定义、公开语料词频信号、美式与英式音标、近义词、反义词和例句。
+- **更快批量生成**：最多四路并发查询，查询结果在本机缓存 14 天；长词表和重复生成都更快。
 - **完整中译**：释义、例句及近反义词均带中文结果；PDF 标签也采用中英双语。
 - **中英界面**：自动识别设备语言；中文设备默认显示简体中文，其他设备显示英文。
 - **首次引导**：第一次打开应用时，用三步教程说明添加、排序、生成与分享流程。
-- **自定义 PDF**：可选小、中、大三档字号，并选择不添加例句、添加 1 句或添加 2–3 句。
+- **自定义 PDF**：可选小、中、大三档字号；中号兼顾手机阅读与打印，大号为手机阅读提供更明显的放大，并可选择 0、1 或 2–3 句例句。
 - **精美 PDF**：中文使用 Noto Sans SC，音标使用完整支持 IPA 的 Noto Sans，自动分页并保留紧凑层级。
-- **历史阅读**：在应用内直接阅读已生成 PDF，并可打印、分享或删除。
+- **历史阅读**：在应用内直接阅读已生成 PDF，支持双指缩放，并可打印、分享或删除。
 - **原生分享**：桌面端支持“导出到…”，Android 直接调用系统分享页。
 - **平台自适应**：移动端使用底部导航，桌面端使用侧边导航，并按 macOS、Windows、Linux 与 Android 调整视觉反馈。
 
@@ -50,20 +51,25 @@ Lexora 是一款面向 Android、macOS、Windows 与 Linux 的英语单词整理
 
 | 平台 | 安装包 | 系统要求 | 下载 |
 | --- | --- | --- | --- |
-| Android | APK | Android 8.0+ | [官网下载](https://lexora.12323456.xyz/downloads/lexora-android.apk) |
-| macOS | ZIP 应用包 | macOS 12+ | [官网下载](https://lexora.12323456.xyz/downloads/lexora-macos.zip) |
-| Windows | ZIP | Windows 10 / 11 | [官网下载](https://lexora.12323456.xyz/downloads/lexora-windows.zip) |
-| Linux | tar.gz | 64 位 Linux | [官网下载](https://lexora.12323456.xyz/downloads/lexora-linux.tar.gz) |
+| Android | APK | Android 8.0+ | [官网下载](https://lexora.12323456.xyz/downloads/lexora-android-v0.3.0.apk) |
+| macOS | 拖动安装 DMG | macOS 12+ | [官网下载](https://lexora.12323456.xyz/downloads/lexora-macos-v0.3.0.dmg) |
+| Windows | ZIP | Windows 10 / 11 | [官网下载](https://lexora.12323456.xyz/downloads/lexora-windows-v0.3.0.zip) |
+| Linux | tar.gz | 64 位 Linux | [官网下载](https://lexora.12323456.xyz/downloads/lexora-linux-v0.3.0.tar.gz) |
 
 <details>
 <summary><strong>首次安装被系统拦截怎么办？</strong></summary>
 
 - **Android**：允许当前浏览器或文件管理器“安装未知应用”，再选择 APK。
-- **macOS**：解压后把 Lexora 拖入“应用程序”；若被拦截，按住 Control 点击应用并选择“打开”。
+- **macOS**：打开 DMG，按精心设计的背景箭头将 Lexora 拖入 Applications；若被拦截，按住 Control 点击应用并选择“打开”。
 - **Windows**：如果 SmartScreen 出现提示，选择“更多信息”→“仍要运行”。
 - **Linux**：解压后为 `lexora` 主程序添加执行权限，再启动。
 
 </details>
+
+> [!IMPORTANT]
+> Android v0.2.0 使用了临时构建签名，旧私钥无法恢复，因此升级到采用稳定签名的 v0.3.0 时需要先卸载旧版再安装一次。自 v0.3.0 起，后续版本继续使用同一发布签名，可直接覆盖更新。请先按需导出旧版中的 PDF。
+
+所有发行文件名都包含版本号，例如 `lexora-android-v0.3.0.apk`。这样可以避免浏览器或下载目录把新旧安装包混淆。
 
 ## 三步生成词汇书
 

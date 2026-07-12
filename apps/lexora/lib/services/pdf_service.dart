@@ -11,23 +11,28 @@ import '../models/word_entry.dart';
 
 enum PdfFontSize {
   small(1),
-  medium(1.18),
-  large(1.38);
+  medium(1.4),
+  large(1.8);
 
   const PdfFontSize(this.scale);
   final double scale;
 }
 
 class PdfService {
+  late final Future<pw.Font> _regularFont = PdfGoogleFonts.notoSansSCRegular();
+  late final Future<pw.Font> _boldFont = PdfGoogleFonts.notoSansSCBold();
+  late final Future<pw.Font> _ipaFont = PdfGoogleFonts.notoSansRegular();
+
   Future<GeneratedBook> create(
     List<WordEntry> entries, {
     PdfFontSize fontSize = PdfFontSize.medium,
   }) async {
-    final regular = await PdfGoogleFonts.notoSansSCRegular();
-    final bold = await PdfGoogleFonts.notoSansSCBold();
+    final fonts = await Future.wait([_regularFont, _boldFont, _ipaFont]);
+    final regular = fonts[0];
+    final bold = fonts[1];
     // Noto Sans SC does not contain the complete IPA Extensions block. Keep it
     // for Chinese text, and explicitly render phonetics with Noto Sans.
-    final ipa = await PdfGoogleFonts.notoSansRegular();
+    final ipa = fonts[2];
     double size(double value) => value * fontSize.scale;
     final document = pw.Document(
       title: 'Lexora Vocabulary Book',

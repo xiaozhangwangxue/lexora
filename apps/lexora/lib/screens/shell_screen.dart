@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../l10n/app_localizations.dart';
+import '../widgets/github_button.dart';
 import 'history_screen.dart';
 import 'home_screen.dart';
 import 'onboarding_screen.dart';
@@ -54,11 +55,20 @@ class _ShellScreenState extends State<ShellScreen> {
 
     final strings = AppLocalizations.of(context);
     final wide = MediaQuery.sizeOf(context).width >= 760;
-    final body = IndexedStack(
-      index: _index,
+    final body = Stack(
       children: [
-        HomeScreen(onGenerated: _showHistory),
-        HistoryScreen(key: ValueKey(_historyRevision)),
+        IndexedStack(
+          index: _index,
+          children: [
+            HomeScreen(onGenerated: _showHistory),
+            HistoryScreen(key: ValueKey(_historyRevision)),
+          ],
+        ),
+        const Positioned(
+          top: 16,
+          right: 20,
+          child: SafeArea(child: GitHubButton()),
+        ),
       ],
     );
 

@@ -61,7 +61,12 @@ const worker = {
         object.writeHttpMetadata(headers);
         headers.set("etag", object.httpEtag);
         headers.set("content-disposition", `attachment; filename="${key}"`);
-        headers.set("cache-control", "public, max-age=3600");
+        headers.set(
+          "cache-control",
+          /-v\d+\.\d+\.\d+\./.test(key)
+            ? "public, max-age=31536000, immutable"
+            : "public, max-age=3600",
+        );
         return new Response(object.body, { headers });
       }
       return Response.redirect(

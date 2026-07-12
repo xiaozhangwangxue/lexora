@@ -1,10 +1,10 @@
 name: lexora
 description: Lexora — turn a word list into a compact bilingual vocabulary book.
 publish_to: none
-version: 0.2.0+2
+version: 0.3.0+3
 
 environment:
-  sdk: ">=3.4.0 <4.0.0"
+  sdk: ">=3.10.0 <4.0.0"
 
 dependencies:
   flutter:
@@ -16,11 +16,13 @@ dependencies:
   http: ^1.2.2
   intl: ^0.20.1
   path_provider: ^2.1.5
+  pdfrx: ^2.4.7
   pdf: ^3.11.1
   printing: ^5.13.4
   share_plus: ^10.1.4
   shared_preferences: ^2.3.5
   uuid: ^4.5.1
+  url_launcher: ^6.3.2
 
 dev_dependencies:
   flutter_test:
@@ -32,6 +34,8 @@ flutter:
   uses-material-design: true
   assets:
     - assets/icon/lexora-icon.png
+    - assets/github/github-mark.png
+    - assets/github/github-avatar.png
 
 flutter_launcher_icons:
   image_path: assets/icon/lexora-icon.png

@@ -16,8 +16,10 @@ export function useSiteLanguage() {
       item.toLowerCase().startsWith("zh"),
     ) ? "zh" : "en";
     const next = saved === "zh" || saved === "en" ? saved : detected;
-    setLanguageState(next);
     document.documentElement.lang = next === "zh" ? "zh-CN" : "en";
+    // Defer the client-only preference until hydration has completed so the
+    // stable Chinese server render never conflicts with the first client tree.
+    queueMicrotask(() => setLanguageState(next));
   }, []);
 
   function setLanguage(next: SiteLanguage) {

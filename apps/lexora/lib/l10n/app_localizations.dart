@@ -18,10 +18,12 @@ class AppLocalizations {
   String get addWord => isZh ? '添加单词' : 'Add word';
   String get generate => isZh ? '开始生成' : 'Start generating';
   String get generating => isZh ? '正在生成…' : 'Generating…';
+  String get github => 'GitHub';
+  String get openGitHubFailed => isZh ? '无法打开 GitHub 页面。' : 'Could not open the GitHub page.';
   String get preparing => isZh ? '正在准备词汇书…' : 'Preparing your vocabulary book…';
   String lookup(String word, int current, int total) => isZh
-      ? '正在查询 $word  ·  $current/$total'
-      : 'Looking up $word  ·  $current/$total';
+      ? '已完成 $word  ·  $current/$total（并发查询）'
+      : 'Completed $word  ·  $current/$total (parallel lookup)';
   String get typesetting => isZh ? '正在排版双语 PDF…' : 'Typesetting the bilingual PDF…';
   String get invalidWord => isZh ? '请输入一个有效的英文单词。' : 'Please enter one English word.';
   String duplicate(String word) => isZh ? '“$word” 已在列表中。' : '“$word” is already in the list.';
@@ -49,6 +51,7 @@ class AppLocalizations {
   String get moreActions => isZh ? '更多操作' : 'More actions';
   String get exportTo => isZh ? '导出到…' : 'Export to…';
   String get share => isZh ? '分享…' : 'Share…';
+  String get print => isZh ? '打印' : 'Print';
   String get delete => isZh ? '删除' : 'Delete';
   String get vocabularyBook => isZh ? 'Lexora 词汇书' : 'Lexora vocabulary book';
   String get onboardingSkip => isZh ? '跳过' : 'Skip';

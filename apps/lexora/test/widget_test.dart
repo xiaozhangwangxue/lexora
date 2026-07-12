@@ -21,6 +21,7 @@ void main() {
     expect(find.text('Lexora'), findsOneWidget);
     expect(find.text('开始生成'), findsOneWidget);
     expect(find.text('自定义 PDF'), findsOneWidget);
+    expect(find.text('GitHub'), findsOneWidget);
     expect(find.text('你的单词将显示在这里'), findsOneWidget);
   });
 }

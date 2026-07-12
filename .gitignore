@@ -46,3 +46,6 @@ next-env.d.ts
 /apps/lexora/build/
 /apps/lexora/.flutter-plugins
 /apps/lexora/.flutter-plugins-dependencies
+/apps/lexora/android/release.keystore
+/apps/lexora/android/key.properties
+/private/

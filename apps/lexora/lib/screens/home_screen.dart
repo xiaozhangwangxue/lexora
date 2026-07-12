@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../l10n/app_localizations.dart';
-import '../models/word_entry.dart';
 import '../services/history_service.dart';
 import '../services/pdf_service.dart';
 import '../services/word_service.dart';
@@ -96,18 +95,19 @@ class _HomeScreenState extends State<HomeScreen> {
       _progress = 0;
       _status = strings.preparing;
     });
-    final entries = <WordEntry>[];
     try {
-      for (var i = 0; i < _words.length; i++) {
-        setState(() {
-          _status = strings.lookup(_words[i], i + 1, _words.length);
-          _progress = i / (_words.length + 1);
-        });
-        entries.add(await _wordService.lookup(
-          _words[i],
-          exampleCount: _exampleAmount.count,
-        ));
-      }
+      final entries = await _wordService.lookupAll(
+        List.of(_words),
+        exampleCount: _exampleAmount.count,
+        maxConcurrency: 4,
+        onProgress: (completed, total, word) {
+          if (!mounted) return;
+          setState(() {
+            _status = strings.lookup(word, completed, total);
+            _progress = completed / total * .88;
+          });
+        },
+      );
       setState(() {
         _status = strings.typesetting;
         _progress = .92;
