@@ -13,6 +13,7 @@ a { color:inherit; text-decoration:none; }
 .navLinks { display:flex; align-items:center; gap:28px; font-size:14px; color:#3e4553; }
 .navLinks a:hover { color:var(--blue); }
 .language { padding:8px 12px; border:1px solid var(--line); background:white; border-radius:20px; cursor:pointer; }
+.donateNavActions{display:flex;align-items:center;gap:14px}
 .hero { padding:74px 0 118px; text-align:center; }
 .eyebrow,.sectionLabel { text-transform:uppercase; letter-spacing:.16em; font-weight:700; font-size:11px; color:var(--blue); }
 .eyebrow { display:inline-flex; align-items:center; gap:9px; }

@@ -36,7 +36,10 @@ Lexora 是一款面向 Android、macOS、Windows 与 Linux 的英语单词整理
 - **自由整理**：长按调整顺序、向左滑动删除，支持自定义、A–Z、长度和估算难度排序。
 - **完整查词**：获取英文定义、公开语料词频信号、美式与英式音标、近义词、反义词和例句。
 - **完整中译**：释义、例句及近反义词均带中文结果；PDF 标签也采用中英双语。
-- **精美 PDF**：使用支持中文的 Noto Sans SC 字体，自动分页、编号、难度标签、词频标签与例句引用块。
+- **中英界面**：自动识别设备语言；中文设备默认显示简体中文，其他设备显示英文。
+- **首次引导**：第一次打开应用时，用三步教程说明添加、排序、生成与分享流程。
+- **自定义 PDF**：可选小、中、大三档字号，并选择不添加例句、添加 1 句或添加 2–3 句。
+- **精美 PDF**：中文使用 Noto Sans SC，音标使用完整支持 IPA 的 Noto Sans，自动分页并保留紧凑层级。
 - **历史阅读**：在应用内直接阅读已生成 PDF，并可打印、分享或删除。
 - **原生分享**：桌面端支持“导出到…”，Android 直接调用系统分享页。
 - **平台自适应**：移动端使用底部导航，桌面端使用侧边导航，并按 macOS、Windows、Linux 与 Android 调整视觉反馈。
@@ -65,7 +68,7 @@ Lexora 是一款面向 Android、macOS、Windows 与 Linux 的英语单词整理
 ## 三步生成词汇书
 
 1. 输入一个英文单词并按回车，继续添加所需单词。
-2. 长按调整顺序或选择排序方式，然后点击“开始生成”。
+2. 长按调整顺序或选择排序方式，按需设置字号与例句数量，然后点击“开始生成”。
 3. 在“历史”页面阅读 PDF，或通过右侧菜单导出与分享。
 
 ```text
@@ -79,7 +82,7 @@ word list → dictionary + corpus + translation → bilingual layout → local P
 | 定义、音标、例句 | [Dictionary API](https://dictionaryapi.dev/) | 免费公开英文词典接口 |
 | 相关词、词频信号 | [Datamuse](https://www.datamuse.com/api/) | 用于近义词补充、相对词频和难度估算 |
 | 中文翻译 | [MyMemory](https://mymemory.translated.net/) | 用于释义、例句及相关词中译 |
-| PDF 中文字体 | Noto Sans SC | 首次生成时获取并缓存 |
+| PDF 中文与音标字体 | Noto Sans SC + Noto Sans | 首次生成时获取并缓存，完整覆盖 IPA 字符 |
 
 难度是基于词频和词形长度的学习级别估算，并非官方考试分级。第三方服务可能限流或暂时不可用；Lexora 会显示明确错误，不会伪造查询结果。详见 [数据来源与隐私](docs/DATA_SOURCES.zh-CN.md)。
 
@@ -111,11 +114,12 @@ npm run dev
 apps/lexora/       Flutter 跨平台客户端
 app/               Lexora 宣传官网与捐款页面
 worker/            Cloudflare Worker、R2 下载与受保护上传通道
+wrangler.deploy.jsonc 独立 Cloudflare Worker 与官方域名路由
 .github/workflows/ 四平台构建、GitHub Release 与 R2 镜像
 docs/              架构、数据来源与隐私说明
 ```
 
-推送 `v*` 标签会分别在 Android、Linux、Windows 与 macOS 原生 runner 中执行静态检查、图标生成、Release 构建与打包，再发布 GitHub Release；配置 Cloudflare 凭据后可自动同步 R2。
+官网由 `lexora-official` Cloudflare Worker 直接提供，并通过 Worker Route 接管 `lexora.12323456.xyz/*`，不经过 ChatGPT.site。推送 `v*` 标签会分别在 Android、Linux、Windows 与 macOS 原生 runner 中执行静态检查、图标生成、Release 构建与打包，再发布 GitHub Release；配置 Cloudflare 凭据后可自动同步 R2。
 
 </details>
 

@@ -16,7 +16,7 @@ class WordService {
 
   final http.Client _client;
 
-  Future<WordEntry> lookup(String rawWord) async {
+  Future<WordEntry> lookup(String rawWord, {int exampleCount = 1}) async {
     final word = rawWord.trim().toLowerCase();
     final dictionaryUri = Uri.https(
       'api.dictionaryapi.dev',
@@ -49,7 +49,7 @@ class WordService {
         ? <String, dynamic>{}
         : definitions.first;
     final definition = primary['definition'] as String? ?? 'No definition';
-    final example = primary['example'] as String? ?? _findExample(meanings);
+    final examples = _findExamples(meanings).take(exampleCount).toList();
 
     final phonetics = (dictionary['phonetics'] as List? ?? const [])
         .cast<Map<String, dynamic>>();
@@ -86,13 +86,15 @@ class WordService {
     final antonyms = opposites.toSet().take(6).toList();
     final translations = await Future.wait([
       _translate(definition),
-      if (example.isNotEmpty) _translate(example),
+      ...examples.map(_translate),
       if (synonyms.isNotEmpty) _translate(synonyms.join(', ')),
       if (antonyms.isNotEmpty) _translate(antonyms.join(', ')),
     ]);
     var translationIndex = 0;
     final definitionZh = translations[translationIndex++];
-    final exampleZh = example.isEmpty ? '' : translations[translationIndex++];
+    final examplesZh = [
+      for (var i = 0; i < examples.length; i++) translations[translationIndex++],
+    ];
     final synonymsZh = synonyms.isEmpty ? '—' : translations[translationIndex++];
     final antonymsZh = antonyms.isEmpty ? '—' : translations[translationIndex++];
 
@@ -108,8 +110,8 @@ class WordService {
       synonymsZh: synonymsZh,
       antonyms: antonyms,
       antonymsZh: antonymsZh,
-      example: example,
-      exampleZh: exampleZh,
+      examples: examples,
+      examplesZh: examplesZh,
     );
   }
 
@@ -122,14 +124,17 @@ class WordService {
     return null;
   }
 
-  String _findExample(List<Map<String, dynamic>> meanings) {
+  List<String> _findExamples(List<Map<String, dynamic>> meanings) {
+    final examples = <String>[];
     for (final meaning in meanings) {
       for (final item in (meaning['definitions'] as List? ?? const [])) {
         final example = (item as Map<String, dynamic>)['example'] as String?;
-        if (example != null && example.isNotEmpty) return example;
+        if (example != null && example.isNotEmpty && !examples.contains(example)) {
+          examples.add(example);
+        }
       }
     }
-    return '';
+    return examples;
   }
 
   Future<String> _translate(String text) async {

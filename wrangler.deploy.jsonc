@@ -1,0 +1,28 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "lexora-official",
+  "main": "dist/server/index.js",
+  "compatibility_date": "2026-07-12",
+  "compatibility_flags": ["nodejs_compat"],
+  "assets": {
+    "directory": "./dist/client",
+    "binding": "ASSETS",
+    "html_handling": "none",
+    "not_found_handling": "none"
+  },
+  "r2_buckets": [
+    {
+      "binding": "DOWNLOADS",
+      "bucket_name": "autoword-downloads"
+    }
+  ],
+  "routes": [
+    {
+      "pattern": "lexora.12323456.xyz/*",
+      "zone_name": "12323456.xyz"
+    }
+  ],
+  "observability": {
+    "enabled": true
+  }
+}

@@ -19,11 +19,13 @@ test("server-renders the finished Lexora landing page", async () => {
   const html = await response.text();
   assert.match(html, /<title>Lexora/);
   assert.match(html, /Make your words worth keeping/);
-  assert.match(html, /Start generating/);
+  assert.match(html, /开始生成/);
   assert.match(html, /macOS/);
-  assert.match(html, /Donation channels/);
+  assert.match(html, /捐款渠道/);
   assert.match(html, /WeChat Pay/);
   assert.match(html, /Alipay/);
+  assert.match(html, /href="\/favicon\.png\?v=5"/);
+  assert.doesNotMatch(html, /\[object%20Object\]/);
   assert.doesNotMatch(html, /codex-preview|react-loading-skeleton|Starter Project/);
 });
 
@@ -31,9 +33,9 @@ test("server-renders the bilingual donation page", async () => {
   const response = await render("/donate");
   assert.equal(response.status, 200);
   const html = await response.text();
-  assert.match(html, /Support independent development/);
+  assert.match(html, /支持独立开发/);
   assert.match(html, /支持独立开发/);
   assert.match(html, /wechat\.png/);
   assert.match(html, /alipay\.jpg/);
-  assert.match(html, /Donations are entirely optional/);
+  assert.match(html, /捐款完全自愿/);
 });

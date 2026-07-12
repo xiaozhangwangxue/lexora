@@ -36,7 +36,10 @@ Lexora is an English vocabulary organizer for Android, macOS, Windows, and Linux
 - **Flexible ordering:** long-press to reorder, swipe left to delete, and sort by custom order, A–Z, length, or estimated difficulty.
 - **Full lookup:** English definition, corpus frequency signal, US and UK phonetics, synonyms, antonyms, and examples.
 - **Complete Chinese layer:** definitions, examples, and related words receive Chinese translations; PDF labels are bilingual too.
-- **Polished PDF:** Noto Sans SC, automatic pagination, numbering, difficulty and frequency pills, and example callouts.
+- **Automatic language:** follows the device language, using Simplified Chinese on Chinese devices and English elsewhere.
+- **First-run guidance:** a concise three-step tutorial introduces capture, ordering, generation, and sharing.
+- **Custom PDF:** small, medium, or large type plus no example, one example, or two to three examples per word.
+- **Polished PDF:** Noto Sans SC for Chinese and IPA-complete Noto Sans for phonetics, with automatic pagination and compact hierarchy.
 - **Built-in history reader:** read, print, share, or delete generated PDFs without leaving the app.
 - **Native sharing:** Export to… on desktop and the system share sheet on Android.
 - **Adaptive interface:** bottom navigation on mobile, side navigation on desktop, and platform-aware feedback.
@@ -55,7 +58,7 @@ Use the [official download section](https://lexora.12323456.xyz/#download) for b
 ## Three steps to a vocabulary book
 
 1. Type an English word and press Enter; continue until the list is complete.
-2. Long-press to reorder or select a sort mode, then choose **Start generating**.
+2. Long-press to reorder or select a sort mode, choose the font size and example count, then select **Start generating**.
 3. Read the PDF in **History**, or open the menu to export and share it.
 
 ```text
@@ -69,7 +72,7 @@ word list → dictionary + corpus + translation → bilingual layout → local P
 | Definitions, phonetics, examples | [Dictionary API](https://dictionaryapi.dev/) | Public English dictionary data |
 | Related words, frequency signals | [Datamuse](https://www.datamuse.com/api/) | Synonym enrichment, relative frequency, and difficulty estimate |
 | Chinese translation | [MyMemory](https://mymemory.translated.net/) | Definitions, examples, and related words |
-| PDF Chinese font | Noto Sans SC | Fetched and cached on first generation |
+| PDF Chinese and IPA fonts | Noto Sans SC + Noto Sans | Fetched and cached on first generation |
 
 Difficulty is a learning-level estimate based on frequency and word shape, not an official examination level. External services may be rate-limited or unavailable; Lexora reports errors instead of inventing results. See [Data sources and privacy](docs/DATA_SOURCES.en.md).
 

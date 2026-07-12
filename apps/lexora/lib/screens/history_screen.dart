@@ -4,6 +4,7 @@ import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../l10n/app_localizations.dart';
 import '../models/word_entry.dart';
 import '../services/history_service.dart';
 import 'pdf_reader_screen.dart';
@@ -41,9 +42,10 @@ class _HistoryScreenState extends State<HistoryScreen> {
   }
 
   Future<void> _share(GeneratedBook book) async {
+    final strings = AppLocalizations.of(context);
     await Share.shareXFiles(
       [XFile(book.path, mimeType: 'application/pdf')],
-      subject: 'Lexora vocabulary book',
+      subject: strings.vocabularyBook,
     );
   }
 
@@ -57,6 +59,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final strings = AppLocalizations.of(context);
     return SafeArea(
       child: Center(
         child: ConstrainedBox(
@@ -64,9 +67,9 @@ class _HistoryScreenState extends State<HistoryScreen> {
           child: Padding(
             padding: const EdgeInsets.all(24),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text('History', style: theme.textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w800)),
+              Text(strings.history, style: theme.textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w800)),
               const SizedBox(height: 4),
-              Text('Read, export, or share your generated vocabulary books.',
+              Text(strings.historySubtitle,
                   style: theme.textTheme.bodyLarge?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
               const SizedBox(height: 22),
               Expanded(
@@ -78,7 +81,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                     }
                     final books = snapshot.data ?? const [];
                     if (books.isEmpty) {
-                      return const Center(child: Text('Your generated PDFs will appear here.'));
+                      return Center(child: Text(strings.emptyHistory));
                     }
                     return ListView.separated(
                       itemCount: books.length,
@@ -98,12 +101,12 @@ class _HistoryScreenState extends State<HistoryScreen> {
                               child: Icon(Icons.picture_as_pdf_rounded, color: theme.colorScheme.primary),
                             ),
                             title: Text(book.title, maxLines: 1, overflow: TextOverflow.ellipsis),
-                            subtitle: Text('${book.wordCount} words · ${_formatDate(book.createdAt)}'),
+                            subtitle: Text('${strings.wordCount(book.wordCount)} · ${_formatDate(book.createdAt)}'),
                             onTap: () => Navigator.of(context).push(
                               MaterialPageRoute<void>(builder: (_) => PdfReaderScreen(book: book)),
                             ),
                             trailing: PopupMenuButton<String>(
-                              tooltip: 'More actions',
+                              tooltip: strings.moreActions,
                               onSelected: (action) {
                                 if (action == 'export') _export(book);
                                 if (action == 'share') _share(book);
@@ -111,10 +114,10 @@ class _HistoryScreenState extends State<HistoryScreen> {
                               },
                               itemBuilder: (context) => [
                                 if (!Platform.isAndroid)
-                                  const PopupMenuItem(value: 'export', child: Text('Export to…')),
-                                const PopupMenuItem(value: 'share', child: Text('Share…')),
+                                  PopupMenuItem(value: 'export', child: Text(strings.exportTo)),
+                                PopupMenuItem(value: 'share', child: Text(strings.share)),
                                 const PopupMenuDivider(),
-                                const PopupMenuItem(value: 'delete', child: Text('Delete')),
+                                PopupMenuItem(value: 'delete', child: Text(strings.delete)),
                               ],
                             ),
                           ),

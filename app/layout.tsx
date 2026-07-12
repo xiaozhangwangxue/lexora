@@ -5,10 +5,6 @@ export const metadata: Metadata = {
   metadataBase: new URL("https://lexora.12323456.xyz"),
   title: "Lexora — Words in. A beautiful bilingual book out.",
   description: "Organize English words and turn them into a polished bilingual PDF with difficulty, frequency, phonetics, related words, and examples.",
-  icons: {
-    icon: [{ url: "/favicon.png", type: "image/png", sizes: "192x192" }],
-    apple: [{ url: "/lexora-icon-512.png", sizes: "512x512" }],
-  },
   openGraph: {
     title: "Lexora — Make your words worth keeping.",
     description: "From a loose word list to a beautiful bilingual vocabulary book.",
@@ -21,5 +17,11 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  return <html lang="en"><body>{children}</body></html>;
+  return <html lang="zh-CN">
+    <head>
+      <link rel="icon" type="image/png" sizes="192x192" href="/favicon.png?v=5" />
+      <link rel="apple-touch-icon" sizes="512x512" href="/lexora-icon-512.png?v=5" />
+    </head>
+    <body>{children}</body>
+  </html>;
 }

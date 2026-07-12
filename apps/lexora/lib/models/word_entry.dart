@@ -11,8 +11,8 @@ class WordEntry {
     required this.synonymsZh,
     required this.antonyms,
     required this.antonymsZh,
-    required this.example,
-    required this.exampleZh,
+    required this.examples,
+    required this.examplesZh,
   });
 
   final String word;
@@ -26,8 +26,8 @@ class WordEntry {
   final String synonymsZh;
   final List<String> antonyms;
   final String antonymsZh;
-  final String example;
-  final String exampleZh;
+  final List<String> examples;
+  final List<String> examplesZh;
 
   Map<String, dynamic> toJson() => {
         'word': word,
@@ -41,8 +41,8 @@ class WordEntry {
         'synonymsZh': synonymsZh,
         'antonyms': antonyms,
         'antonymsZh': antonymsZh,
-        'example': example,
-        'exampleZh': exampleZh,
+        'examples': examples,
+        'examplesZh': examplesZh,
       };
 }
 

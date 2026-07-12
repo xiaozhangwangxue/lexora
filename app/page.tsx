@@ -3,6 +3,7 @@
 import { FormEvent, useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useSiteLanguage } from "./use-site-language";
 
 type SortMode = "custom" | "alphabetical" | "length" | "difficulty";
 
@@ -24,7 +25,7 @@ export default function Home() {
   const [words, setWords] = useState(seedWords);
   const [input, setInput] = useState("");
   const [sort, setSort] = useState<SortMode>("custom");
-  const [language, setLanguage] = useState<"en" | "zh">("en");
+  const { language, setLanguage, zh } = useSiteLanguage();
   const [progress, setProgress] = useState<number | null>(null);
 
   const visibleWords = useMemo(() => {
@@ -58,13 +59,11 @@ export default function Home() {
     }, 180);
   }
 
-  const zh = language === "zh";
-
   return (
     <main>
       <nav className="nav wrap" aria-label="Primary navigation">
         <a className="brand" href="#top" aria-label="Lexora home">
-          <Image src="/lexora-icon-192.png" alt="" width={36} height={36} />
+          <img src="/lexora-icon-192.png" alt="" width="36" height="36" />
           <span>Lexora</span>
         </a>
         <div className="navLinks">
@@ -72,7 +71,7 @@ export default function Home() {
           <a href="#download">{zh ? "下载" : "Download"}</a>
           <Link href="/donate">{zh ? "捐款" : "Donate"}</Link>
           <a href="https://github.com/" target="_blank" rel="noreferrer">GitHub</a>
-          <button className="language" onClick={() => setLanguage(zh ? "en" : "zh")}>
+          <button className="language" onClick={() => setLanguage(language === "zh" ? "en" : "zh")}>
             {zh ? "EN" : "中文"}
           </button>
         </div>
@@ -94,14 +93,14 @@ export default function Home() {
         <div className="appWindow" id="demo">
           <div className="windowBar">
             <div className="traffic"><i /><i /><i /></div>
-            <div className="miniBrand"><Image src="/lexora-icon-192.png" alt="" width={21} height={21} /> Lexora</div>
+            <div className="miniBrand"><img src="/lexora-icon-192.png" alt="" width="21" height="21" /> Lexora</div>
             <div className="windowMenu">•••</div>
           </div>
           <div className="appBody">
             <aside>
               <button className="active"><span>◫</span> {zh ? "单词" : "Words"}</button>
               <button><span>↺</span> {zh ? "历史" : "History"}</button>
-              <div className="asideFoot">v0.1 · Open source</div>
+              <div className="asideFoot">v0.2 · Open source</div>
             </aside>
             <section className="composer">
               <div className="composerHead">
@@ -222,7 +221,7 @@ export default function Home() {
       </section>
 
       <footer className="wrap">
-        <a className="brand" href="#top"><Image src="/lexora-icon-192.png" alt="" width={30} height={30} /><span>Lexora</span></a>
+        <a className="brand" href="#top"><img src="/lexora-icon-192.png" alt="" width="30" height="30" /><span>Lexora</span></a>
         <p>{zh ? "把单词变成值得保存的东西。" : "Make your words worth keeping."}</p>
         <span>© 2026 Lexora · <Link href="/donate">{zh ? "支持项目" : "Support"}</Link></span>
       </footer>

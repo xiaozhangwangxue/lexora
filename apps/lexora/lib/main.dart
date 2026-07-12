@@ -1,7 +1,9 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 
+import 'l10n/app_localizations.dart';
 import 'screens/shell_screen.dart';
 
 void main() {
@@ -27,6 +29,13 @@ class LexoraApp extends StatelessWidget {
       themeMode: ThemeMode.system,
       theme: _theme(seed, Brightness.light),
       darkTheme: _theme(seed, Brightness.dark),
+      supportedLocales: const [Locale('en'), Locale('zh')],
+      localizationsDelegates: const [
+        AppLocalizationsDelegate(),
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
       home: const ShellScreen(),
     );
   }

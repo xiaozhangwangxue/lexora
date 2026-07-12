@@ -9,10 +9,26 @@ import 'package:uuid/uuid.dart';
 
 import '../models/word_entry.dart';
 
+enum PdfFontSize {
+  small(1),
+  medium(1.18),
+  large(1.38);
+
+  const PdfFontSize(this.scale);
+  final double scale;
+}
+
 class PdfService {
-  Future<GeneratedBook> create(List<WordEntry> entries) async {
+  Future<GeneratedBook> create(
+    List<WordEntry> entries, {
+    PdfFontSize fontSize = PdfFontSize.medium,
+  }) async {
     final regular = await PdfGoogleFonts.notoSansSCRegular();
     final bold = await PdfGoogleFonts.notoSansSCBold();
+    // Noto Sans SC does not contain the complete IPA Extensions block. Keep it
+    // for Chinese text, and explicitly render phonetics with Noto Sans.
+    final ipa = await PdfGoogleFonts.notoSansRegular();
+    double size(double value) => value * fontSize.scale;
     final document = pw.Document(
       title: 'Lexora Vocabulary Book',
       author: 'Lexora',
@@ -28,25 +44,33 @@ class PdfService {
           child: pw.Row(
             mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
             children: [
-              pw.Text('LEXORA', style: pw.TextStyle(font: bold, fontSize: 11)),
+              pw.Text('LEXORA', style: pw.TextStyle(font: bold, fontSize: size(11))),
               pw.Text('${entries.length} words / 单词 · ${DateFormat('yyyy-MM-dd').format(DateTime.now())}',
-                  style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey600)),
+                  style: pw.TextStyle(fontSize: size(8), color: PdfColors.grey600)),
             ],
           ),
         ),
         footer: (context) => pw.Align(
           alignment: pw.Alignment.centerRight,
           child: pw.Text('${context.pageNumber} / ${context.pagesCount}',
-              style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey600)),
+              style: pw.TextStyle(fontSize: size(8), color: PdfColors.grey600)),
         ),
         build: (context) => [
           pw.Text('My vocabulary book',
-              style: pw.TextStyle(font: bold, fontSize: 27, color: PdfColors.indigo900)),
+              style: pw.TextStyle(font: bold, fontSize: size(27), color: PdfColors.indigo900)),
           pw.SizedBox(height: 4),
           pw.Text('我的双语词汇册',
-              style: const pw.TextStyle(fontSize: 13, color: PdfColors.grey700)),
+              style: pw.TextStyle(fontSize: size(13), color: PdfColors.grey700)),
           pw.SizedBox(height: 20),
-          ...entries.asMap().entries.map((indexed) => _entry(indexed.key + 1, indexed.value, bold)),
+          ...entries.asMap().entries.map(
+                (indexed) => _entry(
+                  indexed.key + 1,
+                  indexed.value,
+                  bold,
+                  ipa,
+                  fontSize.scale,
+                ),
+              ),
         ],
       ),
     );
@@ -65,14 +89,21 @@ class PdfService {
     );
   }
 
-  pw.Widget _entry(int number, WordEntry entry, pw.Font bold) {
+  pw.Widget _entry(
+    int number,
+    WordEntry entry,
+    pw.Font bold,
+    pw.Font ipa,
+    double scale,
+  ) {
+    double size(double value) => value * scale;
     pw.Widget pill(String text, PdfColor color) => pw.Container(
           padding: const pw.EdgeInsets.symmetric(horizontal: 7, vertical: 3),
           decoration: pw.BoxDecoration(
             color: color,
             borderRadius: pw.BorderRadius.circular(12),
           ),
-          child: pw.Text(text, style: const pw.TextStyle(fontSize: 7)),
+          child: pw.Text(text, style: pw.TextStyle(fontSize: size(7))),
         );
 
     return pw.Container(
@@ -85,41 +116,54 @@ class PdfService {
       ),
       child: pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
         pw.Row(crossAxisAlignment: pw.CrossAxisAlignment.end, children: [
-          pw.Text('$number', style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey600)),
+          pw.Text('$number', style: pw.TextStyle(fontSize: size(8), color: PdfColors.grey600)),
           pw.SizedBox(width: 10),
-          pw.Expanded(child: pw.Text(entry.word, style: pw.TextStyle(font: bold, fontSize: 20))),
+          pw.Expanded(child: pw.Text(entry.word, style: pw.TextStyle(font: bold, fontSize: size(20)))),
           pill(entry.difficulty, PdfColors.indigo100),
           pw.SizedBox(width: 5),
           pill('freq ${entry.frequency.toStringAsFixed(1)}', PdfColors.teal100),
         ]),
         pw.SizedBox(height: 5),
-        pw.Text('US 美式 ${entry.usPhonetic}    UK 英式 ${entry.ukPhonetic}',
-            style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey700)),
+        pw.Wrap(crossAxisAlignment: pw.WrapCrossAlignment.center, children: [
+          pw.Text('US 美式  ', style: pw.TextStyle(fontSize: size(8), color: PdfColors.grey700)),
+          pw.Text(entry.usPhonetic,
+              style: pw.TextStyle(font: ipa, fontSize: size(9), color: PdfColors.grey700)),
+          pw.SizedBox(width: 16),
+          pw.Text('UK 英式  ', style: pw.TextStyle(fontSize: size(8), color: PdfColors.grey700)),
+          pw.Text(entry.ukPhonetic,
+              style: pw.TextStyle(font: ipa, fontSize: size(9), color: PdfColors.grey700)),
+        ]),
         pw.SizedBox(height: 8),
-        pw.Text(entry.definition, style: const pw.TextStyle(fontSize: 10)),
+        pw.Text(entry.definition, style: pw.TextStyle(fontSize: size(10))),
         pw.SizedBox(height: 3),
         pw.Text(entry.definitionZh,
-            style: pw.TextStyle(font: bold, fontSize: 10, color: PdfColors.indigo900)),
+            style: pw.TextStyle(font: bold, fontSize: size(10), color: PdfColors.indigo900)),
         if (entry.synonyms.isNotEmpty || entry.antonyms.isNotEmpty) ...[
           pw.SizedBox(height: 7),
-          pw.Text('Synonyms / 近义词  ${entry.synonyms.join(' · ')}', style: const pw.TextStyle(fontSize: 8)),
-          pw.Text(entry.synonymsZh, style: const pw.TextStyle(fontSize: 8, color: PdfColors.indigo700)),
+          pw.Text('Synonyms / 近义词  ${entry.synonyms.join(' · ')}', style: pw.TextStyle(fontSize: size(8))),
+          pw.Text(entry.synonymsZh, style: pw.TextStyle(fontSize: size(8), color: PdfColors.indigo700)),
           pw.Text('Antonyms / 反义词  ${entry.antonyms.isEmpty ? '—' : entry.antonyms.join(' · ')}',
-              style: const pw.TextStyle(fontSize: 8)),
-          pw.Text(entry.antonymsZh, style: const pw.TextStyle(fontSize: 8, color: PdfColors.indigo700)),
+              style: pw.TextStyle(fontSize: size(8))),
+          pw.Text(entry.antonymsZh, style: pw.TextStyle(fontSize: size(8), color: PdfColors.indigo700)),
         ],
-        if (entry.example.isNotEmpty) ...[
+        if (entry.examples.isNotEmpty) ...[
           pw.SizedBox(height: 8),
           pw.Container(
             padding: const pw.EdgeInsets.only(left: 8),
             decoration: const pw.BoxDecoration(
               border: pw.Border(left: pw.BorderSide(color: PdfColors.teal400, width: 2)),
             ),
-            child: pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
-              pw.Text(entry.example, style: pw.TextStyle(font: bold, fontSize: 8)),
-              pw.SizedBox(height: 2),
-              pw.Text(entry.exampleZh, style: const pw.TextStyle(fontSize: 8)),
-            ]),
+            child: pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                for (var i = 0; i < entry.examples.length; i++) ...[
+                  if (i > 0) pw.SizedBox(height: 6),
+                  pw.Text(entry.examples[i], style: pw.TextStyle(font: bold, fontSize: size(8))),
+                  pw.SizedBox(height: 2),
+                  pw.Text(entry.examplesZh[i], style: pw.TextStyle(fontSize: size(8))),
+                ],
+              ],
+            ),
           ),
         ],
       ]),
