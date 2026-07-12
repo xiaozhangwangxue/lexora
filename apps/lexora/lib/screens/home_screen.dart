@@ -205,8 +205,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     : ReorderableListView.builder(
                         buildDefaultDragHandles: false,
                         itemCount: _words.length,
-                        onReorder: (oldIndex, newIndex) {
-                          if (newIndex > oldIndex) newIndex--;
+                        onReorderItem: (oldIndex, newIndex) {
                           setState(() {
                             final word = _words.removeAt(oldIndex);
                             _words.insert(newIndex, word);
