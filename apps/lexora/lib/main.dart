@@ -12,7 +12,9 @@ void main() {
 }
 
 class LexoraApp extends StatelessWidget {
-  const LexoraApp({super.key});
+  const LexoraApp({super.key, this.locale});
+
+  final Locale? locale;
 
   @override
   Widget build(BuildContext context) {
@@ -26,6 +28,7 @@ class LexoraApp extends StatelessWidget {
     return MaterialApp(
       title: 'Lexora',
       debugShowCheckedModeBanner: false,
+      locale: locale,
       themeMode: ThemeMode.system,
       theme: _theme(seed, Brightness.light),
       darkTheme: _theme(seed, Brightness.dark),

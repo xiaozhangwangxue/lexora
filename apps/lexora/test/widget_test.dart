@@ -14,9 +14,7 @@ void main() {
 
   testWidgets('Lexora opens the localized word composer', (tester) async {
     SharedPreferences.setMockInitialValues({'lexora.onboarding.completed.v1': true});
-    tester.platformDispatcher.localeTestValue = const Locale('zh', 'CN');
-    addTearDown(tester.platformDispatcher.clearLocaleTestValue);
-    await tester.pumpWidget(const LexoraApp());
+    await tester.pumpWidget(const LexoraApp(locale: Locale('zh', 'CN')));
     await tester.pumpAndSettle();
     expect(find.text('Lexora'), findsOneWidget);
     expect(find.text('开始生成'), findsOneWidget);
