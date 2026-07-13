@@ -8,6 +8,8 @@
 - Desktop initial state: `output/playwright/website-v1.1.2-animation-start-final.png`
 - Desktop settled state: `output/playwright/website-v1.1.2-desktop-final.png`
 - Mobile settled state: `output/playwright/website-v1.1.2-mobile-spacing-final.png`
+- Live mobile after Cloudflare routing fix: `/tmp/lexora-v112-qa3/output/playwright/website-v1.1.2-live-mobile-recheck.png`
+- Live desktop after Cloudflare routing fix: `/tmp/lexora-v112-qa3/output/playwright/website-v1.1.2-live-desktop-restored.png`
 - Viewports: Chrome at 1440 x 1000 and 390 x 844; Flutter Android harness at 540 x 1280
 - States checked: first rendered frame, completed wordmark animation, responsive mobile layout, Android keyboard open -> launcher -> app resume -> Settings
 - Browser console: no errors
