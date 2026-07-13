@@ -39,11 +39,14 @@ Lexora 是一款面向 Android、macOS、Windows 与 Linux 的英语单词整理
 - **完整中译**：释义、例句及近反义词均带中文结果；PDF 标签也采用中英双语。
 - **中英界面**：自动识别设备语言；中文设备默认显示简体中文，其他设备显示英文。
 - **首次引导**：第一次打开应用时，用三步教程说明添加、排序、生成与分享流程。
-- **自定义 PDF**：可选小、中、大三档字号；中号兼顾手机阅读与打印，大号为手机阅读提供更明显的放大，并可选择 0、1 或 2–3 句例句。
-- **精美 PDF**：中文使用 Noto Sans SC，音标使用完整支持 IPA 的 Noto Sans，自动分页并保留紧凑层级。
-- **历史阅读**：在应用内直接阅读已生成 PDF，支持双指缩放，并可打印、分享或删除。
+- **独立设置**：PDF 字号与例句数量集中在设置页，并提供官网快捷入口与捐赠二维码。
+- **自定义 PDF**：可选小、中、大三档字号与 0、1 或 2–3 句例句；中小字号自动使用双栏，一页尽量容纳 8–10 个单词。
+- **精美 PDF**：中文使用 Noto Sans SC，音标使用完整支持 IPA 的 Noto Sans；缺少近义词或反义词时自动略过空区域。
+- **生成记录**：在应用内直接阅读已生成 PDF，支持双指缩放，三点菜单可先预览前几个单词。
+- **单词历史**：保留全部生成过的单词，支持按次数、首字母、时间、难度正反排序，星标单词永久置顶。
+- **后台完成通知**：生成结束时若 Lexora 不在前台，系统通知会及时提醒。
 - **原生分享**：桌面端支持“导出到…”，Android 直接调用系统分享页。
-- **平台自适应**：移动端使用底部导航，桌面端使用侧边导航，并按 macOS、Windows、Linux 与 Android 调整视觉反馈。
+- **平台自适应**：macOS 采用 SwiftUI 液态玻璃导航背景，Android 可在空白区域左右滑动换页，并避开单词的左滑删除手势。
 
 ## 下载与安装
 
@@ -51,10 +54,10 @@ Lexora 是一款面向 Android、macOS、Windows 与 Linux 的英语单词整理
 
 | 平台 | 安装包 | 系统要求 | 下载 |
 | --- | --- | --- | --- |
-| Android | APK | Android 8.0+ | [官网下载](https://lexora.12323456.xyz/downloads/lexora-android-v0.3.0.apk) |
-| macOS | 拖动安装 DMG | macOS 12+ | [官网下载](https://lexora.12323456.xyz/downloads/lexora-macos-v0.3.0.dmg) |
-| Windows | ZIP | Windows 10 / 11 | [官网下载](https://lexora.12323456.xyz/downloads/lexora-windows-v0.3.0.zip) |
-| Linux | tar.gz | 64 位 Linux | [官网下载](https://lexora.12323456.xyz/downloads/lexora-linux-v0.3.0.tar.gz) |
+| Android | APK | Android 8.0+ | [官网下载](https://lexora.12323456.xyz/downloads/lexora-android-v0.4.0.apk) |
+| macOS | 拖动安装 DMG | macOS 12+ | [官网下载](https://lexora.12323456.xyz/downloads/lexora-macos-v0.4.0.dmg) |
+| Windows | ZIP | Windows 10 / 11 | [官网下载](https://lexora.12323456.xyz/downloads/lexora-windows-v0.4.0.zip) |
+| Linux | tar.gz | 64 位 Linux | [官网下载](https://lexora.12323456.xyz/downloads/lexora-linux-v0.4.0.tar.gz) |
 
 <details>
 <summary><strong>首次安装被系统拦截怎么办？</strong></summary>
@@ -69,13 +72,13 @@ Lexora 是一款面向 Android、macOS、Windows 与 Linux 的英语单词整理
 > [!IMPORTANT]
 > Android v0.2.0 使用了临时构建签名，旧私钥无法恢复，因此升级到采用稳定签名的 v0.3.0 时需要先卸载旧版再安装一次。自 v0.3.0 起，后续版本继续使用同一发布签名，可直接覆盖更新。请先按需导出旧版中的 PDF。
 
-所有发行文件名都包含版本号，例如 `lexora-android-v0.3.0.apk`。这样可以避免浏览器或下载目录把新旧安装包混淆。
+所有发行文件名都包含版本号，例如 `lexora-android-v0.4.0.apk`。这样可以避免浏览器或下载目录把新旧安装包混淆。
 
 ## 三步生成词汇书
 
 1. 输入一个英文单词并按回车，继续添加所需单词。
-2. 长按调整顺序或选择排序方式，按需设置字号与例句数量，然后点击“开始生成”。
-3. 在“历史”页面阅读 PDF，或通过右侧菜单导出与分享。
+2. 长按调整顺序或选择排序方式，在“设置”中选好字号与例句数量，然后点击“开始生成”。
+3. 在“生成记录”阅读、导出或分享 PDF，在“历史”查看所有生成过的单词。
 
 ```text
 word list → dictionary + corpus + translation → bilingual layout → local PDF → history / export / share

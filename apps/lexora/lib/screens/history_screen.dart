@@ -67,7 +67,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
           child: Padding(
             padding: const EdgeInsets.all(24),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(strings.history, style: theme.textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w800)),
+              Text(strings.generationRecords, style: theme.textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w800)),
               const SizedBox(height: 4),
               Text(strings.historySubtitle,
                   style: theme.textTheme.bodyLarge?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
@@ -113,6 +113,40 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                 if (action == 'delete') _delete(book);
                               },
                               itemBuilder: (context) => [
+                                PopupMenuItem<String>(
+                                  enabled: false,
+                                  child: SizedBox(
+                                    width: 250,
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          strings.firstWords,
+                                          style: theme.textTheme.labelLarge,
+                                        ),
+                                        const SizedBox(height: 7),
+                                        if (book.previewWords.isEmpty)
+                                          Text(
+                                            strings.noPreviewWords,
+                                            style: theme.textTheme.bodySmall,
+                                          )
+                                        else
+                                          Wrap(
+                                            spacing: 5,
+                                            runSpacing: 5,
+                                            children: [
+                                              for (final word in book.previewWords)
+                                                Chip(
+                                                  visualDensity: VisualDensity.compact,
+                                                  label: Text(word),
+                                                ),
+                                            ],
+                                          ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                                const PopupMenuDivider(),
                                 if (!Platform.isAndroid)
                                   PopupMenuItem(value: 'export', child: Text(strings.exportTo)),
                                 PopupMenuItem(value: 'share', child: Text(strings.share)),

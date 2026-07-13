@@ -6,6 +6,7 @@ import '../models/word_entry.dart';
 
 class HistoryService {
   static const _key = 'lexora.generated.books';
+  static const _wordKey = 'lexora.generated.words.v1';
 
   Future<List<GeneratedBook>> load() async {
     final preferences = await SharedPreferences.getInstance();
@@ -35,6 +36,63 @@ class HistoryService {
     await preferences.setStringList(
       _key,
       books.map((item) => jsonEncode(item.toJson())).toList(),
+    );
+  }
+
+  Future<List<GeneratedWordRecord>> loadWords() async {
+    final preferences = await SharedPreferences.getInstance();
+    final records = <GeneratedWordRecord>[];
+    for (final item in preferences.getStringList(_wordKey) ?? const []) {
+      try {
+        records.add(GeneratedWordRecord.fromJson(
+          jsonDecode(item) as Map<String, dynamic>,
+        ));
+      } catch (_) {
+        // Keep one malformed legacy entry from hiding the rest of the history.
+      }
+    }
+    return records;
+  }
+
+  Future<void> recordWords(
+    List<WordEntry> entries,
+    DateTime generatedAt,
+  ) async {
+    final records = await loadWords();
+    final byWord = {for (final record in records) record.word: record};
+    for (final entry in entries) {
+      final previous = byWord[entry.word];
+      byWord[entry.word] = previous == null
+          ? GeneratedWordRecord(
+              word: entry.word,
+              generationCount: 1,
+              firstGeneratedAt: generatedAt,
+              lastGeneratedAt: generatedAt,
+              difficulty: entry.difficulty,
+            )
+          : previous.copyWith(
+              generationCount: previous.generationCount + 1,
+              lastGeneratedAt: generatedAt,
+              difficulty: entry.difficulty,
+            );
+    }
+    await _saveWords(byWord.values);
+  }
+
+  Future<void> setWordStarred(String word, bool starred) async {
+    final records = await loadWords();
+    final updated = [
+      for (final record in records)
+        if (record.word == word) record.copyWith(starred: starred) else record,
+    ];
+    await _saveWords(updated);
+  }
+
+  Future<void> _saveWords(Iterable<GeneratedWordRecord> records) async {
+    final preferences = await SharedPreferences.getInstance();
+    await preferences.setStringList(
+      _wordKey,
+      records.map((item) => jsonEncode(item.toJson())).toList(),
     );
   }
 }

@@ -134,8 +134,8 @@ class WordService {
     final examplesZh = [
       for (var i = 0; i < examples.length; i++) translations[translationIndex++],
     ];
-    final synonymsZh = synonyms.isEmpty ? '—' : translations[translationIndex++];
-    final antonymsZh = antonyms.isEmpty ? '—' : translations[translationIndex++];
+    final synonymsZh = synonyms.isEmpty ? '' : translations[translationIndex++];
+    final antonymsZh = antonyms.isEmpty ? '' : translations[translationIndex++];
 
     final entry = WordEntry(
       word: word,

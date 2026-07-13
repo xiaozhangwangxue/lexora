@@ -3,25 +3,29 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../l10n/app_localizations.dart';
+import '../models/word_entry.dart';
 import '../services/haptic_service.dart';
 import '../services/history_service.dart';
+import '../services/notification_service.dart';
 import '../services/pdf_service.dart';
+import '../services/pdf_settings_service.dart';
 import '../services/word_service.dart';
 
 enum WordSort { custom, alphabetical, length, difficulty }
 
-enum ExampleAmount {
-  none(0),
-  one(1),
-  upToThree(3);
-
-  const ExampleAmount(this.count);
-  final int count;
-}
-
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key, required this.onGenerated});
-  final VoidCallback onGenerated;
+  const HomeScreen({
+    super.key,
+    required this.settings,
+    required this.appIsActive,
+    required this.onGenerated,
+    required this.onOpenSettings,
+  });
+
+  final PdfSettings settings;
+  final bool appIsActive;
+  final ValueChanged<GeneratedBook> onGenerated;
+  final VoidCallback onOpenSettings;
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -35,10 +39,8 @@ class _HomeScreenState extends State<HomeScreen> {
   final _pdfService = PdfService();
   final _historyService = HistoryService();
   final _haptics = const HapticService();
+  final _notifications = NotificationService.instance;
   WordSort _sort = WordSort.custom;
-  PdfFontSize _fontSize = PdfFontSize.medium;
-  ExampleAmount _exampleAmount = ExampleAmount.one;
-  bool _showCustomization = false;
   bool _generating = false;
   double _progress = 0;
   String _status = '';
@@ -100,10 +102,11 @@ class _HomeScreenState extends State<HomeScreen> {
       _status = strings.preparing;
     });
     unawaited(_haptics.generationStarted());
+    unawaited(_notifications.requestPermission());
     try {
       final entries = await _wordService.lookupAll(
         List.of(_words),
-        exampleCount: _exampleAmount.count,
+        exampleCount: widget.settings.exampleAmount.count,
         maxConcurrency: 4,
         onProgress: (completed, total, word) {
           if (!mounted) return;
@@ -117,12 +120,23 @@ class _HomeScreenState extends State<HomeScreen> {
         _status = strings.typesetting;
         _progress = .92;
       });
-      final book = await _pdfService.create(entries, fontSize: _fontSize);
+      final book = await _pdfService.create(
+        entries,
+        fontSize: widget.settings.fontSize,
+      );
       await _historyService.save(book);
+      await _historyService.recordWords(entries, book.createdAt);
       setState(() => _progress = 1);
       await _haptics.generationCompleted();
       if (!mounted) return;
-      widget.onGenerated();
+      if (!widget.appIsActive) {
+        await _notifications.showGenerationComplete(
+          wordCount: entries.length,
+          isZh: strings.isZh,
+        );
+      }
+      if (!mounted) return;
+      widget.onGenerated(book);
     } catch (error) {
       _message(error.toString());
     } finally {
@@ -191,25 +205,13 @@ class _HomeScreenState extends State<HomeScreen> {
               Align(
                 alignment: Alignment.centerLeft,
                 child: TextButton.icon(
-                  onPressed: _generating
-                      ? null
-                      : () => setState(() => _showCustomization = !_showCustomization),
-                  icon: Icon(_showCustomization ? Icons.expand_less : Icons.tune_rounded),
-                  label: Text(strings.customize),
-                ),
-              ),
-              AnimatedCrossFade(
-                duration: const Duration(milliseconds: 180),
-                crossFadeState: _showCustomization
-                    ? CrossFadeState.showSecond
-                    : CrossFadeState.showFirst,
-                firstChild: const SizedBox.shrink(),
-                secondChild: _PdfOptions(
-                  fontSize: _fontSize,
-                  exampleAmount: _exampleAmount,
-                  enabled: !_generating,
-                  onFontSizeChanged: (value) => setState(() => _fontSize = value),
-                  onExampleAmountChanged: (value) => setState(() => _exampleAmount = value),
+                  onPressed: _generating ? null : widget.onOpenSettings,
+                  icon: const Icon(Icons.tune_rounded),
+                  label: Text(
+                    '${strings.pdfSettings}  ·  '
+                    '${_fontSizeLabel(strings, widget.settings.fontSize)}  ·  '
+                    '${_exampleLabel(strings, widget.settings.exampleAmount)}',
+                  ),
                 ),
               ),
               if (_generating) ...[
@@ -326,69 +328,20 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
-}
 
-class _PdfOptions extends StatelessWidget {
-  const _PdfOptions({
-    required this.fontSize,
-    required this.exampleAmount,
-    required this.enabled,
-    required this.onFontSizeChanged,
-    required this.onExampleAmountChanged,
-  });
+  String _fontSizeLabel(AppLocalizations strings, PdfFontSize value) =>
+      switch (value) {
+        PdfFontSize.small => strings.small,
+        PdfFontSize.medium => strings.medium,
+        PdfFontSize.large => strings.large,
+      };
 
-  final PdfFontSize fontSize;
-  final ExampleAmount exampleAmount;
-  final bool enabled;
-  final ValueChanged<PdfFontSize> onFontSizeChanged;
-  final ValueChanged<ExampleAmount> onExampleAmountChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final strings = AppLocalizations.of(context);
-    final theme = Theme.of(context);
-    return Container(
-      width: double.infinity,
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: theme.colorScheme.outlineVariant),
-      ),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text(strings.pdfFontSize, style: theme.textTheme.labelLarge),
-        const SizedBox(height: 8),
-        SizedBox(
-          width: double.infinity,
-          child: SegmentedButton<PdfFontSize>(
-            segments: [
-              ButtonSegment(value: PdfFontSize.small, label: Text(strings.small)),
-              ButtonSegment(value: PdfFontSize.medium, label: Text(strings.medium)),
-              ButtonSegment(value: PdfFontSize.large, label: Text(strings.large)),
-            ],
-            selected: {fontSize},
-            onSelectionChanged: enabled ? (value) => onFontSizeChanged(value.first) : null,
-          ),
-        ),
-        const SizedBox(height: 14),
-        Text(strings.examples, style: theme.textTheme.labelLarge),
-        const SizedBox(height: 8),
-        SizedBox(
-          width: double.infinity,
-          child: SegmentedButton<ExampleAmount>(
-            segments: [
-              ButtonSegment(value: ExampleAmount.none, label: Text(strings.noExamples)),
-              ButtonSegment(value: ExampleAmount.one, label: Text(strings.oneExample)),
-              ButtonSegment(value: ExampleAmount.upToThree, label: Text(strings.upToThreeExamples)),
-            ],
-            selected: {exampleAmount},
-            onSelectionChanged: enabled ? (value) => onExampleAmountChanged(value.first) : null,
-          ),
-        ),
-      ]),
-    );
-  }
+  String _exampleLabel(AppLocalizations strings, ExampleAmount value) =>
+      switch (value) {
+        ExampleAmount.none => strings.noExamples,
+        ExampleAmount.one => strings.oneExample,
+        ExampleAmount.upToThree => strings.upToThreeExamples,
+      };
 }
 
 class _EmptyList extends StatelessWidget {

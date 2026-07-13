@@ -59,6 +59,8 @@ jobs:
         run: |
           sed -i '/<manifest/a\\    <uses-permission android:name="android.permission.INTERNET" />' android/app/src/main/AndroidManifest.xml
           sed -i 's/compileSdk = flutter.compileSdkVersion/compileSdk = 36/' android/app/build.gradle.kts
+          sed -i '/compileOptions {/a\\        isCoreLibraryDesugaringEnabled = true' android/app/build.gradle.kts
+          printf '\ndependencies {\n    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.5")\n}\n' >> android/app/build.gradle.kts
       - name: Restore stable Android signing key
         if: matrix.platform == 'android'
         shell: bash
@@ -77,6 +79,7 @@ jobs:
       - name: Allow macOS network lookups
         if: matrix.platform == 'macos'
         run: |
+          cp packaging/macos/MainFlutterWindow.swift macos/Runner/MainFlutterWindow.swift
           /usr/libexec/PlistBuddy -c "Add :com.apple.security.network.client bool true" macos/Runner/Release.entitlements || /usr/libexec/PlistBuddy -c "Set :com.apple.security.network.client true" macos/Runner/Release.entitlements
           /usr/libexec/PlistBuddy -c "Add :com.apple.security.files.user-selected.read-write bool true" macos/Runner/Release.entitlements || /usr/libexec/PlistBuddy -c "Set :com.apple.security.files.user-selected.read-write true" macos/Runner/Release.entitlements
       - run: flutter pub get
@@ -101,7 +104,7 @@ jobs:
           ditto -c -k --sequesterRsrc --keepParent "${{ matrix.source }}" "lexora-macos-${RELEASE_VERSION}.zip"
           bash tool/create_macos_dmg.sh \
             "${{ matrix.source }}" \
-            packaging/macos/dmg-background.png \
+            packaging/macos/dmg-background-final.png \
             "lexora-macos-${RELEASE_VERSION}.dmg"
       - name: Package Windows build
         if: matrix.platform == 'windows'

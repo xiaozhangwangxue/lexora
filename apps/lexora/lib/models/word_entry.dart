@@ -69,6 +69,7 @@ class GeneratedBook {
     required this.path,
     required this.createdAt,
     required this.wordCount,
+    this.previewWords = const [],
   });
 
   final String id;
@@ -76,6 +77,7 @@ class GeneratedBook {
   final String path;
   final DateTime createdAt;
   final int wordCount;
+  final List<String> previewWords;
 
   Map<String, dynamic> toJson() => {
         'id': id,
@@ -83,6 +85,7 @@ class GeneratedBook {
         'path': path,
         'createdAt': createdAt.toIso8601String(),
         'wordCount': wordCount,
+        'previewWords': previewWords,
       };
 
   factory GeneratedBook.fromJson(Map<String, dynamic> json) => GeneratedBook(
@@ -90,6 +93,62 @@ class GeneratedBook {
         title: json['title'] as String,
         path: json['path'] as String,
         createdAt: DateTime.parse(json['createdAt'] as String),
-        wordCount: json['wordCount'] as int,
+        wordCount: (json['wordCount'] as num).toInt(),
+        previewWords: (json['previewWords'] as List? ?? const [])
+            .map((item) => item.toString())
+            .toList(),
+      );
+}
+
+class GeneratedWordRecord {
+  const GeneratedWordRecord({
+    required this.word,
+    required this.generationCount,
+    required this.firstGeneratedAt,
+    required this.lastGeneratedAt,
+    required this.difficulty,
+    this.starred = false,
+  });
+
+  final String word;
+  final int generationCount;
+  final DateTime firstGeneratedAt;
+  final DateTime lastGeneratedAt;
+  final String difficulty;
+  final bool starred;
+
+  GeneratedWordRecord copyWith({
+    int? generationCount,
+    DateTime? firstGeneratedAt,
+    DateTime? lastGeneratedAt,
+    String? difficulty,
+    bool? starred,
+  }) =>
+      GeneratedWordRecord(
+        word: word,
+        generationCount: generationCount ?? this.generationCount,
+        firstGeneratedAt: firstGeneratedAt ?? this.firstGeneratedAt,
+        lastGeneratedAt: lastGeneratedAt ?? this.lastGeneratedAt,
+        difficulty: difficulty ?? this.difficulty,
+        starred: starred ?? this.starred,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'word': word,
+        'generationCount': generationCount,
+        'firstGeneratedAt': firstGeneratedAt.toIso8601String(),
+        'lastGeneratedAt': lastGeneratedAt.toIso8601String(),
+        'difficulty': difficulty,
+        'starred': starred,
+      };
+
+  factory GeneratedWordRecord.fromJson(Map<String, dynamic> json) =>
+      GeneratedWordRecord(
+        word: json['word'] as String,
+        generationCount: (json['generationCount'] as num).toInt(),
+        firstGeneratedAt: DateTime.parse(json['firstGeneratedAt'] as String),
+        lastGeneratedAt: DateTime.parse(json['lastGeneratedAt'] as String),
+        difficulty: json['difficulty'] as String? ?? 'B1–B2',
+        starred: json['starred'] as bool? ?? false,
       );
 }

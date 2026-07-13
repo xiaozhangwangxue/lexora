@@ -12,7 +12,7 @@ type DragPreview = { word: string; x: number; y: number; width: number; grabOffs
 const seedWords = ["serendipity", "lucid", "resilient", "wanderlust"];
 const donationQrBase = "https://raw.githubusercontent.com/xiaozhangwangxue/autoword/main/assets/donate";
 
-const currentVersion = "v0.3.0";
+const currentVersion = "v0.4.0";
 const platforms: Array<{ key: PlatformKey; name: string; note: string; icon: string; file: string }> = [
   { key: "macos", name: "macOS", note: "Drag-to-install DMG", icon: "⌘", file: `lexora-macos-${currentVersion}.dmg` },
   { key: "windows", name: "Windows", note: "Windows 10 / 11", icon: "⊞", file: `lexora-windows-${currentVersion}.zip` },
@@ -34,8 +34,8 @@ const installGuides: Record<PlatformKey, { zh: string[]; en: string[] }> = {
     en: ["Extract the tar.gz archive.", "If needed, allow the lexora file to run as a program or use chmod +x.", "Launch the lexora executable."],
   },
   android: {
-    zh: ["重要：从 v0.2.0 升级到 v0.3.0 需先卸载旧版并重新安装一次；v0.3.0 以后可直接覆盖更新。", "下载 APK，系统询问时允许浏览器安装未知来源应用。", "确认文件来自本官网后，选择“仍要安装”；安装后可关闭该权限。"],
-    en: ["Important: upgrading from v0.2.0 to v0.3.0 requires one uninstall and reinstall. Updates after v0.3.0 can install over the existing app.", "Download the APK and allow your browser to install unknown apps when Android asks.", "After verifying this official site, choose Install anyway. You can revoke that permission afterward."],
+    zh: ["从 v0.3.0 或更高版本可直接覆盖安装 v0.4.0；只有 v0.2.0 需先卸载一次。", "下载 APK，系统询问时允许浏览器安装未知来源应用。", "确认文件来自本官网后，选择“仍要安装”；安装后可关闭该权限。"],
+    en: ["v0.3.0 and newer can update directly to v0.4.0. Only v0.2.0 requires one uninstall first.", "Download the APK and allow your browser to install unknown apps when Android asks.", "After verifying this official site, choose Install anyway. You can revoke that permission afterward."],
   },
 };
 
@@ -336,7 +336,7 @@ export default function Home() {
           <span className="featureNumber">03</span>
           <div className="pdfMini"><b>LEXORA</b><strong>lucid</strong><small>/ˈluːsɪd/ · B2</small><p>expressed clearly; easy to understand</p><em>清晰的；易懂的</em></div>
           <h3>{zh ? "PDF 不只是导出，而是成品。" : "Not an export. A finished book."}</h3>
-          <p>{zh ? "紧凑、清晰、适合屏幕阅读和打印。" : "Compact, polished, and made for screens or paper."}</p>
+          <p>{zh ? "中小字号自动双栏排版，设置、生成记录和完整单词历史都在手边。" : "Medium and small type use a compact two-column layout, with settings, generated books, and full word history close at hand."}</p>
         </article>
       </section>
 

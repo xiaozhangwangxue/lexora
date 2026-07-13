@@ -18,8 +18,19 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Lexora'), findsOneWidget);
     expect(find.text('开始生成'), findsOneWidget);
-    expect(find.text('自定义 PDF'), findsOneWidget);
+    expect(find.textContaining('PDF 自定义'), findsOneWidget);
     expect(find.text('GitHub'), findsOneWidget);
     expect(find.text('你的单词将显示在这里'), findsOneWidget);
+
+    await tester.tap(find.text('生成记录'));
+    await tester.pumpAndSettle();
+    expect(find.text('GitHub'), findsNothing);
+
+    await tester.tap(find.text('设置'));
+    await tester.pumpAndSettle();
+    expect(find.text('把零散单词，变成真正想读的词汇书。'), findsOneWidget);
+    expect(find.text('Lexora 官网'), findsOneWidget);
+    expect(find.text('支持 Lexora'), findsOneWidget);
+    expect(find.text('GitHub'), findsOneWidget);
   });
 }
