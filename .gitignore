@@ -40,6 +40,7 @@ next-env.d.ts
 /.wrangler/
 /outputs/
 /work/
+/tmp/
 
 # Flutter generated files
 /apps/lexora/.dart_tool/

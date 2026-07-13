@@ -36,9 +36,9 @@ void main() {
     await compactOutput.writeAsBytes(compactBytes, flush: true);
 
     expect(bytes, isNotEmpty);
-    expect(await output.length(), greaterThan(1000));
+    expect(await output.length(), greaterThan(15000));
     expect(compactBytes, isNotEmpty);
-    expect(await compactOutput.length(), greaterThan(1000));
+    expect(await compactOutput.length(), greaterThan(15000));
   });
 }
 

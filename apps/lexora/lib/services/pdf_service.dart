@@ -1,11 +1,11 @@
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
-import 'package:printing/printing.dart';
 import 'package:uuid/uuid.dart';
 
 import '../models/word_entry.dart';
@@ -65,9 +65,18 @@ class PdfTypography {
 }
 
 class PdfService {
-  late final Future<pw.Font> _regularFont = PdfGoogleFonts.notoSansSCRegular();
-  late final Future<pw.Font> _boldFont = PdfGoogleFonts.notoSansSCBold();
-  late final Future<pw.Font> _ipaFont = PdfGoogleFonts.notoSansRegular();
+  late final Future<pw.Font> _regularFont = _assetFont(
+    'assets/fonts/NotoSansSC-Regular.ttf',
+  );
+  late final Future<pw.Font> _boldFont = _assetFont(
+    'assets/fonts/NotoSansSC-Bold.ttf',
+  );
+  late final Future<pw.Font> _ipaFont = _assetFont(
+    'assets/fonts/NotoSans-Regular.ttf',
+  );
+
+  Future<pw.Font> _assetFont(String path) async =>
+      pw.Font.ttf(await rootBundle.load(path));
 
   Future<GeneratedBook> create(
     List<WordEntry> entries, {

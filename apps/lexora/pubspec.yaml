@@ -40,6 +40,11 @@ flutter:
     - assets/github/github-avatar.png
     - assets/donate/wechat.png
     - assets/donate/alipay.jpg
+    - assets/fonts/NotoSansSC-Regular.ttf
+    - assets/fonts/NotoSansSC-Bold.ttf
+    - assets/fonts/NotoSans-Regular.ttf
+    - assets/fonts/NotoSansSC-OFL.txt
+    - assets/fonts/NotoSans-OFL.txt
 
 flutter_launcher_icons:
   image_path: assets/icon/lexora-icon.png
