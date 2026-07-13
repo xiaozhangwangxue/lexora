@@ -124,13 +124,13 @@ void main() {
       }
       if (request.url.host == 'api.datamuse.com') {
         if (request.url.queryParameters.containsKey('sp')) {
-          return http.Response(jsonEncode([
+          return http.Response.bytes(utf8.encode(jsonEncode([
             {
               'word': 'take off',
               'defs': ['v\tto leave the ground'],
               'tags': ['pron:teɪk ɔf', 'f:7.5'],
             },
-          ]), 200);
+          ])), 200);
         }
         return http.Response(jsonEncode([
           {
