@@ -18,7 +18,6 @@ Future<PdfSettings?> showPdfCustomizationDialog(
       barrierLabel: MaterialLocalizations.of(context).modalBarrierDismissLabel,
       barrierColor: Colors.black.withValues(alpha: .24),
       transitionDuration: const Duration(milliseconds: 520),
-      useSafeArea: true,
       pageBuilder: (_, __, ___) => _PdfCustomizationDialog(initial: settings),
       transitionBuilder: (context, animation, secondaryAnimation, child) {
         final curved = CurvedAnimation(
