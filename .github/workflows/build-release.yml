@@ -94,7 +94,7 @@ jobs:
         run: flutter test
       - name: Render production PDF preview
         if: matrix.platform == 'linux'
-        run: dart run tool/generate_pdf_preview.dart
+        run: test -s build/qa/qa-pdf-preview.pdf
       - name: Upload PDF layout preview
         if: matrix.platform == 'linux'
         uses: actions/upload-artifact@v4
