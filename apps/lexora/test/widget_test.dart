@@ -76,6 +76,7 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         locale: const Locale('zh', 'CN'),
+        supportedLocales: const [Locale('zh', 'CN')],
         home: WordHistoryScreen(
           generationRunning: false,
           onRegenerate: (_) {},
