@@ -4,7 +4,10 @@ import Image from "next/image";
 import Link from "next/link";
 import { useSiteLanguage } from "../use-site-language";
 
-const qrBase = "https://raw.githubusercontent.com/xiaozhangwangxue/autoword/main/assets/donate";
+const donationCodes = {
+  wechat: "https://photo.12323456.xyz/api/rfile/%E5%BE%AE%E4%BF%A1.png",
+  alipay: "https://photo.12323456.xyz/api/rfile/%E6%94%AF%E4%BB%98%E5%AE%9D.jpg",
+};
 
 export default function DonatePage() {
   const { language, setLanguage, zh } = useSiteLanguage();
@@ -37,14 +40,14 @@ export default function DonatePage() {
         <article>
           <div className="qrHeading"><span className="wechatDot">微</span><div><h2>微信支付</h2><p>WeChat Pay</p></div></div>
           <div className="qrFrame">
-            <Image src={`${qrBase}/wechat.png`} alt="微信支付收款码" width={620} height={620} unoptimized />
+            <Image src={donationCodes.wechat} alt="微信支付收款码" width={620} height={620} unoptimized />
           </div>
           <p>{zh ? "打开微信扫一扫" : "Scan with WeChat"}</p>
         </article>
         <article>
           <div className="qrHeading"><span className="alipayDot">支</span><div><h2>支付宝</h2><p>Alipay</p></div></div>
           <div className="qrFrame">
-            <Image src={`${qrBase}/alipay.jpg`} alt="支付宝收款码" width={620} height={620} unoptimized />
+            <Image src={donationCodes.alipay} alt="支付宝收款码" width={620} height={620} unoptimized />
           </div>
           <p>{zh ? "打开支付宝扫一扫" : "Scan with Alipay"}</p>
         </article>

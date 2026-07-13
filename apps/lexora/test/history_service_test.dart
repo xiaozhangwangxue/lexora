@@ -54,6 +54,33 @@ void main() {
     expect(books, hasLength(1));
     expect(books.single.previewWords, isEmpty);
   });
+
+  test('batch removal updates generated books and word history', () async {
+    final createdAt = DateTime.utc(2026, 7, 13, 10);
+    SharedPreferences.setMockInitialValues({
+      'lexora.generated.books': [
+        for (final id in ['one', 'two', 'three'])
+          jsonEncode({
+            'id': id,
+            'title': '$id.pdf',
+            'path': '/tmp/$id.pdf',
+            'createdAt': createdAt.toIso8601String(),
+            'wordCount': 1,
+          }),
+      ],
+    });
+    final service = HistoryService();
+    await service.recordWords(
+      [_entry('alpha', 'A1–A2'), _entry('bravo', 'B1–B2')],
+      createdAt,
+    );
+
+    await service.removeMany({'one', 'three'});
+    await service.removeWords({'alpha'});
+
+    expect((await service.load()).map((book) => book.id), ['two']);
+    expect((await service.loadWords()).map((record) => record.word), ['bravo']);
+  });
 }
 
 WordEntry _entry(String word, String difficulty) => WordEntry(

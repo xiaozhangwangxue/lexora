@@ -66,6 +66,19 @@ class AppLocalizations {
       ? 'Lexora 会联网补全难度、词频、英美音标、近反义词、双语例句与中文翻译，再排版成适合手机阅读和打印的 PDF。'
       : 'Lexora completes difficulty, frequency, US and UK phonetics, related words, bilingual examples, and Chinese translations, then typesets a PDF made for phones and print.';
   String get pdfFontSize => isZh ? 'PDF 字号' : 'PDF font size';
+  String get fontPreset => isZh ? '字号预设' : 'Font preset';
+  String get fineTuneTypography => isZh ? '精细调整字体' : 'Fine-tune typography';
+  String get fineTuneTypographyHint => isZh
+      ? '分别调整各部分字号，数值会直接用于下一份 PDF。'
+      : 'Adjust each section independently. These values apply to the next PDF.';
+  String get wordTitleFont => isZh ? '单词标题' : 'Word title';
+  String get phoneticFont => isZh ? '英美音标' : 'Phonetics';
+  String get definitionFont => isZh ? '中英文释义' : 'Definitions';
+  String get relatedFont => isZh ? '近义词与反义词' : 'Related words';
+  String get exampleFont => isZh ? '双语例句' : 'Examples';
+  String get phraseFont => isZh ? '短语与涵义' : 'Phrases';
+  String get typographyPreview => isZh ? '实时预览' : 'Live preview';
+  String get saveChanges => isZh ? '保存调整' : 'Save changes';
   String get small => isZh ? '小' : 'Small';
   String get medium => isZh ? '中' : 'Medium';
   String get large => isZh ? '大' : 'Large';
@@ -95,6 +108,30 @@ class AppLocalizations {
   String generatedTimes(int count) => isZh ? '生成 $count 次' : 'Generated $count ${count == 1 ? 'time' : 'times'}';
   String get starWord => isZh ? '加上星标并置顶' : 'Star and pin word';
   String get unstarWord => isZh ? '取消星标' : 'Remove star';
+  String get select => isZh ? '多选' : 'Select';
+  String get finishSelecting => isZh ? '完成' : 'Done';
+  String get selectAll => isZh ? '全选' : 'Select all';
+  String get clearSelection => isZh ? '取消全选' : 'Clear selection';
+  String selectedCount(int count) => isZh ? '已选择 $count 项' : '$count selected';
+  String get shareSelected => isZh ? '批量分享' : 'Share selected';
+  String get deleteSelected => isZh ? '批量删除' : 'Delete selected';
+  String get regenerateSelected => isZh ? '重新生成' : 'Generate again';
+  String get confirmDeleteTitle => isZh ? '删除所选内容？' : 'Delete selected items?';
+  String confirmDeleteBody(int count) => isZh
+      ? '将永久删除选中的 $count 项，此操作无法撤销。'
+      : 'This permanently deletes $count selected items and cannot be undone.';
+  String get confirmRegenerateTitle => isZh ? '重新生成所选单词？' : 'Generate selected words again?';
+  String confirmRegenerateBody(int count) => isZh
+      ? '将使用当前 PDF 设置重新查询并生成 $count 个单词。'
+      : 'Lexora will look up $count words again using the current PDF settings.';
+  String get generationReadyBody => isZh
+      ? 'PDF 已保存。你可以继续整理下一批词条，也可以立即查看或分享。'
+      : 'The PDF is saved. Keep preparing another list, or view and share it now.';
+  String get stayHere => isZh ? '留在此页' : 'Stay here';
+  String get viewGenerated => isZh ? '前往生成记录' : 'View generated';
+  String get shareNow => isZh ? '分享' : 'Share';
+  String get noFilesToShare => isZh ? '所选 PDF 文件不存在，无法分享。' : 'The selected PDF files could not be found.';
+  String get generationAlreadyRunning => isZh ? '已有生成任务正在进行。' : 'A generation task is already running.';
   String get quickLinks => isZh ? '快速链接' : 'Quick links';
   String get officialWebsite => isZh ? 'Lexora 官网' : 'Lexora website';
   String get officialWebsiteHint => isZh ? '下载更新、查看安装说明' : 'Downloads, updates, and installation help';

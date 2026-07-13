@@ -30,9 +30,14 @@ class HistoryService {
   }
 
   Future<void> remove(String id) async {
+    await removeMany({id});
+  }
+
+  Future<void> removeMany(Set<String> ids) async {
+    if (ids.isEmpty) return;
     final preferences = await SharedPreferences.getInstance();
     final books = await load();
-    books.removeWhere((item) => item.id == id);
+    books.removeWhere((item) => ids.contains(item.id));
     await preferences.setStringList(
       _key,
       books.map((item) => jsonEncode(item.toJson())).toList(),
@@ -86,6 +91,14 @@ class HistoryService {
         if (record.word == word) record.copyWith(starred: starred) else record,
     ];
     await _saveWords(updated);
+  }
+
+  Future<void> removeWords(Set<String> words) async {
+    if (words.isEmpty) return;
+    final records = await loadWords();
+    await _saveWords(
+      records.where((record) => !words.contains(record.word)),
+    );
   }
 
   Future<void> _saveWords(Iterable<GeneratedWordRecord> records) async {

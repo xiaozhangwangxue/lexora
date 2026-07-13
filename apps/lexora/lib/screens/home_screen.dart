@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../l10n/app_localizations.dart';
 import '../services/haptic_service.dart';
@@ -16,13 +17,13 @@ class HomeScreen extends StatefulWidget {
     required this.settings,
     required this.generationRunning,
     required this.onStartGeneration,
-    required this.onOpenSettings,
+    required this.onCustomizePdf,
   });
 
   final PdfSettings settings;
   final bool generationRunning;
   final ValueChanged<List<String>> onStartGeneration;
-  final VoidCallback onOpenSettings;
+  final VoidCallback onCustomizePdf;
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -110,6 +111,12 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
     if (confirmed != true || !mounted) return;
+    FocusManager.instance.primaryFocus?.unfocus();
+    if (Platform.isAndroid) {
+      await SystemChannels.textInput.invokeMethod<void>('TextInput.hide');
+      await Future<void>.delayed(const Duration(milliseconds: 120));
+    }
+    if (!mounted) return;
     final terms = List<String>.of(_words);
     setState(() {
       _words.clear();
@@ -194,7 +201,7 @@ class _HomeScreenState extends State<HomeScreen> {
               Align(
                 alignment: Alignment.centerLeft,
                 child: TextButton.icon(
-                  onPressed: widget.onOpenSettings,
+                  onPressed: widget.onCustomizePdf,
                   icon: const Icon(Icons.tune_rounded),
                   label: Text(
                     '${strings.pdfSettings}  ·  '

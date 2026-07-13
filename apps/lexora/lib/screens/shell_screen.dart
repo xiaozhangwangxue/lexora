@@ -2,9 +2,11 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../l10n/app_localizations.dart';
+import '../models/word_entry.dart';
 import '../services/generation_progress.dart';
 import '../services/haptic_service.dart';
 import '../services/history_service.dart';
@@ -16,8 +18,11 @@ import '../widgets/github_button.dart';
 import 'history_screen.dart';
 import 'home_screen.dart';
 import 'onboarding_screen.dart';
+import 'pdf_customization_dialog.dart';
 import 'settings_screen.dart';
 import 'word_history_screen.dart';
+
+enum _GenerationCompleteAction { stay, records, share }
 
 class ShellScreen extends StatefulWidget {
   const ShellScreen({super.key});
@@ -88,10 +93,11 @@ class _ShellScreenState extends State<ShellScreen>
   void _selectPage(int value, {bool animate = true}) {
     if (value == _index) return;
     if (Platform.isAndroid && animate && _pageController.hasClients) {
+      setState(() => _index = value);
       _pageController.animateToPage(
         value,
-        duration: const Duration(milliseconds: 340),
-        curve: Curves.easeOutCubic,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOutCubicEmphasized,
       );
     } else {
       setState(() => _index = value);
@@ -106,9 +112,13 @@ class _ShellScreenState extends State<ShellScreen>
     unawaited(_settingsService.save(settings));
   }
 
+  Future<void> _showPdfCustomizer() async {
+    final updated = await showPdfCustomizationDialog(context, _settings!);
+    if (updated != null && mounted) _updateSettings(updated);
+  }
+
   void _startGeneration(List<String> terms) {
     if (_generationProgress.isRunning) return;
-    _selectPage(1);
     unawaited(_runGeneration(terms));
   }
 
@@ -116,6 +126,7 @@ class _ShellScreenState extends State<ShellScreen>
     final strings = AppLocalizations.of(context);
     final settings = _settings!;
     _generationProgress.start(terms.length);
+    if (mounted) setState(() {});
     unawaited(_haptics.generationStarted());
     unawaited(_notifications.requestPermission());
     try {
@@ -127,6 +138,7 @@ class _ShellScreenState extends State<ShellScreen>
       );
       if (result.entries.isEmpty) {
         _generationProgress.fail(strings.noItemsGenerated);
+        if (mounted) setState(() {});
         if (mounted && result.failures.isNotEmpty) {
           await _showSkippedItems(result.failures, generated: false);
         }
@@ -137,6 +149,7 @@ class _ShellScreenState extends State<ShellScreen>
       final book = await _pdfService.create(
         result.entries,
         fontSize: settings.fontSize,
+        typography: settings.typography,
       );
       await _historyService.save(book);
       await _historyService.recordWords(result.entries, book.createdAt);
@@ -146,7 +159,6 @@ class _ShellScreenState extends State<ShellScreen>
       setState(() {
         _recordsRevision++;
         _wordHistoryRevision++;
-        _index = 1;
       });
       if (!_appIsActive) {
         await _notifications.showGenerationComplete(
@@ -157,13 +169,60 @@ class _ShellScreenState extends State<ShellScreen>
       if (mounted && result.failures.isNotEmpty) {
         await _showSkippedItems(result.failures, generated: true);
       }
+      if (mounted) await _showGenerationComplete(book);
     } catch (error) {
       _generationProgress.fail(error.toString());
       if (mounted) {
+        setState(() {});
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(strings.generationError(error.toString()))),
         );
       }
+    }
+  }
+
+  Future<void> _shareBook(GeneratedBook book) async {
+    final strings = AppLocalizations.of(context);
+    await Share.shareXFiles(
+      [XFile(book.path, mimeType: 'application/pdf')],
+      subject: strings.vocabularyBook,
+    );
+  }
+
+  Future<void> _showGenerationComplete(GeneratedBook book) async {
+    final strings = AppLocalizations.of(context);
+    final action = await showDialog<_GenerationCompleteAction>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        icon: const Icon(Icons.check_circle_rounded),
+        title: Text(strings.generationCompleted),
+        content: Text(strings.generationReadyBody),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext)
+                .pop(_GenerationCompleteAction.stay),
+            child: Text(strings.stayHere),
+          ),
+          TextButton.icon(
+            onPressed: () => Navigator.of(dialogContext)
+                .pop(_GenerationCompleteAction.share),
+            icon: const Icon(Icons.ios_share_rounded),
+            label: Text(strings.shareNow),
+          ),
+          FilledButton.icon(
+            onPressed: () => Navigator.of(dialogContext)
+                .pop(_GenerationCompleteAction.records),
+            icon: const Icon(Icons.receipt_long_rounded),
+            label: Text(strings.viewGenerated),
+          ),
+        ],
+      ),
+    );
+    if (!mounted) return;
+    if (action == _GenerationCompleteAction.records) {
+      _selectPage(1);
+    } else if (action == _GenerationCompleteAction.share) {
+      await _shareBook(book);
     }
   }
 
@@ -233,33 +292,57 @@ class _ShellScreenState extends State<ShellScreen>
     }
 
     final strings = AppLocalizations.of(context);
-    final wide = MediaQuery.sizeOf(context).width >= 760;
+    final windowWidth = MediaQuery.sizeOf(context).width;
+    final wide = Platform.isAndroid
+        ? windowWidth >= 680
+        : windowWidth >= 520;
+    final expandedNavigation = windowWidth >= 800;
     final showGitHub = _index == 0 || _index == 3;
     final pages = [
       HomeScreen(
         settings: _settings!,
         generationRunning: _generationProgress.isRunning,
         onStartGeneration: _startGeneration,
-        onOpenSettings: () => _selectPage(3),
+        onCustomizePdf: _showPdfCustomizer,
       ),
       HistoryScreen(
         key: ValueKey(_recordsRevision),
         progress: _generationProgress,
       ),
-      WordHistoryScreen(key: ValueKey(_wordHistoryRevision)),
+      WordHistoryScreen(
+        key: ValueKey(_wordHistoryRevision),
+        generationRunning: _generationProgress.isRunning,
+        onRegenerate: _startGeneration,
+      ),
       SettingsScreen(
         settings: _settings!,
         onChanged: _updateSettings,
+        onOpenTypography: _showPdfCustomizer,
       ),
     ];
     final pageContent = Platform.isAndroid
-        ? PageView(
-            controller: _pageController,
-            physics: const _LexoraPagePhysics(),
-            onPageChanged: (value) {
-              if (_index != value) setState(() => _index = value);
-            },
-            children: pages,
+        ? ColoredBox(
+            color: Theme.of(context).scaffoldBackgroundColor,
+            child: PageView(
+              controller: _pageController,
+              physics: const _LexoraPagePhysics(
+                parent: ClampingScrollPhysics(),
+              ),
+              clipBehavior: Clip.hardEdge,
+              allowImplicitScrolling: true,
+              onPageChanged: (value) {
+                if (_index != value) setState(() => _index = value);
+              },
+              children: [
+                for (final page in pages)
+                  RepaintBoundary(
+                    child: ColoredBox(
+                      color: Theme.of(context).scaffoldBackgroundColor,
+                      child: page,
+                    ),
+                  ),
+              ],
+            ),
           )
         : IndexedStack(index: _index, children: pages);
     final body = Stack(
@@ -303,11 +386,12 @@ class _ShellScreenState extends State<ShellScreen>
           backgroundColor: Colors.transparent,
           body: Row(children: [
             SizedBox(
-              width: 220,
+              width: expandedNavigation ? 220 : 76,
               child: _MacSidebar(
                 selectedIndex: _index,
                 destinations: destinations,
                 onSelected: _selectPage,
+                expanded: expandedNavigation,
               ),
             ),
             VerticalDivider(
@@ -330,7 +414,9 @@ class _ShellScreenState extends State<ShellScreen>
               backgroundColor: Colors.transparent,
               selectedIndex: _index,
               onDestinationSelected: _selectPage,
-              labelType: NavigationRailLabelType.all,
+              labelType: expandedNavigation
+                  ? NavigationRailLabelType.all
+                  : NavigationRailLabelType.none,
               leading: Padding(
                 padding: const EdgeInsets.only(bottom: 20),
                 child: ClipRRect(
@@ -398,9 +484,9 @@ class _LexoraPagePhysics extends PageScrollPhysics {
 
   @override
   SpringDescription get spring => const SpringDescription(
-        mass: .82,
-        stiffness: 185,
-        damping: 24,
+        mass: .9,
+        stiffness: 260,
+        damping: 31,
       );
 }
 
@@ -409,11 +495,13 @@ class _MacSidebar extends StatelessWidget {
     required this.selectedIndex,
     required this.destinations,
     required this.onSelected,
+    required this.expanded,
   });
 
   final int selectedIndex;
   final List<NavigationRailDestination> destinations;
   final ValueChanged<int> onSelected;
+  final bool expanded;
 
   @override
   Widget build(BuildContext context) {
@@ -433,14 +521,16 @@ class _MacSidebar extends StatelessWidget {
                   height: 30,
                 ),
               ),
-              const SizedBox(width: 10),
-              Text(
-                'Lexora',
-                style: theme.textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: -.4,
+              if (expanded) ...[
+                const SizedBox(width: 10),
+                Text(
+                  'Lexora',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: -.4,
+                  ),
                 ),
-              ),
+              ],
             ]),
           ),
           for (var index = 0; index < destinations.length; index++) ...[
@@ -451,19 +541,21 @@ class _MacSidebar extends StatelessWidget {
                   : destinations[index].icon,
               label: destinations[index].label,
               onTap: () => onSelected(index),
+              expanded: expanded,
             ),
             const SizedBox(height: 4),
           ],
           const Spacer(),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 10),
-            child: Text(
-              'Lexora 0.4.0',
-              style: theme.textTheme.labelSmall?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
+          if (expanded)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 10),
+              child: Text(
+                'Lexora 0.4.0',
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
               ),
             ),
-          ),
         ]),
       ),
     );
@@ -476,12 +568,14 @@ class _MacSidebarItem extends StatelessWidget {
     required this.icon,
     required this.label,
     required this.onTap,
+    required this.expanded,
   });
 
   final bool selected;
   final Widget icon;
   final Widget label;
   final VoidCallback onTap;
+  final bool expanded;
 
   @override
   Widget build(BuildContext context) {
@@ -508,15 +602,17 @@ class _MacSidebarItem extends StatelessWidget {
                 ),
                 child: icon,
               ),
-              const SizedBox(width: 11),
-              Expanded(
-                child: DefaultTextStyle.merge(
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+              if (expanded) ...[
+                const SizedBox(width: 11),
+                Expanded(
+                  child: DefaultTextStyle.merge(
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+                    ),
+                    child: label,
                   ),
-                  child: label,
                 ),
-              ),
+              ],
             ]),
           ),
         ),

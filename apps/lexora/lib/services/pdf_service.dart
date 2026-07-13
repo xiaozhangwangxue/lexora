@@ -11,12 +11,57 @@ import 'package:uuid/uuid.dart';
 import '../models/word_entry.dart';
 
 enum PdfFontSize {
-  small(.86),
-  medium(1),
-  large(1.18);
+  small(.86, .86),
+  medium(1, 1),
+  large(1.18, 1.42);
 
-  const PdfFontSize(this.scale);
+  const PdfFontSize(this.scale, this.bodyScale);
   final double scale;
+  final double bodyScale;
+}
+
+class PdfTypography {
+  const PdfTypography({
+    required this.word,
+    required this.phonetic,
+    required this.definition,
+    required this.related,
+    required this.example,
+    required this.phrase,
+  });
+
+  final double word;
+  final double phonetic;
+  final double definition;
+  final double related;
+  final double example;
+  final double phrase;
+
+  factory PdfTypography.fromPreset(PdfFontSize preset) => PdfTypography(
+        word: 18 * preset.scale,
+        phonetic: 9 * preset.bodyScale,
+        definition: 8.7 * preset.bodyScale,
+        related: 7.2 * preset.bodyScale,
+        example: 7.2 * preset.bodyScale,
+        phrase: 7.2 * preset.bodyScale,
+      );
+
+  PdfTypography copyWith({
+    double? word,
+    double? phonetic,
+    double? definition,
+    double? related,
+    double? example,
+    double? phrase,
+  }) =>
+      PdfTypography(
+        word: word ?? this.word,
+        phonetic: phonetic ?? this.phonetic,
+        definition: definition ?? this.definition,
+        related: related ?? this.related,
+        example: example ?? this.example,
+        phrase: phrase ?? this.phrase,
+      );
 }
 
 class PdfService {
@@ -27,11 +72,13 @@ class PdfService {
   Future<GeneratedBook> create(
     List<WordEntry> entries, {
     PdfFontSize fontSize = PdfFontSize.medium,
+    PdfTypography? typography,
   }) async {
     final now = DateTime.now();
     final bytes = await buildBytes(
       entries,
       fontSize: fontSize,
+      typography: typography,
       generatedAt: now,
     );
     final directory = await getApplicationDocumentsDirectory();
@@ -55,6 +102,7 @@ class PdfService {
   Future<Uint8List> buildBytes(
     List<WordEntry> entries, {
     PdfFontSize fontSize = PdfFontSize.medium,
+    PdfTypography? typography,
     DateTime? generatedAt,
   }) async {
     final date = generatedAt ?? DateTime.now();
@@ -64,6 +112,8 @@ class PdfService {
     // Noto Sans SC does not contain the complete IPA Extensions block. Keep it
     // for Chinese text, and explicitly render phonetics with Noto Sans.
     final ipa = fonts[2];
+    final resolvedTypography =
+        typography ?? PdfTypography.fromPreset(fontSize);
     double size(double value) => value * fontSize.scale;
     final useTwoColumns = fontSize != PdfFontSize.large;
     final document = pw.Document(
@@ -103,7 +153,7 @@ class PdfService {
             entries,
             bold,
             ipa,
-            fontSize.scale,
+            resolvedTypography,
             twoColumns: useTwoColumns,
           ),
         ],
@@ -117,13 +167,19 @@ class PdfService {
     List<WordEntry> entries,
     pw.Font bold,
     pw.Font ipa,
-    double scale, {
+    PdfTypography typography, {
     required bool twoColumns,
   }) {
     if (!twoColumns) {
       return [
         for (var index = 0; index < entries.length; index++) ...[
-          _entry(index + 1, entries[index], bold, ipa, scale),
+          _entry(
+            index + 1,
+            entries[index],
+            bold,
+            ipa,
+            typography,
+          ),
           if (index != entries.length - 1) pw.SizedBox(height: 7),
         ],
       ];
@@ -136,7 +192,13 @@ class PdfService {
           crossAxisAlignment: pw.CrossAxisAlignment.start,
           children: [
             pw.Expanded(
-              child: _entry(index + 1, entries[index], bold, ipa, scale),
+              child: _entry(
+                index + 1,
+                entries[index],
+                bold,
+                ipa,
+                typography,
+              ),
             ),
             pw.SizedBox(width: 8),
             pw.Expanded(
@@ -146,7 +208,7 @@ class PdfService {
                       entries[index + 1],
                       bold,
                       ipa,
-                      scale,
+                      typography,
                     )
                   : pw.SizedBox(),
             ),
@@ -163,16 +225,18 @@ class PdfService {
     WordEntry entry,
     pw.Font bold,
     pw.Font ipa,
-    double scale,
+    PdfTypography typography,
   ) {
-    double size(double value) => value * scale;
     pw.Widget pill(String text, PdfColor color) => pw.Container(
           padding: const pw.EdgeInsets.symmetric(horizontal: 7, vertical: 3),
           decoration: pw.BoxDecoration(
             color: color,
             borderRadius: pw.BorderRadius.circular(12),
           ),
-          child: pw.Text(text, style: pw.TextStyle(fontSize: size(7))),
+          child: pw.Text(
+            text,
+            style: pw.TextStyle(fontSize: typography.related),
+          ),
         );
 
     return pw.Container(
@@ -184,44 +248,44 @@ class PdfService {
       ),
       child: pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
         pw.Row(crossAxisAlignment: pw.CrossAxisAlignment.end, children: [
-          pw.Text('$number', style: pw.TextStyle(fontSize: size(8), color: PdfColors.grey600)),
+          pw.Text('$number', style: pw.TextStyle(fontSize: typography.related, color: PdfColors.grey600)),
           pw.SizedBox(width: 7),
-          pw.Expanded(child: pw.Text(entry.word, style: pw.TextStyle(font: bold, fontSize: size(18)))),
+          pw.Expanded(child: pw.Text(entry.word, style: pw.TextStyle(font: bold, fontSize: typography.word))),
           pill(entry.difficulty, PdfColors.indigo100),
           pw.SizedBox(width: 5),
           pill('freq ${entry.frequency.toStringAsFixed(1)}', PdfColors.teal100),
         ]),
         pw.SizedBox(height: 3),
         pw.Wrap(crossAxisAlignment: pw.WrapCrossAlignment.center, children: [
-          pw.Text('US 美式  ', style: pw.TextStyle(fontSize: size(8), color: PdfColors.grey700)),
+          pw.Text('US 美式  ', style: pw.TextStyle(fontSize: typography.phonetic - 1, color: PdfColors.grey700)),
           pw.Text(entry.usPhonetic,
-              style: pw.TextStyle(font: ipa, fontSize: size(9), color: PdfColors.grey700)),
+              style: pw.TextStyle(font: ipa, fontSize: typography.phonetic, color: PdfColors.grey700)),
           pw.SizedBox(width: 10),
-          pw.Text('UK 英式  ', style: pw.TextStyle(fontSize: size(8), color: PdfColors.grey700)),
+          pw.Text('UK 英式  ', style: pw.TextStyle(fontSize: typography.phonetic - 1, color: PdfColors.grey700)),
           pw.Text(entry.ukPhonetic,
-              style: pw.TextStyle(font: ipa, fontSize: size(9), color: PdfColors.grey700)),
+              style: pw.TextStyle(font: ipa, fontSize: typography.phonetic, color: PdfColors.grey700)),
         ]),
         pw.SizedBox(height: 5),
-        pw.Text(entry.definition, style: pw.TextStyle(fontSize: size(8.7))),
+        pw.Text(entry.definition, style: pw.TextStyle(fontSize: typography.definition)),
         pw.SizedBox(height: 2),
         pw.Text(entry.definitionZh,
-            style: pw.TextStyle(font: bold, fontSize: size(8.7), color: PdfColors.indigo900)),
+            style: pw.TextStyle(font: bold, fontSize: typography.definition, color: PdfColors.indigo900)),
         if (entry.synonyms.isNotEmpty || entry.antonyms.isNotEmpty) ...[
           pw.SizedBox(height: 5),
           if (entry.synonyms.isNotEmpty) ...[
             pw.Text('Synonyms / 近义词  ${entry.synonyms.join(' · ')}',
-                style: pw.TextStyle(fontSize: size(7.2))),
+                style: pw.TextStyle(fontSize: typography.related)),
             if (entry.synonymsZh.isNotEmpty && entry.synonymsZh != '—')
               pw.Text(entry.synonymsZh,
-                  style: pw.TextStyle(fontSize: size(7.2), color: PdfColors.indigo700)),
+                  style: pw.TextStyle(fontSize: typography.related, color: PdfColors.indigo700)),
           ],
           if (entry.antonyms.isNotEmpty) ...[
             if (entry.synonyms.isNotEmpty) pw.SizedBox(height: 2),
             pw.Text('Antonyms / 反义词  ${entry.antonyms.join(' · ')}',
-                style: pw.TextStyle(fontSize: size(7.2))),
+                style: pw.TextStyle(fontSize: typography.related)),
             if (entry.antonymsZh.isNotEmpty && entry.antonymsZh != '—')
               pw.Text(entry.antonymsZh,
-                  style: pw.TextStyle(fontSize: size(7.2), color: PdfColors.indigo700)),
+                  style: pw.TextStyle(fontSize: typography.related, color: PdfColors.indigo700)),
           ],
         ],
         if (entry.examples.isNotEmpty) ...[
@@ -236,9 +300,9 @@ class PdfService {
               children: [
                 for (var i = 0; i < entry.examples.length; i++) ...[
                   if (i > 0) pw.SizedBox(height: 4),
-                  pw.Text(entry.examples[i], style: pw.TextStyle(font: bold, fontSize: size(7.2))),
+                  pw.Text(entry.examples[i], style: pw.TextStyle(font: bold, fontSize: typography.example)),
                   pw.SizedBox(height: 1),
-                  pw.Text(entry.examplesZh[i], style: pw.TextStyle(fontSize: size(7.2))),
+                  pw.Text(entry.examplesZh[i], style: pw.TextStyle(fontSize: typography.example)),
                 ],
               ],
             ),
@@ -250,7 +314,7 @@ class PdfService {
             'Phrases / 常用短语',
             style: pw.TextStyle(
               font: bold,
-              fontSize: size(7.4),
+              fontSize: typography.phrase + .2,
               color: PdfColors.indigo900,
             ),
           ),
@@ -259,16 +323,16 @@ class PdfService {
             if (i > 0) pw.SizedBox(height: 3),
             pw.Text(
               entry.phrases[i].phrase,
-              style: pw.TextStyle(font: bold, fontSize: size(7.2)),
+              style: pw.TextStyle(font: bold, fontSize: typography.phrase),
             ),
             pw.Text(
               entry.phrases[i].meaning,
-              style: pw.TextStyle(fontSize: size(7)),
+              style: pw.TextStyle(fontSize: typography.phrase),
             ),
             pw.Text(
               entry.phrases[i].meaningZh,
               style: pw.TextStyle(
-                fontSize: size(7),
+                fontSize: typography.phrase,
                 color: PdfColors.indigo700,
               ),
             ),

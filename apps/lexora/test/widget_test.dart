@@ -28,6 +28,15 @@ void main() {
     expect(find.text('take off'), findsOneWidget);
     expect(find.textContaining('短语'), findsWidgets);
 
+    await tester.tap(find.textContaining('PDF 自定义').first);
+    await tester.pumpAndSettle();
+    expect(find.text('精细调整字体'), findsOneWidget);
+    expect(find.text('单词标题'), findsOneWidget);
+    expect(find.text('实时预览'), findsOneWidget);
+    await tester.tap(find.text('取消'));
+    await tester.pumpAndSettle();
+    expect(find.text('take off'), findsOneWidget);
+
     await tester.tap(find.text('生成记录'));
     await tester.pumpAndSettle();
     expect(find.text('GitHub'), findsNothing);

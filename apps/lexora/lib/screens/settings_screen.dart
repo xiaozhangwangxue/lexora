@@ -10,10 +10,12 @@ class SettingsScreen extends StatelessWidget {
     super.key,
     required this.settings,
     required this.onChanged,
+    required this.onOpenTypography,
   });
 
   final PdfSettings settings;
   final ValueChanged<PdfSettings> onChanged;
+  final VoidCallback onOpenTypography;
 
   Future<void> _openWebsite(BuildContext context) async {
     final uri = Uri.parse('https://lexora.12323456.xyz');
@@ -179,8 +181,17 @@ class SettingsScreen extends StatelessWidget {
                         ],
                         selected: {settings.fontSize},
                         onSelectionChanged: (value) => onChanged(
-                          settings.copyWith(fontSize: value.first),
+                          settings.applyPreset(value.first),
                         ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: OutlinedButton.icon(
+                        onPressed: onOpenTypography,
+                        icon: const Icon(Icons.tune_rounded),
+                        label: Text(strings.fineTuneTypography),
                       ),
                     ),
                     const SizedBox(height: 18),

@@ -8,6 +8,11 @@ const nextConfig: NextConfig = {
         hostname: "raw.githubusercontent.com",
         pathname: "/xiaozhangwangxue/autoword/**",
       },
+      {
+        protocol: "https",
+        hostname: "photo.12323456.xyz",
+        pathname: "/api/rfile/**",
+      },
     ],
   },
 };

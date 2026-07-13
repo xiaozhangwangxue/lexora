@@ -10,7 +10,10 @@ type PlatformKey = "macos" | "windows" | "linux" | "android";
 type DragPreview = { word: string; x: number; y: number; width: number; grabOffsetY: number };
 
 const seedWords = ["serendipity", "lucid", "resilient", "wanderlust"];
-const donationQrBase = "https://raw.githubusercontent.com/xiaozhangwangxue/autoword/main/assets/donate";
+const donationCodes = {
+  wechat: "https://photo.12323456.xyz/api/rfile/%E5%BE%AE%E4%BF%A1.png",
+  alipay: "https://photo.12323456.xyz/api/rfile/%E6%94%AF%E4%BB%98%E5%AE%9D.jpg",
+};
 
 const currentVersion = "v0.4.0";
 const platforms: Array<{ key: PlatformKey; name: string; note: string; icon: string; file: string }> = [
@@ -401,11 +404,11 @@ export default function Home() {
         </div>
         <div className="homeQrGrid">
           <Link href="/donate" aria-label={zh ? "打开微信支付捐款二维码" : "Open WeChat Pay donation code"}>
-            <Image src={`${donationQrBase}/wechat.png`} alt="微信支付收款码" width={300} height={300} unoptimized />
+            <Image src={donationCodes.wechat} alt="微信支付收款码" width={300} height={300} unoptimized />
             <span><b>微信支付</b><small>WeChat Pay</small></span>
           </Link>
           <Link href="/donate" aria-label={zh ? "打开支付宝捐款二维码" : "Open Alipay donation code"}>
-            <Image src={`${donationQrBase}/alipay.jpg`} alt="支付宝收款码" width={300} height={300} unoptimized />
+            <Image src={donationCodes.alipay} alt="支付宝收款码" width={300} height={300} unoptimized />
             <span><b>支付宝</b><small>Alipay</small></span>
           </Link>
         </div>

@@ -39,7 +39,7 @@ test("server-renders the bilingual donation page", async () => {
   const html = await response.text();
   assert.match(html, /支持独立开发/);
   assert.match(html, /支持独立开发/);
-  assert.match(html, /wechat\.png/);
-  assert.match(html, /alipay\.jpg/);
+  assert.match(html, /photo\.12323456\.xyz\/api\/rfile\/%E5%BE%AE%E4%BF%A1\.png/);
+  assert.match(html, /photo\.12323456\.xyz\/api\/rfile\/%E6%94%AF%E4%BB%98%E5%AE%9D\.jpg/);
   assert.match(html, /捐款完全自愿/);
 });

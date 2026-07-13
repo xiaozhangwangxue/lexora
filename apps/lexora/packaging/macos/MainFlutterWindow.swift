@@ -5,20 +5,17 @@ import SwiftUI
 class MainFlutterWindow: NSWindow {
   override func awakeFromNib() {
     let flutterViewController = FlutterViewController()
-    flutterViewController.backgroundColor = NSColor.clear
+    flutterViewController.backgroundColor = .clear
 
     title = "Lexora"
     titleVisibility = .hidden
-    backgroundColor = NSColor.windowBackgroundColor
+    backgroundColor = .windowBackgroundColor
     isOpaque = false
     titlebarAppearsTransparent = true
     styleMask.remove(.fullSizeContentView)
-    minSize = NSSize(width: 900, height: 620)
-    // Flutter renders into a transparent view hosted by SwiftUI. Treating the
-    // whole window background as draggable makes AppKit consume mouse events
-    // before Flutter controls receive them. The native title bar remains the
-    // correct drag region.
+    minSize = NSSize(width: 640, height: 540)
     isMovableByWindowBackground = false
+    acceptsMouseMovedEvents = true
 
     let nativeToolbar = NSToolbar(identifier: "LexoraToolbar")
     nativeToolbar.displayMode = .iconOnly
@@ -27,8 +24,8 @@ class MainFlutterWindow: NSWindow {
     toolbarStyle = .unifiedCompact
 
     let windowFrame = frame
-    contentViewController = NSHostingController(
-      rootView: LexoraWindowRoot(flutterViewController: flutterViewController)
+    contentViewController = LexoraHostViewController(
+      flutterViewController: flutterViewController
     )
     setFrame(windowFrame, display: true)
 
@@ -37,57 +34,90 @@ class MainFlutterWindow: NSWindow {
   }
 }
 
-private struct LexoraWindowRoot: View {
-  let flutterViewController: FlutterViewController
+/// Keeps Flutter as the frontmost AppKit child so every pointer event reaches
+/// Flutter directly. SwiftUI is used only for the non-interactive glass
+/// backdrop; it never participates in hit testing.
+private final class LexoraHostViewController: NSViewController {
+  private let flutterViewController: FlutterViewController
 
-  var body: some View {
-    ZStack {
-      LegacyVisualEffect(material: .underWindowBackground)
-        .ignoresSafeArea()
-
-      Color(nsColor: .windowBackgroundColor)
-        .opacity(0.46)
-        .ignoresSafeArea()
-
-      navigationMaterial
-      FlutterSurface(controller: flutterViewController)
-    }
+  init(flutterViewController: FlutterViewController) {
+    self.flutterViewController = flutterViewController
+    super.init(nibName: nil, bundle: nil)
   }
 
-  @ViewBuilder
-  private var navigationMaterial: some View {
-    HStack(spacing: 0) {
-      if #available(macOS 26.0, *) {
-        Color.clear
-          .frame(width: 220)
-          .glassEffect(
-            .regular,
-            in: Rectangle()
-          )
-      } else {
-        LegacyVisualEffect(material: .sidebar)
-          .frame(width: 220)
-      }
-      Rectangle()
-        .fill(Color(nsColor: .separatorColor).opacity(0.38))
-        .frame(width: 0.5)
-      Spacer(minLength: 0)
-    }
-    .ignoresSafeArea()
+  required init?(coder: NSCoder) {
+    fatalError("init(coder:) has not been implemented")
+  }
+
+  override func loadView() {
+    let rootView = NSView()
+    rootView.wantsLayer = true
+
+    let backdrop = NSHostingView(rootView: LexoraBackdrop())
+    backdrop.translatesAutoresizingMaskIntoConstraints = false
+    rootView.addSubview(backdrop)
+
+    addChild(flutterViewController)
+    let flutterView = flutterViewController.view
+    flutterView.translatesAutoresizingMaskIntoConstraints = false
+    rootView.addSubview(flutterView)
+
+    NSLayoutConstraint.activate([
+      backdrop.leadingAnchor.constraint(equalTo: rootView.leadingAnchor),
+      backdrop.trailingAnchor.constraint(equalTo: rootView.trailingAnchor),
+      backdrop.topAnchor.constraint(equalTo: rootView.topAnchor),
+      backdrop.bottomAnchor.constraint(equalTo: rootView.bottomAnchor),
+      flutterView.leadingAnchor.constraint(equalTo: rootView.leadingAnchor),
+      flutterView.trailingAnchor.constraint(equalTo: rootView.trailingAnchor),
+      flutterView.topAnchor.constraint(equalTo: rootView.topAnchor),
+      flutterView.bottomAnchor.constraint(equalTo: rootView.bottomAnchor),
+    ])
+
+    view = rootView
+  }
+
+  override func viewDidAppear() {
+    super.viewDidAppear()
+    view.window?.makeFirstResponder(flutterViewController.view)
   }
 }
 
-private struct FlutterSurface: NSViewControllerRepresentable {
-  let controller: FlutterViewController
+private struct LexoraBackdrop: View {
+  var body: some View {
+    GeometryReader { geometry in
+      let sidebarWidth: CGFloat = geometry.size.width >= 800
+        ? 220
+        : geometry.size.width >= 520 ? 76 : 0
 
-  func makeNSViewController(context: Context) -> FlutterViewController {
-    controller
+      ZStack {
+        LegacyVisualEffect(material: .underWindowBackground)
+          .ignoresSafeArea()
+
+        Color(nsColor: .windowBackgroundColor)
+          .opacity(0.48)
+          .ignoresSafeArea()
+
+        if sidebarWidth > 0 {
+          HStack(spacing: 0) {
+            if #available(macOS 26.0, *) {
+              Color.clear
+                .frame(width: sidebarWidth)
+                .glassEffect(.regular, in: Rectangle())
+            } else {
+              LegacyVisualEffect(material: .sidebar)
+                .frame(width: sidebarWidth)
+            }
+            Rectangle()
+              .fill(Color(nsColor: .separatorColor).opacity(0.38))
+              .frame(width: 0.5)
+            Spacer(minLength: 0)
+          }
+          .ignoresSafeArea()
+        }
+      }
+    }
+    .allowsHitTesting(false)
   }
-
-  func updateNSViewController(
-    _ nsViewController: FlutterViewController,
-    context: Context
-  ) {}
 }
 
 private struct LegacyVisualEffect: NSViewRepresentable {
