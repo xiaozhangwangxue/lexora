@@ -54,15 +54,15 @@ Use the [official download section](https://lexora.12323456.xyz/#download) for b
 
 | Platform | Package | Requirement | Download |
 | --- | --- | --- | --- |
-| Android | APK | Android 8.0+ | [Official mirror](https://lexora.12323456.xyz/downloads/lexora-android-v1.0.0.apk) |
-| macOS | Drag-to-install DMG | macOS 12+ | [Official mirror](https://lexora.12323456.xyz/downloads/lexora-macos-v1.0.0.dmg) |
-| Windows | ZIP | Windows 10 / 11 | [Official mirror](https://lexora.12323456.xyz/downloads/lexora-windows-v1.0.0.zip) |
-| Linux | tar.gz | 64-bit Linux | [Official mirror](https://lexora.12323456.xyz/downloads/lexora-linux-v1.0.0.tar.gz) |
+| Android | APK | Android 8.0+ | [Official mirror](https://lexora.12323456.xyz/downloads/lexora-android-v1.0.1.apk) |
+| macOS | Drag-to-install DMG | macOS 12+ | [Official mirror](https://lexora.12323456.xyz/downloads/lexora-macos-v1.0.1.dmg) |
+| Windows | Setup EXE (launch option checked by default) | Windows 10 / 11 | [Official mirror](https://lexora.12323456.xyz/downloads/lexora-windows-v1.0.1-setup.exe) |
+| Linux | tar.gz | 64-bit Linux | [Official mirror](https://lexora.12323456.xyz/downloads/lexora-linux-v1.0.1.tar.gz) |
 
 > [!IMPORTANT]
 > Android v0.2.0 used an ephemeral build signature whose private key cannot be recovered. Moving to the stable v0.3.0 signing key therefore requires one uninstall and reinstall. From v0.3.0 onward, future APKs use the same release key and install directly over the existing app. Export any PDFs you need before removing v0.2.0.
 
-Every release filename contains its version, such as `lexora-android-v1.0.0.apk`, so old and new installers remain easy to distinguish.
+Every release filename contains its version, such as `lexora-android-v1.0.1.apk`, so old and new installers remain easy to distinguish.
 
 ## Three steps to a vocabulary book
 

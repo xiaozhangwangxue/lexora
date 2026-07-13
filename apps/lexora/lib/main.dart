@@ -31,7 +31,10 @@ class LexoraApp extends StatelessWidget {
       title: 'Lexora',
       debugShowCheckedModeBanner: false,
       locale: locale,
-      themeMode: ThemeMode.system,
+      // Windows can report a system-wide dark preference even when the
+      // desktop window is using the light Lexora surface. Keep the Windows
+      // shell legible and consistent with its native light desktop chrome.
+      themeMode: isWindows ? ThemeMode.light : ThemeMode.system,
       theme: _theme(seed, Brightness.light, transparent: isApple),
       darkTheme: _theme(seed, Brightness.dark, transparent: isApple),
       supportedLocales: const [Locale('en'), Locale('zh')],

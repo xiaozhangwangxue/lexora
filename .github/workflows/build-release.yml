@@ -124,6 +124,26 @@ jobs:
         if: matrix.platform == 'windows'
         shell: pwsh
         run: Compress-Archive -Path "${{ matrix.source }}\*" -DestinationPath "lexora-windows-$env:RELEASE_VERSION.zip"
+      - name: Package Windows installer
+        if: matrix.platform == 'windows'
+        shell: pwsh
+        run: |
+          $version = $env:RELEASE_VERSION.TrimStart('v')
+          $sourceDir = (Resolve-Path "${{ matrix.source }}").Path
+          $compiler = (Get-Command iscc.exe -ErrorAction SilentlyContinue).Source
+          if (-not $compiler) {
+            $compiler = Join-Path ${env:ProgramFiles(x86)} 'Inno Setup 6\ISCC.exe'
+          }
+          if (-not (Test-Path $compiler)) {
+            choco install innosetup --no-progress --yes
+            $compiler = Join-Path ${env:ProgramFiles(x86)} 'Inno Setup 6\ISCC.exe'
+          }
+          & $compiler `
+            "/DAppVersion=$version" `
+            "/DSourceDir=$sourceDir" `
+            "/DOutputBaseFilename=lexora-windows-$env:RELEASE_VERSION-setup" `
+            "/O$PWD" `
+            "packaging/windows/lexora.iss"
       - name: Stage Android build
         if: matrix.platform == 'android'
         run: cp "${{ matrix.source }}" "lexora-android-${RELEASE_VERSION}.apk"

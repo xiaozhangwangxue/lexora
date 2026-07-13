@@ -407,7 +407,10 @@ class _ShellScreenState extends State<ShellScreen>
         );
       }
       return Scaffold(
-        backgroundColor: Colors.transparent,
+        // The generated Windows runner has an opaque light window. Using a
+        // transparent Scaffold here exposes the runner's black clear color
+        // around desktop pages, especially during the first frame.
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         body: Row(children: [
           SafeArea(
             child: NavigationRail(

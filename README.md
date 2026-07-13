@@ -54,17 +54,17 @@ Lexora 是一款面向 Android、macOS、Windows 与 Linux 的英语单词整理
 
 | 平台 | 安装包 | 系统要求 | 下载 |
 | --- | --- | --- | --- |
-| Android | APK | Android 8.0+ | [官网下载](https://lexora.12323456.xyz/downloads/lexora-android-v1.0.0.apk) |
-| macOS | 拖动安装 DMG | macOS 12+ | [官网下载](https://lexora.12323456.xyz/downloads/lexora-macos-v1.0.0.dmg) |
-| Windows | ZIP | Windows 10 / 11 | [官网下载](https://lexora.12323456.xyz/downloads/lexora-windows-v1.0.0.zip) |
-| Linux | tar.gz | 64 位 Linux | [官网下载](https://lexora.12323456.xyz/downloads/lexora-linux-v1.0.0.tar.gz) |
+| Android | APK | Android 8.0+ | [官网下载](https://lexora.12323456.xyz/downloads/lexora-android-v1.0.1.apk) |
+| macOS | 拖动安装 DMG | macOS 12+ | [官网下载](https://lexora.12323456.xyz/downloads/lexora-macos-v1.0.1.dmg) |
+| Windows | 安装程序 EXE（默认安装后启动） | Windows 10 / 11 | [官网下载](https://lexora.12323456.xyz/downloads/lexora-windows-v1.0.1-setup.exe) |
+| Linux | tar.gz | 64 位 Linux | [官网下载](https://lexora.12323456.xyz/downloads/lexora-linux-v1.0.1.tar.gz) |
 
 <details>
 <summary><strong>首次安装被系统拦截怎么办？</strong></summary>
 
 - **Android**：允许当前浏览器或文件管理器“安装未知应用”，再选择 APK。
 - **macOS**：打开 DMG，按精心设计的背景箭头将 Lexora 拖入 Applications；若被拦截，按住 Control 点击应用并选择“打开”。
-- **Windows**：如果 SmartScreen 出现提示，选择“更多信息”→“仍要运行”。
+- **Windows**：双击安装程序，按向导完成安装；最后的“启动 Lexora”默认勾选。如果 SmartScreen 出现提示，选择“更多信息”→“仍要运行”。
 - **Linux**：解压后为 `lexora` 主程序添加执行权限，再启动。
 
 </details>
@@ -72,7 +72,7 @@ Lexora 是一款面向 Android、macOS、Windows 与 Linux 的英语单词整理
 > [!IMPORTANT]
 > Android v0.2.0 使用了临时构建签名，旧私钥无法恢复，因此升级到采用稳定签名的 v0.3.0 时需要先卸载旧版再安装一次。自 v0.3.0 起，后续版本继续使用同一发布签名，可直接覆盖更新。请先按需导出旧版中的 PDF。
 
-所有发行文件名都包含版本号，例如 `lexora-android-v1.0.0.apk`。这样可以避免浏览器或下载目录把新旧安装包混淆。
+所有发行文件名都包含版本号，例如 `lexora-android-v1.0.1.apk`。这样可以避免浏览器或下载目录把新旧安装包混淆。
 
 ## 三步生成词汇书
 

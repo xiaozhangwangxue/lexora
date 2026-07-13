@@ -15,10 +15,10 @@ const donationCodes = {
   alipay: "https://photo.12323456.xyz/api/rfile/%E6%94%AF%E4%BB%98%E5%AE%9D.jpg",
 };
 
-const currentVersion = "v1.0.0";
+const currentVersion = "v1.0.1";
 const platforms: Array<{ key: PlatformKey; name: string; note: string; icon: string; file: string }> = [
   { key: "macos", name: "macOS", note: "Drag-to-install DMG", icon: "⌘", file: `lexora-macos-${currentVersion}.dmg` },
-  { key: "windows", name: "Windows", note: "Windows 10 / 11", icon: "⊞", file: `lexora-windows-${currentVersion}.zip` },
+  { key: "windows", name: "Windows", note: "Installer · Windows 10 / 11", icon: "⊞", file: `lexora-windows-${currentVersion}-setup.exe` },
   { key: "linux", name: "Linux", note: "64-bit bundle", icon: "◇", file: `lexora-linux-${currentVersion}.tar.gz` },
   { key: "android", name: "Android", note: "Android 8+", icon: "◒", file: `lexora-android-${currentVersion}.apk` },
 ];
@@ -29,16 +29,16 @@ const installGuides: Record<PlatformKey, { zh: string[]; en: string[] }> = {
     en: ["Open the DMG and follow the background arrow to drag Lexora into Applications.", "Control-click Lexora in Applications the first time, then choose Open.", "If macOS warns about an unidentified developer, verify this official site first, then confirm Open."],
   },
   windows: {
-    zh: ["解压 ZIP 后运行 Lexora。", "若 SmartScreen 出现提示，先确认下载域名为 lexora.12323456.xyz。", "点击“更多信息”，然后选择“仍要运行”。"],
-    en: ["Extract the ZIP and run Lexora.", "If SmartScreen appears, first verify that the file came from lexora.12323456.xyz.", "Choose More info, then Run anyway."],
+    zh: ["双击安装程序并按向导完成安装，最后可选择立即启动 Lexora（默认勾选）。", "若 SmartScreen 出现提示，先确认下载域名为 lexora.12323456.xyz。", "点击“更多信息”，然后选择“仍要运行”。"],
+    en: ["Open the installer and follow the setup wizard; the final Launch Lexora option is checked by default.", "If SmartScreen appears, first verify that the file came from lexora.12323456.xyz.", "Choose More info, then Run anyway."],
   },
   linux: {
     zh: ["解压 tar.gz 文件。", "若无法启动，在文件属性中允许作为程序执行，或使用 chmod +x。", "启动 lexora 可执行文件。"],
     en: ["Extract the tar.gz archive.", "If needed, allow the lexora file to run as a program or use chmod +x.", "Launch the lexora executable."],
   },
   android: {
-    zh: ["从 v0.3.0 或更高版本可直接覆盖安装 v1.0.0；只有 v0.2.0 需先卸载一次。", "下载 APK，系统询问时允许浏览器安装未知来源应用。", "确认文件来自本官网后，选择“仍要安装”；安装后可关闭该权限。"],
-    en: ["v0.3.0 and newer can update directly to v1.0.0. Only v0.2.0 requires one uninstall first.", "Download the APK and allow your browser to install unknown apps when Android asks.", "After verifying this official site, choose Install anyway. You can revoke that permission afterward."],
+    zh: ["从 v0.3.0 或更高版本可直接覆盖安装 v1.0.1；只有 v0.2.0 需先卸载一次。", "下载 APK，系统询问时允许浏览器安装未知来源应用。", "确认文件来自本官网后，选择“仍要安装”；安装后可关闭该权限。"],
+    en: ["v0.3.0 and newer can update directly to v1.0.1. Only v0.2.0 requires one uninstall first.", "Download the APK and allow your browser to install unknown apps when Android asks.", "After verifying this official site, choose Install anyway. You can revoke that permission afterward."],
   },
 };
 
