@@ -130,7 +130,9 @@ void main() {
               'defs': ['v\tto leave the ground'],
               'tags': ['pron:teɪk ɔf', 'f:7.5'],
             },
-          ])), 200);
+          ])), 200, headers: const {
+            'content-type': 'application/json; charset=utf-8',
+          });
         }
         return http.Response(jsonEncode([
           {
