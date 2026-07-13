@@ -1,5 +1,4 @@
-import 'dart:io';
-
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
@@ -22,13 +21,13 @@ class LexoraApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isApple = Platform.isMacOS;
-    final isWindows = Platform.isWindows;
+    final isApple = defaultTargetPlatform == TargetPlatform.macOS;
+    final isWindows = defaultTargetPlatform == TargetPlatform.windows;
     final seed = isApple
         ? const Color(0xFF635BFF)
         : isWindows
-            ? const Color(0xFF0067C0)
-            : const Color(0xFF3154D8);
+        ? const Color(0xFF0067C0)
+        : const Color(0xFF3154D8);
     return MaterialApp(
       title: 'Lexora',
       debugShowCheckedModeBanner: false,
@@ -55,41 +54,42 @@ class LexoraApp extends StatelessWidget {
     Brightness brightness, {
     required bool transparent,
   }) {
-    final scheme = ColorScheme.fromSeed(seedColor: seed, brightness: brightness);
+    final scheme = ColorScheme.fromSeed(
+      seedColor: seed,
+      brightness: brightness,
+    );
     final radius = transparent ? 12.0 : 24.0;
     return ThemeData(
       useMaterial3: true,
       colorScheme: scheme,
       fontFamily: transparent ? 'SF Pro Text' : null,
-      visualDensity: transparent ? VisualDensity.compact : VisualDensity.standard,
+      visualDensity: transparent
+          ? VisualDensity.compact
+          : VisualDensity.standard,
       scaffoldBackgroundColor: transparent
           ? Colors.transparent
           : brightness == Brightness.light
-              ? const Color(0xFFF7F8FC)
-              : const Color(0xFF101116),
+          ? const Color(0xFFF7F8FC)
+          : const Color(0xFF101116),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: transparent
             ? (brightness == Brightness.light
-                ? Colors.white.withValues(alpha: .72)
-                : const Color(0xFF1A1C23).withValues(alpha: .76))
+                  ? Colors.white.withValues(alpha: .72)
+                  : const Color(0xFF1A1C23).withValues(alpha: .76))
             : brightness == Brightness.light
-                ? Colors.white
-                : const Color(0xFF1A1C23),
+            ? Colors.white
+            : const Color(0xFF1A1C23),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(radius),
           borderSide: transparent
-              ? BorderSide(
-                  color: scheme.outlineVariant.withValues(alpha: .5),
-                )
+              ? BorderSide(color: scheme.outlineVariant.withValues(alpha: .5))
               : BorderSide.none,
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(radius),
           borderSide: transparent
-              ? BorderSide(
-                  color: scheme.outlineVariant.withValues(alpha: .5),
-                )
+              ? BorderSide(color: scheme.outlineVariant.withValues(alpha: .5))
               : BorderSide.none,
         ),
         focusedBorder: OutlineInputBorder(
@@ -102,11 +102,11 @@ class LexoraApp extends StatelessWidget {
         margin: EdgeInsets.zero,
         color: transparent
             ? (brightness == Brightness.light
-                ? Colors.white.withValues(alpha: .68)
-                : const Color(0xFF1A1C23).withValues(alpha: .72))
+                  ? Colors.white.withValues(alpha: .68)
+                  : const Color(0xFF1A1C23).withValues(alpha: .72))
             : brightness == Brightness.light
-                ? Colors.white
-                : const Color(0xFF1A1C23),
+            ? Colors.white
+            : const Color(0xFF1A1C23),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(transparent ? 12 : 20),
           side: BorderSide(color: scheme.outlineVariant.withValues(alpha: .55)),

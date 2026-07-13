@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:ui';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
@@ -55,6 +56,10 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
   bool _releaseNotesPending = false;
   bool _releaseNotesShowing = false;
 
+  bool get _isAndroid =>
+      Platform.isAndroid ||
+      debugDefaultTargetPlatformOverride == TargetPlatform.android;
+
   @override
   void initState() {
     super.initState();
@@ -72,10 +77,34 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (_isAndroid) {
+      if (state == AppLifecycleState.resumed) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) unawaited(_synchronizeAndroidKeyboardAfterResume());
+        });
+      } else {
+        _dismissAndroidKeyboard();
+      }
+    }
     final active = state == AppLifecycleState.resumed;
     if (_appIsActive != active && mounted) {
       setState(() => _appIsActive = active);
     }
+  }
+
+  void _dismissAndroidKeyboard() {
+    FocusManager.instance.primaryFocus?.unfocus();
+    unawaited(SystemChannels.textInput.invokeMethod<void>('TextInput.hide'));
+  }
+
+  Future<void> _synchronizeAndroidKeyboardAfterResume() async {
+    _dismissAndroidKeyboard();
+    // Android can restore the Flutter surface before dispatching the final IME
+    // inset. Repeating the hide request on the next frame prevents a stale
+    // keyboard height from surviving the trip through the launcher.
+    await Future<void>.delayed(const Duration(milliseconds: 120));
+    if (!mounted) return;
+    _dismissAndroidKeyboard();
   }
 
   Future<void> _loadInitialState() async {
@@ -159,7 +188,7 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
   void _selectPage(int value, {bool animate = true}) {
     if (value == _index) return;
     _dismissAndroidHomeKeyboard(value);
-    if (Platform.isAndroid && animate && _pageController.hasClients) {
+    if (_isAndroid && animate && _pageController.hasClients) {
       setState(() => _index = value);
       _pageController.animateToPage(
         value,
@@ -168,14 +197,14 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
       );
     } else {
       setState(() => _index = value);
-      if (Platform.isAndroid && _pageController.hasClients) {
+      if (_isAndroid && _pageController.hasClients) {
         _pageController.jumpToPage(value);
       }
     }
   }
 
   void _dismissAndroidHomeKeyboard(int destination) {
-    if (!Platform.isAndroid || _index != 0 || destination == 0) return;
+    if (!_isAndroid || _index != 0 || destination == 0) return;
     FocusManager.instance.primaryFocus?.unfocus();
     unawaited(SystemChannels.textInput.invokeMethod<void>('TextInput.hide'));
   }
@@ -432,7 +461,7 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
 
     final strings = AppLocalizations.of(context);
     final windowWidth = MediaQuery.sizeOf(context).width;
-    final wide = Platform.isAndroid ? windowWidth >= 680 : windowWidth >= 520;
+    final wide = _isAndroid ? windowWidth >= 680 : windowWidth >= 520;
     final expandedNavigation = windowWidth >= 800;
     final showGitHub = _index == 0;
     final pages = [
@@ -459,7 +488,7 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
         onOpenTypography: _showPdfCustomizer,
       ),
     ];
-    final pageContent = Platform.isAndroid
+    final pageContent = _isAndroid
         ? ColoredBox(
             color: Theme.of(context).scaffoldBackgroundColor,
             child: PageView(
@@ -488,7 +517,7 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
     final body = Stack(
       children: [
         pageContent,
-        if (Platform.isAndroid)
+        if (_isAndroid)
           Positioned(
             top: 0,
             left: 0,
@@ -571,6 +600,7 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
         // transparent Scaffold here exposes the runner's black clear color
         // around desktop pages, especially during the first frame.
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        resizeToAvoidBottomInset: !_isAndroid,
         body: Row(
           children: [
             SafeArea(
@@ -608,15 +638,20 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
     }
 
     return Scaffold(
+      // The Android IME inset can remain stale for one frame after returning
+      // from the launcher. Keeping the app shell at full height prevents that
+      // stale value from reserving a large blank area. Dialogs that need to sit
+      // above the live keyboard handle viewInsets locally.
+      resizeToAvoidBottomInset: !_isAndroid,
       body: body,
-      extendBody: Platform.isAndroid,
+      extendBody: _isAndroid,
       bottomNavigationBar: ClipRect(
         child: BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 22, sigmaY: 22),
           child: NavigationBar(
-            backgroundColor: Theme.of(context).colorScheme.surface.withValues(
-              alpha: Platform.isAndroid ? .76 : 1,
-            ),
+            backgroundColor: Theme.of(
+              context,
+            ).colorScheme.surface.withValues(alpha: _isAndroid ? .76 : 1),
             shadowColor: Colors.transparent,
             selectedIndex: _index,
             onDestinationSelected: _selectPage,

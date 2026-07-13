@@ -1,6 +1,10 @@
 import 'dart:convert';
+import 'dart:io';
+import 'dart:ui' as ui;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:lexora/l10n/app_localizations.dart';
@@ -60,10 +64,81 @@ void main() {
     await tester.tap(find.text('设置'));
     await tester.pumpAndSettle();
     expect(find.text('把零散单词，变成真正想读的词汇书。'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('Lexora 官网'),
+      220,
+      scrollable: find.byType(Scrollable).last,
+    );
     expect(find.text('Lexora 官网'), findsOneWidget);
     expect(find.text('支持 Lexora'), findsOneWidget);
     expect(find.text('GitHub'), findsOneWidget);
   });
+
+  testWidgets(
+    'Android resume clears focus and ignores a stale keyboard inset',
+    (tester) async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.android;
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(540, 1280);
+      addTearDown(() {
+        debugDefaultTargetPlatformOverride = null;
+        tester.view.resetDevicePixelRatio();
+        tester.view.resetPhysicalSize();
+        tester.view.resetViewInsets();
+      });
+      SharedPreferences.setMockInitialValues({
+        'lexora.onboarding.completed.v1': true,
+        'lexora.release-notes.seen.1.1.2': true,
+      });
+
+      await tester.pumpWidget(
+        const RepaintBoundary(
+          key: Key('android-resume-capture'),
+          child: LexoraApp(locale: Locale('zh', 'CN')),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byType(TextField));
+      await tester.pump();
+      final input = tester.widget<TextField>(find.byType(TextField));
+      expect(input.focusNode?.hasFocus, isTrue);
+
+      tester.view.viewInsets = const FakeViewPadding(bottom: 480);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+      await tester.pump();
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 160));
+
+      expect(input.focusNode?.hasFocus, isFalse);
+      await tester.tap(find.text('设置').last);
+      await tester.pumpAndSettle();
+      expect(find.text('PDF 自定义'), findsOneWidget);
+      final rootScaffold = tester.widget<Scaffold>(find.byType(Scaffold).last);
+      expect(rootScaffold.resizeToAvoidBottomInset, isFalse);
+      expect(tester.getBottomRight(find.byType(NavigationBar)).dy, 1280);
+
+      await tester.runAsync(() async {
+        final boundary = tester.renderObject<RenderRepaintBoundary>(
+          find.byKey(const Key('android-resume-capture')),
+        );
+        final image = await boundary.toImage(pixelRatio: 1);
+        final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
+        final output = File('build/qa/android-resume-after.png');
+        await output.parent.create(recursive: true);
+        await output.writeAsBytes(bytes!.buffer.asUint8List(), flush: true);
+      });
+
+      debugDefaultTargetPlatformOverride = null;
+      tester.view.resetDevicePixelRatio();
+      tester.view.resetPhysicalSize();
+      tester.view.resetViewInsets();
+    },
+  );
 
   testWidgets('历史批量操作显示重新生成文字', (tester) async {
     SharedPreferences.setMockInitialValues({
