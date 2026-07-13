@@ -18,6 +18,7 @@ Future<PdfSettings?> showPdfCustomizationDialog(
       barrierLabel: MaterialLocalizations.of(context).modalBarrierDismissLabel,
       barrierColor: Colors.black.withValues(alpha: .24),
       transitionDuration: const Duration(milliseconds: 520),
+      useSafeArea: true,
       pageBuilder: (_, __, ___) => _PdfCustomizationDialog(initial: settings),
       transitionBuilder: (context, animation, secondaryAnimation, child) {
         final curved = CurvedAnimation(
@@ -65,19 +66,35 @@ class _PdfCustomizationDialogState extends State<_PdfCustomizationDialog> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final strings = AppLocalizations.of(context);
-    final size = MediaQuery.sizeOf(context);
+    final media = MediaQuery.of(context);
+    // Keep the sheet below the status bar/notch and above the keyboard.  The
+    // dialog is scrollable, so on a short phone it becomes a compact sheet
+    // instead of covering system UI or making the action buttons unreachable.
+    final maxHeight = (media.size.height -
+            media.viewPadding.top -
+            media.viewPadding.bottom -
+            media.viewInsets.bottom -
+            24)
+        .clamp(280.0, double.infinity)
+        .toDouble();
     final glassColor = theme.colorScheme.surface.withValues(
       alpha: Platform.isMacOS ? .74 : .98,
     );
 
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: ConstrainedBox(
-          constraints: BoxConstraints(
-            maxWidth: 660,
-            maxHeight: size.height - 40,
-          ),
+    return SafeArea(
+      minimum: const EdgeInsets.fromLTRB(12, 12, 12, 12),
+      child: AnimatedPadding(
+        duration: const Duration(milliseconds: 220),
+        curve: Curves.easeOutCubic,
+        padding: EdgeInsets.only(bottom: media.viewInsets.bottom),
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(8),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxWidth: 660,
+                maxHeight: maxHeight,
+              ),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(28),
             child: BackdropFilter(
@@ -356,6 +373,8 @@ class _PdfCustomizationDialogState extends State<_PdfCustomizationDialog> {
                   ),
                 ]),
               ),
+            ),
+          ),
             ),
           ),
         ),

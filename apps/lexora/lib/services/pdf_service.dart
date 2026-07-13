@@ -125,9 +125,12 @@ class PdfService {
     document.addPage(
       pw.MultiPage(
         pageFormat: PdfPageFormat.a4,
-        margin: const pw.EdgeInsets.fromLTRB(28, 26, 28, 26),
+        // Keep the printable margins compact.  The entry flow below is a
+        // spanning Wrap, so a page can continue with the next card instead
+        // of leaving a large unused block at the bottom of a page.
+        margin: const pw.EdgeInsets.fromLTRB(24, 20, 24, 20),
         header: (context) => pw.Padding(
-          padding: const pw.EdgeInsets.only(bottom: 8),
+          padding: const pw.EdgeInsets.only(bottom: 4),
           child: pw.Row(
             mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
             children: [
@@ -148,7 +151,7 @@ class PdfService {
           pw.SizedBox(height: 2),
           pw.Text('我的双语词汇册',
               style: pw.TextStyle(fontSize: size(11), color: PdfColors.grey700)),
-          pw.SizedBox(height: 12),
+          pw.SizedBox(height: 8),
           ..._entryLayout(
             entries,
             bold,
@@ -185,13 +188,25 @@ class PdfService {
       ];
     }
 
-    final rows = <pw.Widget>[];
-    for (var index = 0; index < entries.length; index += 2) {
-      rows.add(
-        pw.Row(
-          crossAxisAlignment: pw.CrossAxisAlignment.start,
-          children: [
-            pw.Expanded(
+    const columnGap = 6.0;
+    const horizontalMargin = 24.0;
+    final columnWidth =
+        (PdfPageFormat.a4.width - horizontalMargin * 2 - columnGap) / 2;
+
+    // GridView lays out complete rows.  When one card is taller than its
+    // neighbour, that row reserves the taller card's height and creates the
+    // conspicuous blank area visible in the exported PDF.  Wrap is a
+    // SpanningWidget, so it keeps the two-column presentation while allowing
+    // the next card to continue naturally on the next page.
+    return [
+      pw.Wrap(
+        spacing: columnGap,
+        runSpacing: 5,
+        crossAxisAlignment: pw.WrapCrossAlignment.start,
+        children: [
+          for (var index = 0; index < entries.length; index++)
+            pw.SizedBox(
+              width: columnWidth,
               child: _entry(
                 index + 1,
                 entries[index],
@@ -200,24 +215,9 @@ class PdfService {
                 typography,
               ),
             ),
-            pw.SizedBox(width: 8),
-            pw.Expanded(
-              child: index + 1 < entries.length
-                  ? _entry(
-                      index + 2,
-                      entries[index + 1],
-                      bold,
-                      ipa,
-                      typography,
-                    )
-                  : pw.SizedBox(),
-            ),
-          ],
-        ),
-      );
-      if (index + 2 < entries.length) rows.add(pw.SizedBox(height: 8));
-    }
-    return rows;
+        ],
+      ),
+    ];
   }
 
   pw.Widget _entry(
@@ -240,7 +240,7 @@ class PdfService {
         );
 
     return pw.Container(
-      padding: const pw.EdgeInsets.fromLTRB(9, 8, 9, 8),
+      padding: const pw.EdgeInsets.fromLTRB(8, 6, 8, 6),
       decoration: pw.BoxDecoration(
         color: PdfColors.grey100,
         borderRadius: pw.BorderRadius.circular(8),
@@ -265,13 +265,13 @@ class PdfService {
           pw.Text(entry.ukPhonetic,
               style: pw.TextStyle(font: ipa, fontSize: typography.phonetic, color: PdfColors.grey700)),
         ]),
-        pw.SizedBox(height: 5),
+        pw.SizedBox(height: 3),
         pw.Text(entry.definition, style: pw.TextStyle(fontSize: typography.definition)),
         pw.SizedBox(height: 2),
         pw.Text(entry.definitionZh,
             style: pw.TextStyle(font: bold, fontSize: typography.definition, color: PdfColors.indigo900)),
         if (entry.synonyms.isNotEmpty || entry.antonyms.isNotEmpty) ...[
-          pw.SizedBox(height: 5),
+          pw.SizedBox(height: 3),
           if (entry.synonyms.isNotEmpty) ...[
             pw.Text('Synonyms / 近义词  ${entry.synonyms.join(' · ')}',
                 style: pw.TextStyle(fontSize: typography.related)),
@@ -289,7 +289,7 @@ class PdfService {
           ],
         ],
         if (entry.examples.isNotEmpty) ...[
-          pw.SizedBox(height: 5),
+          pw.SizedBox(height: 3),
           pw.Container(
             padding: const pw.EdgeInsets.only(left: 6),
             decoration: const pw.BoxDecoration(
@@ -309,7 +309,7 @@ class PdfService {
           ),
         ],
         if (entry.phrases.isNotEmpty) ...[
-          pw.SizedBox(height: 5),
+          pw.SizedBox(height: 3),
           pw.Text(
             'Phrases / 常用短语',
             style: pw.TextStyle(
