@@ -40,13 +40,13 @@ private struct LexoraWindowRoot: View {
       .ignoresSafeArea()
 
       Circle()
-        .fill(Color.indigo.opacity(0.16))
+        .fill(Color(red: 0.31, green: 0.28, blue: 0.94).opacity(0.16))
         .frame(width: 360, height: 360)
         .blur(radius: 70)
         .offset(x: -260, y: -210)
 
       Circle()
-        .fill(Color.cyan.opacity(0.12))
+        .fill(Color(red: 0.12, green: 0.72, blue: 0.82).opacity(0.12))
         .frame(width: 420, height: 420)
         .blur(radius: 82)
         .offset(x: 330, y: 260)
