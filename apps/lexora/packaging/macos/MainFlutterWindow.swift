@@ -14,7 +14,11 @@ class MainFlutterWindow: NSWindow {
     titlebarAppearsTransparent = true
     styleMask.remove(.fullSizeContentView)
     minSize = NSSize(width: 900, height: 620)
-    isMovableByWindowBackground = true
+    // Flutter renders into a transparent view hosted by SwiftUI. Treating the
+    // whole window background as draggable makes AppKit consume mouse events
+    // before Flutter controls receive them. The native title bar remains the
+    // correct drag region.
+    isMovableByWindowBackground = false
 
     let nativeToolbar = NSToolbar(identifier: "LexoraToolbar")
     nativeToolbar.displayMode = .iconOnly
