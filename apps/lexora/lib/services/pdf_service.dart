@@ -240,7 +240,7 @@ class PdfService {
     pw.Font ipa,
     PdfTypography typography, {
     required bool denseHeader,
-  ) {
+  }) {
     pw.Widget pill(String text, PdfColor color) => pw.Container(
           padding: const pw.EdgeInsets.symmetric(horizontal: 7, vertical: 3),
           decoration: pw.BoxDecoration(
