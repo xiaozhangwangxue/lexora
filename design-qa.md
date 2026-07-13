@@ -36,6 +36,9 @@
 - Earlier P1: returning from the launcher with a stale Android IME inset clipped Settings and reserved a large blank region.
 - Fix: dismiss the keyboard on every non-resumed lifecycle state, repeat the synchronization after resume, and keep the Android app shell at full height instead of resizing from a potentially stale inset.
 - Post-fix evidence: the dedicated lifecycle test passes with a 480-pixel stale inset, clears the input focus, keeps `resizeToAvoidBottomInset` disabled for Android, and measures the navigation bottom at y = 1280.
+- Earlier live P0: a broad Cloudflare `run_worker_first: true` rule caused website CSS and JavaScript assets to pass through the application Worker and render the deployed site without styling.
+- Fix: narrow Worker-first asset routing to `/version.json` only. Update and download routes continue to fall through to the Worker when no static asset exists, while CSS, JavaScript, fonts, and images remain on Cloudflare Assets.
+- Post-fix evidence: the final live mobile and desktop captures render the complete branded layout, and the R2 manifest still exposes verified sizes and SHA-256 values.
 
 ## Findings
 
