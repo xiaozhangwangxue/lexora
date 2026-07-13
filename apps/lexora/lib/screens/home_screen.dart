@@ -46,12 +46,11 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _addWord([String? raw]) {
     final strings = AppLocalizations.of(context);
-    final word = (raw ?? _controller.text)
-        .trim()
-        .toLowerCase()
-        .replaceAll(RegExp(r'\s+'), ' ');
-    if (!RegExp(r"^[a-z][a-z'-]*(?:\s+[a-z][a-z'-]*)*$")
-        .hasMatch(word)) {
+    final word = (raw ?? _controller.text).trim().toLowerCase().replaceAll(
+      RegExp(r'\s+'),
+      ' ',
+    );
+    if (!RegExp(r"^[a-z][a-z'-]*(?:\s+[a-z][a-z'-]*)*$").hasMatch(word)) {
       _message(strings.invalidWord);
       return;
     }
@@ -80,7 +79,10 @@ class _HomeScreenState extends State<HomeScreen> {
           _words.sort((a, b) => a.length.compareTo(b.length));
           break;
         case WordSort.difficulty:
-          _words.sort((a, b) => _estimatedDifficulty(a).compareTo(_estimatedDifficulty(b)));
+          _words.sort(
+            (a, b) =>
+                _estimatedDifficulty(a).compareTo(_estimatedDifficulty(b)),
+          );
           break;
       }
     });
@@ -146,177 +148,230 @@ class _HomeScreenState extends State<HomeScreen> {
               isMac ? 36 : 20,
               16,
             ),
-            child: Column(children: [
-              if (!isMac) const Spacer() else const SizedBox(height: 8),
-              Align(
-                alignment: isMac ? Alignment.centerLeft : Alignment.center,
-                child: LexoraWordmark(
-                  fontSize: isMac ? 38 : 42,
-                  alignment: isMac ? TextAlign.left : TextAlign.center,
-                ),
-              ),
-              const SizedBox(height: 6),
-              Align(
-                alignment: isMac ? Alignment.centerLeft : Alignment.center,
-                child: Text(strings.tagline,
-                    style: theme.textTheme.bodyLarge?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
-              ),
-              SizedBox(height: isMac ? 20 : 24),
-              TextField(
-                controller: _controller,
-                focusNode: _focusNode,
-                autofocus: true,
-                textInputAction: TextInputAction.done,
-                onSubmitted: _addWord,
-                decoration: InputDecoration(
-                  hintText: strings.inputHint,
-                  prefixIcon: const Icon(Icons.search_rounded),
-                  suffixIcon: IconButton(
-                    tooltip: strings.addWord,
-                    onPressed: _addWord,
-                    icon: const Icon(Icons.keyboard_return_rounded),
+            child: Column(
+              children: [
+                if (!isMac) const Spacer() else const SizedBox(height: 8),
+                Align(
+                  alignment: isMac ? Alignment.centerLeft : Alignment.center,
+                  child: LexoraWordmark(
+                    fontSize: isMac ? 38 : 42,
+                    alignment: isMac ? TextAlign.left : TextAlign.center,
+                    hero: true,
                   ),
                 ),
-              ),
-              const SizedBox(height: 14),
-              SizedBox(
-                width: double.infinity,
-                height: isMac ? 44 : 50,
-                child: FilledButton.icon(
-                  onPressed: _words.isEmpty || widget.generationRunning
-                      ? null
-                      : _generate,
-                  icon: widget.generationRunning
-                      ? const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(Icons.auto_awesome_rounded),
-                  label: Text(widget.generationRunning
-                      ? strings.generationInProgress
-                      : strings.generate),
-                ),
-              ),
-              const SizedBox(height: 6),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: TextButton.icon(
-                  onPressed: widget.onCustomizePdf,
-                  icon: const Icon(Icons.tune_rounded),
-                  label: Text(
-                    '${strings.pdfSettings}  ·  '
-                    '${_fontSizeLabel(strings, widget.settings.fontSize)}  ·  '
-                    '${_exampleLabel(strings, widget.settings.exampleAmount)}',
-                  ),
-                ),
-              ),
-              const SizedBox(height: 12),
-              if (_words.isNotEmpty)
-                Row(children: [
-                  Expanded(child: Text(strings.termCount(_words.length), style: theme.textTheme.titleSmall)),
-                  PopupMenuButton<WordSort>(
-                    initialValue: _sort,
-                    onSelected: _applySort,
-                    tooltip: strings.sortWords,
-                    itemBuilder: (context) => [
-                      PopupMenuItem(value: WordSort.custom, child: Text(strings.customOrder)),
-                      PopupMenuItem(value: WordSort.alphabetical, child: Text(strings.alphabetical)),
-                      PopupMenuItem(value: WordSort.length, child: Text(strings.wordLength)),
-                      PopupMenuItem(value: WordSort.difficulty, child: Text(strings.estimatedDifficulty)),
-                    ],
-                    child: Chip(
-                      avatar: const Icon(Icons.swap_vert_rounded, size: 18),
-                      label: Text(switch (_sort) {
-                        WordSort.custom => strings.custom,
-                        WordSort.alphabetical => 'A–Z',
-                        WordSort.length => strings.wordLength,
-                        WordSort.difficulty => strings.estimatedDifficulty,
-                      }),
+                const SizedBox(height: 6),
+                Align(
+                  alignment: isMac ? Alignment.centerLeft : Alignment.center,
+                  child: Text(
+                    strings.tagline,
+                    style: theme.textTheme.bodyLarge?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
                     ),
                   ),
-                ]),
-              const SizedBox(height: 8),
-              Expanded(
-                flex: 5,
-                child: _words.isEmpty
-                    ? _EmptyList(theme: theme, strings: strings)
-                    : ReorderableListView.builder(
-                        buildDefaultDragHandles: false,
-                        onReorderStart: (_) => unawaited(_haptics.dragStarted()),
-                        proxyDecorator: (child, index, animation) => AnimatedBuilder(
-                          animation: animation,
-                          builder: (context, _) => Transform.scale(
-                            scale: 1 + animation.value * .015,
-                            child: Material(
-                              color: Colors.transparent,
-                              elevation: 0,
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(itemRadius),
-                                child: DecoratedBox(
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(itemRadius),
-                                    boxShadow: [BoxShadow(
-                                      color: theme.shadowColor.withValues(alpha: .18 * animation.value),
-                                      blurRadius: 22,
-                                      offset: const Offset(0, 8),
-                                    )],
-                                  ),
-                                  child: child,
-                                ),
-                              ),
-                            ),
-                          ),
+                ),
+                SizedBox(height: isMac ? 20 : 24),
+                TextField(
+                  controller: _controller,
+                  focusNode: _focusNode,
+                  autofocus: true,
+                  textInputAction: TextInputAction.done,
+                  onSubmitted: _addWord,
+                  decoration: InputDecoration(
+                    hintText: strings.inputHint,
+                    prefixIcon: const Icon(Icons.search_rounded),
+                    suffixIcon: IconButton(
+                      tooltip: strings.addWord,
+                      onPressed: _addWord,
+                      icon: const Icon(Icons.keyboard_return_rounded),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 14),
+                SizedBox(
+                  width: double.infinity,
+                  height: isMac ? 44 : 50,
+                  child: FilledButton.icon(
+                    onPressed: _words.isEmpty || widget.generationRunning
+                        ? null
+                        : _generate,
+                    icon: widget.generationRunning
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.auto_awesome_rounded),
+                    label: Text(
+                      widget.generationRunning
+                          ? strings.generationInProgress
+                          : strings.generate,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: TextButton.icon(
+                    onPressed: widget.onCustomizePdf,
+                    icon: const Icon(Icons.tune_rounded),
+                    label: Text(
+                      '${strings.pdfSettings}  ·  '
+                      '${_fontSizeLabel(strings, widget.settings.fontSize)}  ·  '
+                      '${_exampleLabel(strings, widget.settings.exampleAmount)}',
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                if (_words.isNotEmpty)
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          strings.termCount(_words.length),
+                          style: theme.textTheme.titleSmall,
                         ),
-                        itemCount: _words.length,
-                        onReorderItem: (oldIndex, newIndex) {
-                          if (oldIndex == newIndex) return;
-                          setState(() {
-                            final word = _words.removeAt(oldIndex);
-                            _words.insert(newIndex, word);
-                            _sort = WordSort.custom;
-                          });
-                          unawaited(_haptics.itemReordered());
-                        },
-                        itemBuilder: (context, index) {
-                          final word = _words[index];
-                          return Dismissible(
-                            key: ValueKey(word),
-                            direction: DismissDirection.endToStart,
-                            onDismissed: (_) => setState(() => _words.remove(word)),
-                            background: Container(
-                              margin: const EdgeInsets.only(bottom: 8),
-                              padding: const EdgeInsets.only(right: 24),
-                              alignment: Alignment.centerRight,
-                              decoration: BoxDecoration(
-                                color: theme.colorScheme.error,
-                                borderRadius: BorderRadius.circular(itemRadius),
-                              ),
-                              child: Icon(Icons.delete_outline, color: theme.colorScheme.onError),
-                            ),
-                            child: Card(
-                              margin: const EdgeInsets.only(bottom: 8),
-                              child: ListTile(
-                                leading: CircleAvatar(child: Text('${index + 1}')),
-                                title: Text(word, style: const TextStyle(fontWeight: FontWeight.w600)),
-                                subtitle: Text(
-                                  '${strings.characters(word.replaceAll(' ', '').length)}'
-                                  '${word.contains(' ') ? ' · ${strings.phrase}' : ''}',
-                                ),
-                                trailing: ReorderableDelayedDragStartListener(
-                                  index: index,
-                                  child: const Padding(
-                                    padding: EdgeInsets.all(10),
-                                    child: Icon(Icons.drag_indicator_rounded),
+                      ),
+                      PopupMenuButton<WordSort>(
+                        initialValue: _sort,
+                        onSelected: _applySort,
+                        tooltip: strings.sortWords,
+                        itemBuilder: (context) => [
+                          PopupMenuItem(
+                            value: WordSort.custom,
+                            child: Text(strings.customOrder),
+                          ),
+                          PopupMenuItem(
+                            value: WordSort.alphabetical,
+                            child: Text(strings.alphabetical),
+                          ),
+                          PopupMenuItem(
+                            value: WordSort.length,
+                            child: Text(strings.wordLength),
+                          ),
+                          PopupMenuItem(
+                            value: WordSort.difficulty,
+                            child: Text(strings.estimatedDifficulty),
+                          ),
+                        ],
+                        child: Chip(
+                          avatar: const Icon(Icons.swap_vert_rounded, size: 18),
+                          label: Text(switch (_sort) {
+                            WordSort.custom => strings.custom,
+                            WordSort.alphabetical => 'A–Z',
+                            WordSort.length => strings.wordLength,
+                            WordSort.difficulty => strings.estimatedDifficulty,
+                          }),
+                        ),
+                      ),
+                    ],
+                  ),
+                const SizedBox(height: 8),
+                Expanded(
+                  flex: 5,
+                  child: _words.isEmpty
+                      ? _EmptyList(theme: theme, strings: strings)
+                      : ReorderableListView.builder(
+                          buildDefaultDragHandles: false,
+                          onReorderStart: (_) =>
+                              unawaited(_haptics.dragStarted()),
+                          proxyDecorator: (child, index, animation) =>
+                              AnimatedBuilder(
+                                animation: animation,
+                                builder: (context, _) => Transform.scale(
+                                  scale: 1 + animation.value * .015,
+                                  child: Material(
+                                    color: Colors.transparent,
+                                    elevation: 0,
+                                    child: ClipRRect(
+                                      borderRadius: BorderRadius.circular(
+                                        itemRadius,
+                                      ),
+                                      child: DecoratedBox(
+                                        decoration: BoxDecoration(
+                                          borderRadius: BorderRadius.circular(
+                                            itemRadius,
+                                          ),
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: theme.shadowColor
+                                                  .withValues(
+                                                    alpha:
+                                                        .18 * animation.value,
+                                                  ),
+                                              blurRadius: 22,
+                                              offset: const Offset(0, 8),
+                                            ),
+                                          ],
+                                        ),
+                                        child: child,
+                                      ),
+                                    ),
                                   ),
                                 ),
                               ),
-                            ),
-                          );
-                        },
-                      ),
-              ),
-            ]),
+                          itemCount: _words.length,
+                          onReorderItem: (oldIndex, newIndex) {
+                            if (oldIndex == newIndex) return;
+                            setState(() {
+                              final word = _words.removeAt(oldIndex);
+                              _words.insert(newIndex, word);
+                              _sort = WordSort.custom;
+                            });
+                            unawaited(_haptics.itemReordered());
+                          },
+                          itemBuilder: (context, index) {
+                            final word = _words[index];
+                            return Dismissible(
+                              key: ValueKey(word),
+                              direction: DismissDirection.endToStart,
+                              onDismissed: (_) =>
+                                  setState(() => _words.remove(word)),
+                              background: Container(
+                                margin: const EdgeInsets.only(bottom: 8),
+                                padding: const EdgeInsets.only(right: 24),
+                                alignment: Alignment.centerRight,
+                                decoration: BoxDecoration(
+                                  color: theme.colorScheme.error,
+                                  borderRadius: BorderRadius.circular(
+                                    itemRadius,
+                                  ),
+                                ),
+                                child: Icon(
+                                  Icons.delete_outline,
+                                  color: theme.colorScheme.onError,
+                                ),
+                              ),
+                              child: Card(
+                                margin: const EdgeInsets.only(bottom: 8),
+                                child: ListTile(
+                                  leading: CircleAvatar(
+                                    child: Text('${index + 1}'),
+                                  ),
+                                  title: Text(
+                                    word,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  subtitle: Text(
+                                    '${strings.characters(word.replaceAll(' ', '').length)}'
+                                    '${word.contains(' ') ? ' · ${strings.phrase}' : ''}',
+                                  ),
+                                  trailing: ReorderableDelayedDragStartListener(
+                                    index: index,
+                                    child: const Padding(
+                                      padding: EdgeInsets.all(10),
+                                      child: Icon(Icons.drag_indicator_rounded),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -345,13 +400,24 @@ class _EmptyList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Center(
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
-          Icon(Icons.format_list_bulleted_add, size: 34, color: theme.colorScheme.outline),
-          const SizedBox(height: 10),
-          Text(strings.emptyTitle, style: theme.textTheme.titleSmall),
-          const SizedBox(height: 4),
-          Text(strings.emptyHint,
-              style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
-        ]),
-      );
+    child: Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(
+          Icons.format_list_bulleted_add,
+          size: 34,
+          color: theme.colorScheme.outline,
+        ),
+        const SizedBox(height: 10),
+        Text(strings.emptyTitle, style: theme.textTheme.titleSmall),
+        const SizedBox(height: 4),
+        Text(
+          strings.emptyHint,
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+        ),
+      ],
+    ),
+  );
 }

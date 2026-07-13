@@ -6,6 +6,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:lexora/l10n/app_localizations.dart';
 import 'package:lexora/main.dart';
 import 'package:lexora/screens/word_history_screen.dart';
+import 'package:lexora/widgets/lexora_wordmark.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
@@ -20,11 +21,11 @@ void main() {
   testWidgets('Lexora opens the localized word composer', (tester) async {
     SharedPreferences.setMockInitialValues({
       'lexora.onboarding.completed.v1': true,
-      'lexora.release-notes.seen.1.1.1': true,
+      'lexora.release-notes.seen.1.1.2': true,
     });
     await tester.pumpWidget(const LexoraApp(locale: Locale('zh', 'CN')));
     await tester.pumpAndSettle();
-    expect(find.text('Lexora'), findsOneWidget);
+    expect(find.byType(LexoraWordmark), findsOneWidget);
     expect(find.text('开始生成'), findsOneWidget);
     expect(find.textContaining('PDF 自定义'), findsOneWidget);
     expect(find.text('GitHub'), findsOneWidget);

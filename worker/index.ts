@@ -31,6 +31,26 @@ const worker = {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
 
+    const r2Response = async (key: string, contentDisposition = true) => {
+      const object = await env.DOWNLOADS?.get(key);
+      if (!object) return null;
+      const headers = new Headers();
+      object.writeHttpMetadata(headers);
+      headers.set("etag", object.httpEtag);
+      if (contentDisposition) {
+        headers.set("content-disposition", `attachment; filename="${key}"`);
+      } else {
+        headers.delete("content-disposition");
+      }
+      headers.set(
+        "cache-control",
+        /-v\d+\.\d+\.\d+\./.test(key)
+          ? "public, max-age=31536000, immutable"
+          : "no-cache",
+      );
+      return new Response(object.body, { headers });
+    };
+
     if (url.pathname.startsWith("/api/admin/downloads/") && request.method === "PUT") {
       const token = request.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
       if (!env.DOWNLOAD_UPLOAD_TOKEN || token !== env.DOWNLOAD_UPLOAD_TOKEN) {
@@ -50,25 +70,27 @@ const worker = {
       return Response.json({ ok: true, key });
     }
 
+    if (url.pathname === "/version.json") {
+      const manifest = await r2Response("version.json", false);
+      if (manifest) return manifest;
+    }
+
+    if (url.pathname.startsWith("/updates/")) {
+      const key = decodeURIComponent(url.pathname.slice("/updates/".length));
+      if (!key || key.includes("/") || key.includes("..")) {
+        return new Response("Invalid update name", { status: 400 });
+      }
+      const object = await r2Response(key);
+      return object ?? new Response("Update mirror is not ready", { status: 503 });
+    }
+
     if (url.pathname.startsWith("/downloads/")) {
       const key = decodeURIComponent(url.pathname.slice("/downloads/".length));
       if (!key || key.includes("/") || key.includes("..")) {
         return new Response("Invalid download name", { status: 400 });
       }
-      const object = await env.DOWNLOADS?.get(key);
-      if (object) {
-        const headers = new Headers();
-        object.writeHttpMetadata(headers);
-        headers.set("etag", object.httpEtag);
-        headers.set("content-disposition", `attachment; filename="${key}"`);
-        headers.set(
-          "cache-control",
-          /-v\d+\.\d+\.\d+\./.test(key)
-            ? "public, max-age=31536000, immutable"
-            : "public, max-age=3600",
-        );
-        return new Response(object.body, { headers });
-      }
+      const object = await r2Response(key);
+      if (object) return object;
       return Response.redirect(
         `https://github.com/xiaozhangwangxue/lexora/releases/latest/download/${encodeURIComponent(key)}`,
         302,

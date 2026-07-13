@@ -1,39 +1,84 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:crypto/crypto.dart';
 import 'package:http/http.dart' as http;
 import 'package:open_filex/open_filex.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../app_version.dart';
+
+typedef InstallerOpener = Future<bool> Function(File file);
+typedef CacheDirectoryProvider = Future<Directory> Function();
+typedef MacUpdateFinisher = Future<void> Function();
+
+class UpdateDownload {
+  const UpdateDownload({
+    required this.urls,
+    required this.filename,
+    this.sha256,
+    this.size,
+  });
+
+  final List<Uri> urls;
+  final String filename;
+  final String? sha256;
+  final int? size;
+}
 
 class UpdateInfo {
   const UpdateInfo({
     required this.version,
-    required this.downloadUrl,
+    required this.download,
     required this.notesZh,
     required this.notesEn,
   });
 
   final String version;
-  final Uri downloadUrl;
+  final UpdateDownload download;
   final List<String> notesZh;
   final List<String> notesEn;
+
+  Uri get downloadUrl => download.urls.first;
 }
 
 class UpdateService {
-  UpdateService({http.Client? client}) : _client = client ?? http.Client();
+  UpdateService({
+    http.Client? client,
+    Uri? manifestUri,
+    String? platformKey,
+    CacheDirectoryProvider? cacheDirectory,
+    InstallerOpener? openInstaller,
+    MacUpdateFinisher? finishMacUpdate,
+    bool? isMacOS,
+  }) : _client = client ?? http.Client(),
+       _manifestUri = manifestUri ?? _defaultManifestUri,
+       _platformKeyOverride = platformKey,
+       _cacheDirectoryOverride = cacheDirectory,
+       _openInstaller = openInstaller ?? _defaultOpenInstaller,
+       _finishMacUpdate = finishMacUpdate ?? _defaultFinishMacUpdate,
+       _isMacOS = isMacOS ?? Platform.isMacOS;
 
-  static final Uri _manifestUri =
-      Uri.parse('https://lexora.12323456.xyz/version.json');
+  static final Uri _defaultManifestUri = Uri.parse(
+    'https://lexora.12323456.xyz/version.json',
+  );
   static const _cacheFolderName = 'lexora_update_installers';
   final http.Client _client;
+  final Uri _manifestUri;
+  final String? _platformKeyOverride;
+  final CacheDirectoryProvider? _cacheDirectoryOverride;
+  final InstallerOpener _openInstaller;
+  final MacUpdateFinisher _finishMacUpdate;
+  final bool _isMacOS;
 
   Future<UpdateInfo?> check() async {
     final uri = _manifestUri.replace(
       queryParameters: {'t': DateTime.now().millisecondsSinceEpoch.toString()},
     );
-    final response = await _client.get(uri).timeout(const Duration(seconds: 15));
+    final response = await _client
+        .get(uri)
+        .timeout(const Duration(seconds: 15));
     if (response.statusCode != 200) {
       throw HttpException('Update server returned ${response.statusCode}.');
     }
@@ -41,15 +86,19 @@ class UpdateService {
     final version = json['version'] as String? ?? '';
     if (version.isEmpty || !_isNewer(version, appVersion)) return null;
     final downloads = json['downloads'] as Map<String, dynamic>? ?? const {};
-    final platformKey = _platformKey;
-    final rawUrl = downloads[platformKey] as String?;
-    if (rawUrl == null || rawUrl.isEmpty) {
-      throw const FormatException('No installer is available for this platform.');
+    final verifiedDownloads =
+        json['verifiedDownloads'] as Map<String, dynamic>? ?? const {};
+    final platform = _platformKeyOverride ?? _platformKey;
+    final rawDownload = verifiedDownloads[platform] ?? downloads[platform];
+    if (rawDownload == null) {
+      throw const FormatException(
+        'No installer is available for this platform.',
+      );
     }
     final notes = json['releaseNotes'] as Map<String, dynamic>? ?? const {};
     return UpdateInfo(
       version: version,
-      downloadUrl: _manifestUri.resolve(rawUrl),
+      download: _parseDownload(rawDownload),
       notesZh: _stringList(notes['zh']),
       notesEn: _stringList(notes['en']),
     );
@@ -59,30 +108,181 @@ class UpdateService {
     UpdateInfo info, {
     required void Function(double?) onProgress,
   }) async {
-    final request = http.Request('GET', info.downloadUrl);
-    final response = await _client.send(request).timeout(const Duration(seconds: 30));
-    if (response.statusCode != 200) {
-      throw HttpException('Installer download returned ${response.statusCode}.');
+    final file = await _downloadValidated(info.download, onProgress);
+    if (!await _openInstaller(file)) {
+      throw FileSystemException(
+        'The system installer could not be opened.',
+        file.path,
+      );
     }
+    if (_isMacOS) await _finishMacUpdate();
+  }
+
+  Future<File> _downloadValidated(
+    UpdateDownload download,
+    void Function(double?) onProgress,
+  ) async {
+    Object? lastError;
+    for (var attempt = 0; attempt < 2; attempt++) {
+      for (final url in download.urls) {
+        try {
+          return await _downloadFrom(url, download, onProgress);
+        } catch (error) {
+          lastError = error;
+          onProgress(0);
+        }
+      }
+    }
+    throw HttpException(
+      'All verified download sources failed. ${lastError ?? ''}'.trim(),
+    );
+  }
+
+  Future<File> _downloadFrom(
+    Uri url,
+    UpdateDownload download,
+    void Function(double?) onProgress,
+  ) async {
+    final request = http.Request('GET', url)
+      ..headers['accept'] = 'application/octet-stream'
+      ..headers['user-agent'] = 'Lexora/$appVersion updater';
+    final response = await _client
+        .send(request)
+        .timeout(const Duration(seconds: 35));
+    if (response.statusCode != 200) {
+      await response.stream.drain<void>();
+      throw HttpException(
+        'Installer source returned ${response.statusCode}.',
+        uri: url,
+      );
+    }
+
     final cache = await _cacheDirectory();
-    final filename = info.downloadUrl.pathSegments.last;
-    final file = File('${cache.path}/$filename');
-    final sink = file.openWrite();
-    final total = response.contentLength;
+    final stamp = DateTime.now().microsecondsSinceEpoch;
+    final finalFile = File('${cache.path}/$stamp-${download.filename}');
+    final partial = File('${finalFile.path}.part');
+    final sink = partial.openWrite();
+    final responseTotal = response.contentLength;
     var received = 0;
     try {
-      await for (final chunk in response.stream) {
+      await for (final chunk in response.stream.timeout(
+        const Duration(seconds: 35),
+      )) {
         sink.add(chunk);
         received += chunk.length;
+        final total = download.size ?? responseTotal;
         onProgress(total == null || total <= 0 ? null : received / total);
       }
-    } finally {
+      await sink.flush();
       await sink.close();
+      if (responseTotal != null && received != responseTotal) {
+        throw const FormatException('The installer download was incomplete.');
+      }
+      if (download.size != null && received != download.size) {
+        throw const FormatException(
+          'The installer size did not match the release.',
+        );
+      }
+      await _verifyFile(partial, download);
+      onProgress(1);
+      return partial.rename(finalFile.path);
+    } catch (_) {
+      await sink.close();
+      if (await partial.exists()) await partial.delete();
+      rethrow;
     }
-    final result = await OpenFilex.open(file.path);
-    if (result.type != ResultType.done) {
-      throw FileSystemException(result.message, file.path);
+  }
+
+  Future<void> _verifyFile(File file, UpdateDownload download) async {
+    final expectedHash = download.sha256?.toLowerCase().replaceFirst(
+      RegExp(r'^sha256:'),
+      '',
+    );
+    if (expectedHash != null && expectedHash.isNotEmpty) {
+      final actualHash = (await sha256.bind(file.openRead()).first).toString();
+      if (actualHash != expectedHash) {
+        throw const FormatException('The installer integrity check failed.');
+      }
     }
+    await _verifyContainer(file, download.filename.toLowerCase());
+  }
+
+  static Future<void> _verifyContainer(File file, String filename) async {
+    final length = await file.length();
+    if (length < 4) {
+      throw const FormatException('The installer file is invalid.');
+    }
+    final reader = await file.open();
+    try {
+      final head = await reader.read(4);
+      bool matches(List<int> signature) {
+        if (head.length < signature.length) return false;
+        for (var index = 0; index < signature.length; index++) {
+          if (head[index] != signature[index]) return false;
+        }
+        return true;
+      }
+
+      if ((filename.endsWith('.apk') || filename.endsWith('.zip')) &&
+          !(matches(const [0x50, 0x4b, 0x03, 0x04]) ||
+              matches(const [0x50, 0x4b, 0x05, 0x06]) ||
+              matches(const [0x50, 0x4b, 0x07, 0x08]))) {
+        throw const FormatException('The downloaded ZIP/APK is invalid.');
+      }
+      if (filename.endsWith('.exe') && !matches(const [0x4d, 0x5a])) {
+        throw const FormatException(
+          'The downloaded Windows installer is invalid.',
+        );
+      }
+      if (filename.endsWith('.tar.gz') && !matches(const [0x1f, 0x8b])) {
+        throw const FormatException('The downloaded Linux archive is invalid.');
+      }
+      if (filename.endsWith('.dmg')) {
+        if (length < 512) {
+          throw const FormatException('The downloaded DMG is invalid.');
+        }
+        await reader.setPosition(length - 512);
+        final trailer = await reader.read(4);
+        if (ascii.decode(trailer, allowInvalid: true) != 'koly') {
+          throw const FormatException('The downloaded DMG is invalid.');
+        }
+      }
+    } finally {
+      await reader.close();
+    }
+  }
+
+  UpdateDownload _parseDownload(dynamic raw) {
+    if (raw is String && raw.isNotEmpty) {
+      final uri = _manifestUri.resolve(raw);
+      return UpdateDownload(urls: [uri], filename: uri.pathSegments.last);
+    }
+    if (raw is! Map<String, dynamic>) {
+      throw const FormatException('The update download entry is invalid.');
+    }
+    final rawSources = raw['sources'];
+    final urls = <Uri>[];
+    if (rawSources is List) {
+      for (final source in rawSources.whereType<String>()) {
+        if (source.isNotEmpty) {
+          urls.add(_manifestUri.resolve(source));
+        }
+      }
+    }
+    final rawUrl = raw['url'];
+    if (urls.isEmpty && rawUrl is String && rawUrl.isNotEmpty) {
+      urls.add(_manifestUri.resolve(rawUrl));
+    }
+    if (urls.isEmpty) {
+      throw const FormatException('The update has no usable download source.');
+    }
+    final filename = raw['filename'] as String? ?? urls.first.pathSegments.last;
+    return UpdateDownload(
+      urls: urls,
+      filename: filename,
+      sha256: raw['sha256'] as String?,
+      size: (raw['size'] as num?)?.toInt(),
+    );
   }
 
   static Future<void> cleanupCachedInstallers() async {
@@ -99,10 +299,36 @@ class UpdateService {
   }
 
   Future<Directory> _cacheDirectory() async {
+    if (_cacheDirectoryOverride != null) return _cacheDirectoryOverride();
     final base = await getTemporaryDirectory();
     final directory = Directory('${base.path}/$_cacheFolderName');
     await directory.create(recursive: true);
     return directory;
+  }
+
+  static Future<bool> _defaultOpenInstaller(File file) async {
+    final result = await OpenFilex.open(file.path);
+    return result.type == ResultType.done;
+  }
+
+  static Future<void> _defaultFinishMacUpdate() async {
+    await Future<void>.delayed(const Duration(milliseconds: 700));
+    final opened = await launchUrl(
+      Uri.parse(
+        'x-apple.systempreferences:com.apple.settings.PrivacySecurity.extension',
+      ),
+      mode: LaunchMode.externalApplication,
+    );
+    if (!opened) {
+      await launchUrl(
+        Uri.parse(
+          'x-apple.systempreferences:com.apple.preference.security?General',
+        ),
+        mode: LaunchMode.externalApplication,
+      );
+    }
+    await Future<void>.delayed(const Duration(milliseconds: 900));
+    exit(0);
   }
 
   static String get _platformKey {

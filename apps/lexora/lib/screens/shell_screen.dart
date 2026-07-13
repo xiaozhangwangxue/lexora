@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -34,8 +35,7 @@ class ShellScreen extends StatefulWidget {
   State<ShellScreen> createState() => _ShellScreenState();
 }
 
-class _ShellScreenState extends State<ShellScreen>
-    with WidgetsBindingObserver {
+class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
   static const _onboardingKey = 'lexora.onboarding.completed.v1';
   static const _releaseNotesKey = 'lexora.release-notes.seen.$appVersion';
   final _settingsService = PdfSettingsService();
@@ -83,8 +83,7 @@ class _ShellScreenState extends State<ShellScreen>
     final settings = await _settingsService.load();
     if (mounted) {
       setState(() {
-        _onboardingCompleted =
-            preferences.getBool(_onboardingKey) ?? false;
+        _onboardingCompleted = preferences.getBool(_onboardingKey) ?? false;
         _settings = settings;
         _releaseNotesPending =
             !(preferences.getBool(_releaseNotesKey) ?? false);
@@ -125,14 +124,17 @@ class _ShellScreenState extends State<ShellScreen>
             mainAxisSize: MainAxisSize.min,
             children: [
               for (final note in notes) ...[
-                Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  const Padding(
-                    padding: EdgeInsets.only(top: 7),
-                    child: Icon(Icons.circle, size: 5),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(child: Text(note)),
-                ]),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Padding(
+                      padding: EdgeInsets.only(top: 7),
+                      child: Icon(Icons.circle, size: 5),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(child: Text(note)),
+                  ],
+                ),
                 const SizedBox(height: 9),
               ],
             ],
@@ -156,6 +158,7 @@ class _ShellScreenState extends State<ShellScreen>
 
   void _selectPage(int value, {bool animate = true}) {
     if (value == _index) return;
+    _dismissAndroidHomeKeyboard(value);
     if (Platform.isAndroid && animate && _pageController.hasClients) {
       setState(() => _index = value);
       _pageController.animateToPage(
@@ -169,6 +172,12 @@ class _ShellScreenState extends State<ShellScreen>
         _pageController.jumpToPage(value);
       }
     }
+  }
+
+  void _dismissAndroidHomeKeyboard(int destination) {
+    if (!Platform.isAndroid || _index != 0 || destination == 0) return;
+    FocusManager.instance.primaryFocus?.unfocus();
+    unawaited(SystemChannels.textInput.invokeMethod<void>('TextInput.hide'));
   }
 
   void _updateSettings(PdfSettings settings) {
@@ -256,10 +265,9 @@ class _ShellScreenState extends State<ShellScreen>
 
   Future<void> _shareBook(GeneratedBook book) async {
     final strings = AppLocalizations.of(context);
-    await Share.shareXFiles(
-      [XFile(book.path, mimeType: 'application/pdf')],
-      subject: strings.vocabularyBook,
-    );
+    await Share.shareXFiles([
+      XFile(book.path, mimeType: 'application/pdf'),
+    ], subject: strings.vocabularyBook);
   }
 
   Future<void> _openBook(GeneratedBook book) async {
@@ -280,35 +288,43 @@ class _ShellScreenState extends State<ShellScreen>
         title: Text(strings.generationCompleted),
         content: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 430),
-          child: Column(mainAxisSize: MainAxisSize.min, children: [
-            Text(strings.generationReadyBody),
-            const SizedBox(height: 22),
-            Row(children: [
-              Expanded(
-                child: TextButton(
-                  onPressed: () => Navigator.of(dialogContext)
-                      .pop(_GenerationCompleteAction.ignore),
-                  child: Text(strings.stayHere),
-                ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(strings.generationReadyBody),
+              const SizedBox(height: 22),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextButton(
+                      onPressed: () => Navigator.of(
+                        dialogContext,
+                      ).pop(_GenerationCompleteAction.ignore),
+                      child: Text(strings.stayHere),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: FilledButton(
+                      onPressed: () => Navigator.of(
+                        dialogContext,
+                      ).pop(_GenerationCompleteAction.share),
+                      child: Text(strings.shareNow),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: FilledButton(
+                      onPressed: () => Navigator.of(
+                        dialogContext,
+                      ).pop(_GenerationCompleteAction.open),
+                      child: Text(strings.viewGenerated),
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: FilledButton(
-                  onPressed: () => Navigator.of(dialogContext)
-                      .pop(_GenerationCompleteAction.share),
-                  child: Text(strings.shareNow),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: FilledButton(
-                  onPressed: () => Navigator.of(dialogContext)
-                      .pop(_GenerationCompleteAction.open),
-                  child: Text(strings.viewGenerated),
-                ),
-              ),
-            ]),
-          ]),
+            ],
+          ),
         ),
       ),
     );
@@ -331,20 +347,24 @@ class _ShellScreenState extends State<ShellScreen>
       context: context,
       builder: (context) => AlertDialog(
         icon: const Icon(Icons.manage_search_rounded),
-        title: Text(fuzzyMatches.isEmpty
-            ? strings.skippedItemsTitle
-            : strings.lookupResultsTitle),
+        title: Text(
+          fuzzyMatches.isEmpty
+              ? strings.skippedItemsTitle
+              : strings.lookupResultsTitle,
+        ),
         content: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 420, maxHeight: 340),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(fuzzyMatches.isNotEmpty
-                  ? strings.lookupResultsBody(failures.isNotEmpty)
-                  : (generated
-                      ? strings.skippedItemsBody
-                      : strings.noItemsGenerated)),
+              Text(
+                fuzzyMatches.isNotEmpty
+                    ? strings.lookupResultsBody(failures.isNotEmpty)
+                    : (generated
+                          ? strings.skippedItemsBody
+                          : strings.noItemsGenerated),
+              ),
               const SizedBox(height: 12),
               Flexible(
                 child: ListView.separated(
@@ -412,9 +432,7 @@ class _ShellScreenState extends State<ShellScreen>
 
     final strings = AppLocalizations.of(context);
     final windowWidth = MediaQuery.sizeOf(context).width;
-    final wide = Platform.isAndroid
-        ? windowWidth >= 680
-        : windowWidth >= 520;
+    final wide = Platform.isAndroid ? windowWidth >= 680 : windowWidth >= 520;
     final expandedNavigation = windowWidth >= 800;
     final showGitHub = _index == 0;
     final pages = [
@@ -452,6 +470,7 @@ class _ShellScreenState extends State<ShellScreen>
               clipBehavior: Clip.hardEdge,
               allowImplicitScrolling: true,
               onPageChanged: (value) {
+                _dismissAndroidHomeKeyboard(value);
                 if (_index != value) setState(() => _index = value);
               },
               children: [
@@ -480,10 +499,9 @@ class _ShellScreenState extends State<ShellScreen>
                 child: BackdropFilter(
                   filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
                   child: ColoredBox(
-                    color: Theme.of(context)
-                        .colorScheme
-                        .surface
-                        .withValues(alpha: .58),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.surface.withValues(alpha: .58),
                   ),
                 ),
               ),
@@ -525,26 +543,27 @@ class _ShellScreenState extends State<ShellScreen>
       if (Platform.isMacOS) {
         return Scaffold(
           backgroundColor: Colors.transparent,
-          body: Row(children: [
-            SizedBox(
-              width: expandedNavigation ? 220 : 76,
-              child: _MacSidebar(
-                selectedIndex: _index,
-                destinations: destinations,
-                onSelected: _selectPage,
-                expanded: expandedNavigation,
+          body: Row(
+            children: [
+              SizedBox(
+                width: expandedNavigation ? 220 : 76,
+                child: _MacSidebar(
+                  selectedIndex: _index,
+                  destinations: destinations,
+                  onSelected: _selectPage,
+                  expanded: expandedNavigation,
+                ),
               ),
-            ),
-            VerticalDivider(
-              width: 1,
-              thickness: .6,
-              color: Theme.of(context)
-                  .colorScheme
-                  .outlineVariant
-                  .withValues(alpha: .32),
-            ),
-            Expanded(child: body),
-          ]),
+              VerticalDivider(
+                width: 1,
+                thickness: .6,
+                color: Theme.of(
+                  context,
+                ).colorScheme.outlineVariant.withValues(alpha: .32),
+              ),
+              Expanded(child: body),
+            ],
+          ),
         );
       }
       return Scaffold(
@@ -552,38 +571,39 @@ class _ShellScreenState extends State<ShellScreen>
         // transparent Scaffold here exposes the runner's black clear color
         // around desktop pages, especially during the first frame.
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-        body: Row(children: [
-          SafeArea(
-            child: NavigationRail(
-              backgroundColor: Colors.transparent,
-              selectedIndex: _index,
-              onDestinationSelected: _selectPage,
-              labelType: expandedNavigation
-                  ? NavigationRailLabelType.all
-                  : NavigationRailLabelType.none,
-              leading: Padding(
-                padding: const EdgeInsets.only(bottom: 20),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: Image.asset(
-                    'assets/icon/lexora-icon.png',
-                    width: 42,
-                    height: 42,
+        body: Row(
+          children: [
+            SafeArea(
+              child: NavigationRail(
+                backgroundColor: Colors.transparent,
+                selectedIndex: _index,
+                onDestinationSelected: _selectPage,
+                labelType: expandedNavigation
+                    ? NavigationRailLabelType.all
+                    : NavigationRailLabelType.none,
+                leading: Padding(
+                  padding: const EdgeInsets.only(bottom: 20),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: Image.asset(
+                      'assets/icon/lexora-icon.png',
+                      width: 42,
+                      height: 42,
+                    ),
                   ),
                 ),
+                destinations: destinations,
               ),
-              destinations: destinations,
             ),
-          ),
-          VerticalDivider(
-            width: 1,
-            color: Theme.of(context)
-                .colorScheme
-                .outlineVariant
-                .withValues(alpha: .45),
-          ),
-          Expanded(child: body),
-        ]),
+            VerticalDivider(
+              width: 1,
+              color: Theme.of(
+                context,
+              ).colorScheme.outlineVariant.withValues(alpha: .45),
+            ),
+            Expanded(child: body),
+          ],
+        ),
       );
     }
 
@@ -594,34 +614,33 @@ class _ShellScreenState extends State<ShellScreen>
         child: BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 22, sigmaY: 22),
           child: NavigationBar(
-            backgroundColor: Theme.of(context)
-                .colorScheme
-                .surface
-                .withValues(alpha: Platform.isAndroid ? .76 : 1),
+            backgroundColor: Theme.of(context).colorScheme.surface.withValues(
+              alpha: Platform.isAndroid ? .76 : 1,
+            ),
             shadowColor: Colors.transparent,
             selectedIndex: _index,
             onDestinationSelected: _selectPage,
             destinations: [
-          NavigationDestination(
-            icon: destinations[0].icon,
-            selectedIcon: destinations[0].selectedIcon,
-            label: strings.words,
-          ),
-          NavigationDestination(
-            icon: destinations[1].icon,
-            selectedIcon: destinations[1].selectedIcon,
-            label: strings.generationRecords,
-          ),
-          NavigationDestination(
-            icon: destinations[2].icon,
-            selectedIcon: destinations[2].selectedIcon,
-            label: strings.history,
-          ),
-          NavigationDestination(
-            icon: destinations[3].icon,
-            selectedIcon: destinations[3].selectedIcon,
-            label: strings.settings,
-          ),
+              NavigationDestination(
+                icon: destinations[0].icon,
+                selectedIcon: destinations[0].selectedIcon,
+                label: strings.words,
+              ),
+              NavigationDestination(
+                icon: destinations[1].icon,
+                selectedIcon: destinations[1].selectedIcon,
+                label: strings.generationRecords,
+              ),
+              NavigationDestination(
+                icon: destinations[2].icon,
+                selectedIcon: destinations[2].selectedIcon,
+                label: strings.history,
+              ),
+              NavigationDestination(
+                icon: destinations[3].icon,
+                selectedIcon: destinations[3].selectedIcon,
+                label: strings.settings,
+              ),
             ],
           ),
         ),
@@ -638,11 +657,8 @@ class _LexoraPagePhysics extends PageScrollPhysics {
       _LexoraPagePhysics(parent: buildParent(ancestor));
 
   @override
-  SpringDescription get spring => const SpringDescription(
-        mass: .9,
-        stiffness: 260,
-        damping: 31,
-      );
+  SpringDescription get spring =>
+      const SpringDescription(mass: .9, stiffness: 260, damping: 31);
 }
 
 class _MacSidebar extends StatelessWidget {
@@ -664,54 +680,59 @@ class _MacSidebar extends StatelessWidget {
     return SafeArea(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(12, 14, 12, 14),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(8, 2, 8, 18),
-            child: Row(children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: Image.asset(
-                  'assets/icon/lexora-icon.png',
-                  width: 30,
-                  height: 30,
-                ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(8, 2, 8, 18),
+              child: Row(
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Image.asset(
+                      'assets/icon/lexora-icon.png',
+                      width: 30,
+                      height: 30,
+                    ),
+                  ),
+                  if (expanded) ...[
+                    const SizedBox(width: 10),
+                    Text(
+                      'Lexora',
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: -.4,
+                      ),
+                    ),
+                  ],
+                ],
               ),
-              if (expanded) ...[
-                const SizedBox(width: 10),
-                Text(
-                  'Lexora',
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: -.4,
+            ),
+            for (var index = 0; index < destinations.length; index++) ...[
+              _MacSidebarItem(
+                selected: selectedIndex == index,
+                icon: selectedIndex == index
+                    ? destinations[index].selectedIcon
+                    : destinations[index].icon,
+                label: destinations[index].label,
+                onTap: () => onSelected(index),
+                expanded: expanded,
+              ),
+              const SizedBox(height: 4),
+            ],
+            const Spacer(),
+            if (expanded)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 10),
+                child: Text(
+                  'Lexora $appVersion',
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
                   ),
                 ),
-              ],
-            ]),
-          ),
-          for (var index = 0; index < destinations.length; index++) ...[
-            _MacSidebarItem(
-              selected: selectedIndex == index,
-              icon: selectedIndex == index
-                  ? destinations[index].selectedIcon
-                  : destinations[index].icon,
-              label: destinations[index].label,
-              onTap: () => onSelected(index),
-              expanded: expanded,
-            ),
-            const SizedBox(height: 4),
-          ],
-          const Spacer(),
-          if (expanded)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 10),
-              child: Text(
-                'Lexora $appVersion',
-                style: theme.textTheme.labelSmall?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
               ),
-            ),
-        ]),
+          ],
+        ),
       ),
     );
   }
@@ -747,28 +768,32 @@ class _MacSidebarItem extends StatelessWidget {
           height: 42,
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 11),
-            child: Row(children: [
-              IconTheme(
-                data: IconThemeData(
-                  size: 20,
-                  color: selected
-                      ? theme.colorScheme.primary
-                      : theme.colorScheme.onSurfaceVariant,
-                ),
-                child: icon,
-              ),
-              if (expanded) ...[
-                const SizedBox(width: 11),
-                Expanded(
-                  child: DefaultTextStyle.merge(
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
-                    ),
-                    child: label,
+            child: Row(
+              children: [
+                IconTheme(
+                  data: IconThemeData(
+                    size: 20,
+                    color: selected
+                        ? theme.colorScheme.primary
+                        : theme.colorScheme.onSurfaceVariant,
                   ),
+                  child: icon,
                 ),
+                if (expanded) ...[
+                  const SizedBox(width: 11),
+                  Expanded(
+                    child: DefaultTextStyle.merge(
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        fontWeight: selected
+                            ? FontWeight.w600
+                            : FontWeight.w500,
+                      ),
+                      child: label,
+                    ),
+                  ),
+                ],
               ],
-            ]),
+            ),
           ),
         ),
       ),

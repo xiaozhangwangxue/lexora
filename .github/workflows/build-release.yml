@@ -110,6 +110,18 @@ jobs:
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+      - name: Verify stable Android release signature
+        if: matrix.platform == 'android'
+        shell: bash
+        run: |
+          APKSIGNER=$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort -V | tail -n 1)
+          test -n "$APKSIGNER"
+          "$APKSIGNER" verify --verbose --print-certs "${{ matrix.source }}"
+      - name: Apply and verify macOS ad-hoc signature
+        if: matrix.platform == 'macos'
+        run: |
+          codesign --force --deep --sign - "${{ matrix.source }}"
+          codesign --verify --deep --strict --verbose=2 "${{ matrix.source }}"
       - name: Package Unix desktop build
         if: matrix.platform == 'linux'
         run: tar -C build/linux/x64/release/bundle -czf "lexora-linux-${RELEASE_VERSION}.tar.gz" .
@@ -121,6 +133,7 @@ jobs:
             "${{ matrix.source }}" \
             packaging/macos/dmg-background-final.png \
             "lexora-macos-${RELEASE_VERSION}.dmg"
+          hdiutil verify "lexora-macos-${RELEASE_VERSION}.dmg"
       - name: Package Windows build
         if: matrix.platform == 'windows'
         shell: pwsh
@@ -177,14 +190,24 @@ jobs:
           files: lexora-*
       - name: Mirror downloads to Cloudflare R2
         env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          R2_BUCKET: ${{ secrets.CLOUDFLARE_R2_BUCKET }}
+          DOWNLOAD_UPLOAD_TOKEN: ${{ secrets.DOWNLOAD_UPLOAD_TOKEN }}
         run: |
-          if [ -z "$CLOUDFLARE_API_TOKEN" ] || [ -z "$CLOUDFLARE_ACCOUNT_ID" ] || [ -z "$R2_BUCKET" ]; then
-            echo "R2 secrets are not configured; GitHub Release remains the download source."
-            exit 0
+          if [ -z "$DOWNLOAD_UPLOAD_TOKEN" ]; then
+            echo "DOWNLOAD_UPLOAD_TOKEN is not configured."
+            exit 1
           fi
+          node tool/finalize_update_manifest.mjs public/version.json update-version.json lexora-*
           for file in lexora-*; do
-            npx wrangler r2 object put "$R2_BUCKET/$file" --file "$file" --remote
+            curl --fail --show-error --silent --retry 5 --retry-all-errors \
+              --request PUT \
+              -H "Authorization: Bearer $DOWNLOAD_UPLOAD_TOKEN" \
+              -H "Content-Type: application/octet-stream" \
+              --data-binary "@$file" \
+              "https://lexora.12323456.xyz/api/admin/downloads/$file"
           done
+          curl --fail --show-error --silent --retry 5 --retry-all-errors \
+            --request PUT \
+            -H "Authorization: Bearer $DOWNLOAD_UPLOAD_TOKEN" \
+            -H "Content-Type: application/json" \
+            --data-binary "@update-version.json" \
+            "https://lexora.12323456.xyz/api/admin/downloads/version.json"
