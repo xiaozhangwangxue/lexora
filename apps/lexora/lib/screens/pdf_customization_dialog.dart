@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'dart:ui';
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
 import '../l10n/app_localizations.dart';
@@ -52,6 +53,13 @@ class _PdfCustomizationDialog extends StatefulWidget {
 
 class _PdfCustomizationDialogState extends State<_PdfCustomizationDialog> {
   late PdfSettings _settings = widget.initial;
+  final _scrollController = ScrollController();
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -140,14 +148,59 @@ class _PdfCustomizationDialogState extends State<_PdfCustomizationDialog> {
                   ),
                   const Divider(height: 1),
                   Flexible(
-                    child: SingleChildScrollView(
-                      padding: const EdgeInsets.fromLTRB(24, 20, 24, 20),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            strings.fontPreset,
-                            style: theme.textTheme.labelLarge,
+                    child: ScrollConfiguration(
+                      behavior: ScrollConfiguration.of(context).copyWith(
+                        dragDevices: const {
+                          PointerDeviceKind.touch,
+                          PointerDeviceKind.mouse,
+                          PointerDeviceKind.trackpad,
+                          PointerDeviceKind.stylus,
+                        },
+                      ),
+                      child: Scrollbar(
+                        controller: _scrollController,
+                        thumbVisibility: true,
+                        interactive: true,
+                        radius: const Radius.circular(20),
+                        thickness: 6,
+                        child: SingleChildScrollView(
+                          key: const Key('pdf-customization-scroll'),
+                          controller: _scrollController,
+                          physics: const BouncingScrollPhysics(
+                            parent: AlwaysScrollableScrollPhysics(),
+                          ),
+                          padding: const EdgeInsets.fromLTRB(24, 20, 34, 20),
+                          child: Listener(
+                            behavior: HitTestBehavior.translucent,
+                            onPointerSignal: _handlePointerSignal,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  strings.fontPreset,
+                                  style: theme.textTheme.labelLarge,
+                                ),
+                              ),
+                              Icon(
+                                Icons.unfold_more_rounded,
+                                size: 17,
+                                color: theme.colorScheme.primary,
+                              ),
+                              const SizedBox(width: 5),
+                              Flexible(
+                                child: Text(
+                                  strings.scrollToAdjust,
+                                  textAlign: TextAlign.right,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: theme.textTheme.labelSmall?.copyWith(
+                                    color: theme.colorScheme.onSurfaceVariant,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                           const SizedBox(height: 10),
                           SizedBox(
@@ -274,7 +327,10 @@ class _PdfCustomizationDialogState extends State<_PdfCustomizationDialog> {
                               ),
                             ),
                           ),
-                        ],
+                              ],
+                            ),
+                          ),
+                        ),
                       ),
                     ),
                   ),
@@ -309,6 +365,18 @@ class _PdfCustomizationDialogState extends State<_PdfCustomizationDialog> {
 
   void _updateTypography(PdfTypography typography) {
     setState(() => _settings = _settings.copyWith(typography: typography));
+  }
+
+  void _handlePointerSignal(PointerSignalEvent event) {
+    if (event is! PointerScrollEvent || !_scrollController.hasClients) return;
+    GestureBinding.instance.pointerSignalResolver.register(event, (resolved) {
+      final scroll = resolved as PointerScrollEvent;
+      final position = _scrollController.position;
+      final target = (position.pixels + scroll.scrollDelta.dy)
+          .clamp(position.minScrollExtent, position.maxScrollExtent)
+          .toDouble();
+      _scrollController.jumpTo(target);
+    });
   }
 }
 

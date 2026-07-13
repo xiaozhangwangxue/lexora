@@ -71,6 +71,9 @@ class AppLocalizations {
   String get fineTuneTypographyHint => isZh
       ? '分别调整各部分字号，数值会直接用于下一份 PDF。'
       : 'Adjust each section independently. These values apply to the next PDF.';
+  String get scrollToAdjust => isZh
+      ? '滚轮、双指或拖动内容继续调整'
+      : 'Scroll, swipe, or drag the content to see every control';
   String get wordTitleFont => isZh ? '单词标题' : 'Word title';
   String get phoneticFont => isZh ? '英美音标' : 'Phonetics';
   String get definitionFont => isZh ? '中英文释义' : 'Definitions';

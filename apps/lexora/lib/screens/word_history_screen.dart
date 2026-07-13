@@ -404,11 +404,12 @@ class _WordBulkActionBar extends StatelessWidget {
           child: Row(children: [
             Checkbox(value: allSelected, onChanged: (_) => onSelectAll()),
             Expanded(child: Text(strings.selectedCount(selectedCount))),
-            IconButton(
-              tooltip: strings.regenerateSelected,
+            FilledButton.tonalIcon(
               onPressed: onRegenerate,
               icon: const Icon(Icons.replay_rounded),
+              label: Text(strings.regenerateSelected),
             ),
+            const SizedBox(width: 4),
             IconButton(
               tooltip: strings.deleteSelected,
               onPressed: onDelete,

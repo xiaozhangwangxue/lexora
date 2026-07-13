@@ -1,6 +1,9 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lexora/main.dart';
+import 'package:lexora/screens/word_history_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
@@ -33,6 +36,13 @@ void main() {
     expect(find.text('精细调整字体'), findsOneWidget);
     expect(find.text('单词标题'), findsOneWidget);
     expect(find.text('实时预览'), findsOneWidget);
+    expect(find.textContaining('滚轮、双指'), findsOneWidget);
+    await tester.drag(
+      find.byKey(const Key('pdf-customization-scroll')),
+      const Offset(0, -260),
+    );
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
     await tester.tap(find.text('取消'));
     await tester.pumpAndSettle();
     expect(find.text('take off'), findsOneWidget);
@@ -47,5 +57,37 @@ void main() {
     expect(find.text('Lexora 官网'), findsOneWidget);
     expect(find.text('支持 Lexora'), findsOneWidget);
     expect(find.text('GitHub'), findsOneWidget);
+  });
+
+  testWidgets('历史批量操作显示重新生成文字', (tester) async {
+    SharedPreferences.setMockInitialValues({
+      'lexora.generated.words.v1': [
+        jsonEncode({
+          'word': 'alpha',
+          'generationCount': 2,
+          'firstGeneratedAt': '2026-07-12T10:00:00.000',
+          'lastGeneratedAt': '2026-07-13T10:00:00.000',
+          'difficulty': 'B1',
+          'starred': false,
+        }),
+      ],
+    });
+
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('zh', 'CN'),
+        home: WordHistoryScreen(
+          generationRunning: false,
+          onRegenerate: (_) {},
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('多选'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('alpha'));
+    await tester.pumpAndSettle();
+
+    expect(find.widgetWithText(FilledButton, '重新生成'), findsOneWidget);
   });
 }
