@@ -115,7 +115,7 @@ class WordService {
     Map<String, dynamic>? dictionary;
     if (responses.first.statusCode == 200) {
       try {
-        final decoded = jsonDecode(responses.first.body) as List;
+        final decoded = _decodeJson(responses.first) as List;
         if (decoded.isNotEmpty) {
           dictionary = decoded.first as Map<String, dynamic>;
         }
@@ -243,7 +243,7 @@ class WordService {
   List<Map<String, dynamic>> _decodeDatamuse(http.Response response) {
     if (response.statusCode != 200) return const [];
     try {
-      return (jsonDecode(response.body) as List).cast<Map<String, dynamic>>();
+      return (_decodeJson(response) as List).cast<Map<String, dynamic>>();
     } catch (_) {
       return const [];
     }
@@ -325,7 +325,7 @@ class WordService {
       });
       final response = await _client.get(uri).timeout(const Duration(seconds: 15));
       if (response.statusCode != 200) return '翻译暂不可用';
-      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      final data = _decodeJson(response) as Map<String, dynamic>;
       return ((data['responseData'] as Map<String, dynamic>)['translatedText']
               as String?) ??
           '翻译暂不可用';
@@ -333,6 +333,9 @@ class WordService {
       return '翻译暂不可用';
     }
   }
+
+  dynamic _decodeJson(http.Response response) =>
+      jsonDecode(utf8.decode(response.bodyBytes));
 
   String _difficulty(String word, double frequency) {
     final letterCount = word.replaceAll(' ', '').length;

@@ -144,9 +144,11 @@ void main() {
       }
       if (request.url.host == 'api.mymemory.translated.net') {
         final source = request.url.queryParameters['q'];
-        return http.Response(jsonEncode({
+        return http.Response.bytes(utf8.encode(jsonEncode({
           'responseData': {'translatedText': '中译：$source'},
-        }), 200);
+        })), 200, headers: const {
+          'content-type': 'application/json; charset=utf-8',
+        });
       }
       return http.Response('not found', 404);
     });
