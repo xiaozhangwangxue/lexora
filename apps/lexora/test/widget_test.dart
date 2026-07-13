@@ -79,9 +79,11 @@ void main() {
         locale: const Locale('zh', 'CN'),
         supportedLocales: const [Locale('zh', 'CN')],
         localizationsDelegates: const [AppLocalizationsDelegate()],
-        home: WordHistoryScreen(
-          generationRunning: false,
-          onRegenerate: (_) {},
+        home: Scaffold(
+          body: WordHistoryScreen(
+            generationRunning: false,
+            onRegenerate: (_) {},
+          ),
         ),
       ),
     );
