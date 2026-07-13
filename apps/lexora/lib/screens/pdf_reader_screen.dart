@@ -50,7 +50,9 @@ class PdfReaderScreen extends StatelessWidget {
             backgroundColor: surface,
             // Fit the complete A4 page on first open. Users can still zoom
             // and pan, but no part of the page is cut off by a narrow window.
-            calculateInitialZoom: (_, __, fitZoom, ___) => fitZoom,
+            sizeDelegateProvider: PdfViewerSizeDelegateProviderLegacy(
+              calculateInitialZoom: (_, __, fitZoom, ___) => fitZoom,
+            ),
             scrollByMouseWheel: .24,
           ),
         ),
