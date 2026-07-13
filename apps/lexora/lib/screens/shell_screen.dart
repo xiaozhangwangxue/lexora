@@ -1,10 +1,12 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../app_version.dart';
 import '../l10n/app_localizations.dart';
 import '../models/word_entry.dart';
 import '../services/generation_progress.dart';
@@ -19,10 +21,11 @@ import 'history_screen.dart';
 import 'home_screen.dart';
 import 'onboarding_screen.dart';
 import 'pdf_customization_dialog.dart';
+import 'pdf_reader_screen.dart';
 import 'settings_screen.dart';
 import 'word_history_screen.dart';
 
-enum _GenerationCompleteAction { stay, records, share }
+enum _GenerationCompleteAction { ignore, open, share }
 
 class ShellScreen extends StatefulWidget {
   const ShellScreen({super.key});
@@ -34,6 +37,7 @@ class ShellScreen extends StatefulWidget {
 class _ShellScreenState extends State<ShellScreen>
     with WidgetsBindingObserver {
   static const _onboardingKey = 'lexora.onboarding.completed.v1';
+  static const _releaseNotesKey = 'lexora.release-notes.seen.$appVersion';
   final _settingsService = PdfSettingsService();
   final _pageController = PageController();
   final _generationProgress = GenerationProgress();
@@ -48,6 +52,8 @@ class _ShellScreenState extends State<ShellScreen>
   bool _appIsActive = true;
   bool? _onboardingCompleted;
   PdfSettings? _settings;
+  bool _releaseNotesPending = false;
+  bool _releaseNotesShowing = false;
 
   @override
   void initState() {
@@ -80,6 +86,13 @@ class _ShellScreenState extends State<ShellScreen>
         _onboardingCompleted =
             preferences.getBool(_onboardingKey) ?? false;
         _settings = settings;
+        _releaseNotesPending =
+            !(preferences.getBool(_releaseNotesKey) ?? false);
+      });
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _onboardingCompleted == true) {
+          unawaited(_showReleaseNotesIfNeeded());
+        }
       });
     }
   }
@@ -87,7 +100,58 @@ class _ShellScreenState extends State<ShellScreen>
   Future<void> _finishOnboarding() async {
     final preferences = await SharedPreferences.getInstance();
     await preferences.setBool(_onboardingKey, true);
-    if (mounted) setState(() => _onboardingCompleted = true);
+    if (mounted) {
+      setState(() => _onboardingCompleted = true);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) unawaited(_showReleaseNotesIfNeeded());
+      });
+    }
+  }
+
+  Future<void> _showReleaseNotesIfNeeded() async {
+    if (!_releaseNotesPending || _releaseNotesShowing || !mounted) return;
+    _releaseNotesShowing = true;
+    final strings = AppLocalizations.of(context);
+    final notes = strings.isZh ? releaseNotesZh : releaseNotesEn;
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => AlertDialog(
+        icon: const Icon(Icons.auto_awesome_rounded),
+        title: Text('Lexora $appVersion · ${strings.whatsNew}'),
+        content: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 480),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              for (final note in notes) ...[
+                Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  const Padding(
+                    padding: EdgeInsets.only(top: 7),
+                    child: Icon(Icons.circle, size: 5),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(child: Text(note)),
+                ]),
+                const SizedBox(height: 9),
+              ],
+            ],
+          ),
+        ),
+        actions: [
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: Text(strings.continueLabel),
+          ),
+        ],
+      ),
+    );
+    final preferences = await SharedPreferences.getInstance();
+    await preferences.setBool(_releaseNotesKey, true);
+    if (mounted) {
+      setState(() => _releaseNotesPending = false);
+    }
+    _releaseNotesShowing = false;
   }
 
   void _selectPage(int value, {bool animate = true}) {
@@ -189,6 +253,15 @@ class _ShellScreenState extends State<ShellScreen>
     );
   }
 
+  Future<void> _openBook(GeneratedBook book) async {
+    const recordsPage = 1;
+    _selectPage(recordsPage, animate: false);
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(builder: (_) => PdfReaderScreen(book: book)),
+    );
+    if (mounted) _selectPage(recordsPage, animate: false);
+  }
+
   Future<void> _showGenerationComplete(GeneratedBook book) async {
     final strings = AppLocalizations.of(context);
     final action = await showDialog<_GenerationCompleteAction>(
@@ -196,31 +269,43 @@ class _ShellScreenState extends State<ShellScreen>
       builder: (dialogContext) => AlertDialog(
         icon: const Icon(Icons.check_circle_rounded),
         title: Text(strings.generationCompleted),
-        content: Text(strings.generationReadyBody),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext)
-                .pop(_GenerationCompleteAction.stay),
-            child: Text(strings.stayHere),
-          ),
-          TextButton.icon(
-            onPressed: () => Navigator.of(dialogContext)
-                .pop(_GenerationCompleteAction.share),
-            icon: const Icon(Icons.ios_share_rounded),
-            label: Text(strings.shareNow),
-          ),
-          FilledButton.icon(
-            onPressed: () => Navigator.of(dialogContext)
-                .pop(_GenerationCompleteAction.records),
-            icon: const Icon(Icons.receipt_long_rounded),
-            label: Text(strings.viewGenerated),
-          ),
-        ],
+        content: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 430),
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            Text(strings.generationReadyBody),
+            const SizedBox(height: 22),
+            Row(children: [
+              Expanded(
+                child: TextButton(
+                  onPressed: () => Navigator.of(dialogContext)
+                      .pop(_GenerationCompleteAction.ignore),
+                  child: Text(strings.stayHere),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: FilledButton(
+                  onPressed: () => Navigator.of(dialogContext)
+                      .pop(_GenerationCompleteAction.share),
+                  child: Text(strings.shareNow),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: FilledButton(
+                  onPressed: () => Navigator.of(dialogContext)
+                      .pop(_GenerationCompleteAction.open),
+                  child: Text(strings.viewGenerated),
+                ),
+              ),
+            ]),
+          ]),
+        ),
       ),
     );
     if (!mounted) return;
-    if (action == _GenerationCompleteAction.records) {
-      _selectPage(1);
+    if (action == _GenerationCompleteAction.open) {
+      await _openBook(book);
     } else if (action == _GenerationCompleteAction.share) {
       await _shareBook(book);
     }
@@ -297,7 +382,7 @@ class _ShellScreenState extends State<ShellScreen>
         ? windowWidth >= 680
         : windowWidth >= 520;
     final expandedNavigation = windowWidth >= 800;
-    final showGitHub = _index == 0 || _index == 3;
+    final showGitHub = _index == 0;
     final pages = [
       HomeScreen(
         settings: _settings!,
@@ -308,11 +393,13 @@ class _ShellScreenState extends State<ShellScreen>
       HistoryScreen(
         key: ValueKey(_recordsRevision),
         progress: _generationProgress,
+        onOpenBook: _openBook,
       ),
       WordHistoryScreen(
         key: ValueKey(_wordHistoryRevision),
         generationRunning: _generationProgress.isRunning,
         onRegenerate: _startGeneration,
+        onCustomizePdf: _showPdfCustomizer,
       ),
       SettingsScreen(
         settings: _settings!,
@@ -348,6 +435,26 @@ class _ShellScreenState extends State<ShellScreen>
     final body = Stack(
       children: [
         pageContent,
+        if (Platform.isAndroid)
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            height: MediaQuery.paddingOf(context).top + 14,
+            child: IgnorePointer(
+              child: ClipRect(
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+                  child: ColoredBox(
+                    color: Theme.of(context)
+                        .colorScheme
+                        .surface
+                        .withValues(alpha: .58),
+                  ),
+                ),
+              ),
+            ),
+          ),
         if (showGitHub)
           const Positioned(
             top: 16,
@@ -448,10 +555,19 @@ class _ShellScreenState extends State<ShellScreen>
 
     return Scaffold(
       body: body,
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _index,
-        onDestinationSelected: _selectPage,
-        destinations: [
+      extendBody: Platform.isAndroid,
+      bottomNavigationBar: ClipRect(
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 22, sigmaY: 22),
+          child: NavigationBar(
+            backgroundColor: Theme.of(context)
+                .colorScheme
+                .surface
+                .withValues(alpha: Platform.isAndroid ? .76 : 1),
+            shadowColor: Colors.transparent,
+            selectedIndex: _index,
+            onDestinationSelected: _selectPage,
+            destinations: [
           NavigationDestination(
             icon: destinations[0].icon,
             selectedIcon: destinations[0].selectedIcon,
@@ -472,7 +588,9 @@ class _ShellScreenState extends State<ShellScreen>
             selectedIcon: destinations[3].selectedIcon,
             label: strings.settings,
           ),
-        ],
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -553,7 +671,7 @@ class _MacSidebar extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 10),
               child: Text(
-                'Lexora 0.4.0',
+                'Lexora $appVersion',
                 style: theme.textTheme.labelSmall?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,
                 ),

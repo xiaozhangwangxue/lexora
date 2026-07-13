@@ -16,10 +16,12 @@ class WordHistoryScreen extends StatefulWidget {
     super.key,
     required this.generationRunning,
     required this.onRegenerate,
+    required this.onCustomizePdf,
   });
 
   final bool generationRunning;
   final ValueChanged<List<String>> onRegenerate;
+  final Future<void> Function() onCustomizePdf;
 
   @override
   State<WordHistoryScreen> createState() => _WordHistoryScreenState();
@@ -116,7 +118,22 @@ class _WordHistoryScreenState extends State<WordHistoryScreen> {
       builder: (dialogContext) => AlertDialog(
         icon: const Icon(Icons.replay_rounded),
         title: Text(strings.confirmRegenerateTitle),
-        content: Text(strings.confirmRegenerateBody(_selectedWords.length)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(strings.confirmRegenerateBody(_selectedWords.length)),
+            const SizedBox(height: 18),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: widget.onCustomizePdf,
+                icon: const Icon(Icons.tune_rounded),
+                label: Text(strings.fineTuneTypography),
+              ),
+            ),
+          ],
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(false),

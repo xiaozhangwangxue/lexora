@@ -27,8 +27,18 @@ void main() {
     await output.parent.create(recursive: true);
     await output.writeAsBytes(bytes, flush: true);
 
+    final compactBytes = await PdfService().buildBytes(
+      entries,
+      fontSize: PdfFontSize.small,
+      generatedAt: DateTime(2026, 7, 13),
+    );
+    final compactOutput = File('build/qa/qa-pdf-preview-small.pdf');
+    await compactOutput.writeAsBytes(compactBytes, flush: true);
+
     expect(bytes, isNotEmpty);
     expect(await output.length(), greaterThan(1000));
+    expect(compactBytes, isNotEmpty);
+    expect(await compactOutput.length(), greaterThan(1000));
   });
 }
 

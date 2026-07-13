@@ -40,7 +40,7 @@ Lexora 是一款面向 Android、macOS、Windows 与 Linux 的英语单词整理
 - **中英界面**：自动识别设备语言；中文设备默认显示简体中文，其他设备显示英文。
 - **首次引导**：第一次打开应用时，用三步教程说明添加、排序、生成与分享流程。
 - **独立设置**：PDF 字号与例句数量集中在设置页，并提供官网快捷入口与捐赠二维码。
-- **自定义 PDF**：可选小、中、大三档字号与 0、1 或 2–3 句例句；中小字号自动使用双栏，一页尽量容纳 8–10 个单词。
+- **自定义 PDF**：可选小、中、大三档字号与 0、1 或 2–3 句例句；中号使用紧凑双栏，字号足够小时自动使用三栏，并以独立分栏消除高矮卡片之间的空洞。
 - **精美 PDF**：中文使用 Noto Sans SC，音标使用完整支持 IPA 的 Noto Sans；缺少近义词或反义词时自动略过空区域。
 - **生成记录**：在应用内直接阅读已生成 PDF，支持双指缩放，三点菜单可先预览前几个单词。
 - **单词历史**：保留全部生成过的单词，支持按次数、首字母、时间、难度正反排序，星标单词永久置顶。
@@ -54,10 +54,10 @@ Lexora 是一款面向 Android、macOS、Windows 与 Linux 的英语单词整理
 
 | 平台 | 安装包 | 系统要求 | 下载 |
 | --- | --- | --- | --- |
-| Android | APK | Android 8.0+ | [官网下载](https://lexora.12323456.xyz/downloads/lexora-android-v1.0.1.apk) |
-| macOS | 拖动安装 DMG | macOS 12+ | [官网下载](https://lexora.12323456.xyz/downloads/lexora-macos-v1.0.1.dmg) |
-| Windows | 安装程序 EXE（默认安装后启动） | Windows 10 / 11 | [官网下载](https://lexora.12323456.xyz/downloads/lexora-windows-v1.0.1-setup.exe) |
-| Linux | tar.gz | 64 位 Linux | [官网下载](https://lexora.12323456.xyz/downloads/lexora-linux-v1.0.1.tar.gz) |
+| Android | APK | Android 8.0+ | [官网下载](https://lexora.12323456.xyz/downloads/lexora-android-v1.1.0.apk) |
+| macOS | 拖动安装 DMG | macOS 12+ | [官网下载](https://lexora.12323456.xyz/downloads/lexora-macos-v1.1.0.dmg) |
+| Windows | 安装程序 EXE（默认安装后启动） | Windows 10 / 11 | [官网下载](https://lexora.12323456.xyz/downloads/lexora-windows-v1.1.0-setup.exe) |
+| Linux | tar.gz | 64 位 Linux | [官网下载](https://lexora.12323456.xyz/downloads/lexora-linux-v1.1.0.tar.gz) |
 
 <details>
 <summary><strong>首次安装被系统拦截怎么办？</strong></summary>
@@ -72,7 +72,7 @@ Lexora 是一款面向 Android、macOS、Windows 与 Linux 的英语单词整理
 > [!IMPORTANT]
 > Android v0.2.0 使用了临时构建签名，旧私钥无法恢复，因此升级到采用稳定签名的 v0.3.0 时需要先卸载旧版再安装一次。自 v0.3.0 起，后续版本继续使用同一发布签名，可直接覆盖更新。请先按需导出旧版中的 PDF。
 
-所有发行文件名都包含版本号，例如 `lexora-android-v1.0.1.apk`。这样可以避免浏览器或下载目录把新旧安装包混淆。
+所有发行文件名都包含版本号，例如 `lexora-android-v1.1.0.apk`。这样可以避免浏览器或下载目录把新旧安装包混淆。
 
 ## 三步生成词汇书
 

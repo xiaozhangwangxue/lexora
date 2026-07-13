@@ -115,7 +115,17 @@ class PdfService {
     final resolvedTypography =
         typography ?? PdfTypography.fromPreset(fontSize);
     double size(double value) => value * fontSize.scale;
-    final useTwoColumns = fontSize != PdfFontSize.large;
+    final compactEnoughForThreeColumns =
+        resolvedTypography.word <= 16.5 &&
+        resolvedTypography.definition <= 8.2 &&
+        resolvedTypography.related <= 7.0 &&
+        resolvedTypography.example <= 7.0 &&
+        resolvedTypography.phrase <= 7.0;
+    final columnCount = fontSize == PdfFontSize.large
+        ? 1
+        : compactEnoughForThreeColumns
+            ? 3
+            : 2;
     final document = pw.Document(
       title: 'Lexora Vocabulary Book',
       author: 'Lexora',
@@ -157,7 +167,7 @@ class PdfService {
             bold,
             ipa,
             resolvedTypography,
-            twoColumns: useTwoColumns,
+            columnCount: columnCount,
           ),
         ],
       ),
@@ -171,9 +181,9 @@ class PdfService {
     pw.Font bold,
     pw.Font ipa,
     PdfTypography typography, {
-    required bool twoColumns,
+    required int columnCount,
   }) {
-    if (!twoColumns) {
+    if (columnCount == 1) {
       return [
         for (var index = 0; index < entries.length; index++) ...[
           _entry(
@@ -182,39 +192,42 @@ class PdfService {
             bold,
             ipa,
             typography,
+            denseHeader: false,
           ),
           if (index != entries.length - 1) pw.SizedBox(height: 7),
         ],
       ];
     }
 
-    const columnGap = 6.0;
-    const horizontalMargin = 24.0;
-    final columnWidth =
-        (PdfPageFormat.a4.width - horizontalMargin * 2 - columnGap) / 2;
+    final columns = List.generate(columnCount, (_) => <pw.Widget>[]);
+    for (var index = 0; index < entries.length; index++) {
+      final column = columns[index % columnCount];
+      column.add(
+        pw.Padding(
+          padding: const pw.EdgeInsets.symmetric(horizontal: 3),
+          child: _entry(
+            index + 1,
+            entries[index],
+            bold,
+            ipa,
+            typography,
+            denseHeader: columnCount == 3,
+          ),
+        ),
+      );
+      if (index + columnCount < entries.length) {
+        column.add(pw.SizedBox(height: 5));
+      }
+    }
 
-    // GridView lays out complete rows.  When one card is taller than its
-    // neighbour, that row reserves the taller card's height and creates the
-    // conspicuous blank area visible in the exported PDF.  Wrap is a
-    // SpanningWidget, so it keeps the two-column presentation while allowing
-    // the next card to continue naturally on the next page.
+    // Each partition flows independently across pages. Unlike a row-based
+    // grid or Wrap, a short card no longer inherits the height of the taller
+    // card beside it, so the next entry immediately consumes the free space.
     return [
-      pw.Wrap(
-        spacing: columnGap,
-        runSpacing: 5,
-        crossAxisAlignment: pw.WrapCrossAlignment.start,
+      pw.Partitions(
         children: [
-          for (var index = 0; index < entries.length; index++)
-            pw.SizedBox(
-              width: columnWidth,
-              child: _entry(
-                index + 1,
-                entries[index],
-                bold,
-                ipa,
-                typography,
-              ),
-            ),
+          for (final column in columns)
+            pw.Partition(child: pw.Column(children: column)),
         ],
       ),
     ];
@@ -225,7 +238,8 @@ class PdfService {
     WordEntry entry,
     pw.Font bold,
     pw.Font ipa,
-    PdfTypography typography,
+    PdfTypography typography, {
+    required bool denseHeader,
   ) {
     pw.Widget pill(String text, PdfColor color) => pw.Container(
           padding: const pw.EdgeInsets.symmetric(horizontal: 7, vertical: 3),
@@ -251,10 +265,22 @@ class PdfService {
           pw.Text('$number', style: pw.TextStyle(fontSize: typography.related, color: PdfColors.grey600)),
           pw.SizedBox(width: 7),
           pw.Expanded(child: pw.Text(entry.word, style: pw.TextStyle(font: bold, fontSize: typography.word))),
-          pill(entry.difficulty, PdfColors.indigo100),
-          pw.SizedBox(width: 5),
-          pill('freq ${entry.frequency.toStringAsFixed(1)}', PdfColors.teal100),
+          if (!denseHeader) ...[
+            pill(entry.difficulty, PdfColors.indigo100),
+            pw.SizedBox(width: 5),
+            pill('freq ${entry.frequency.toStringAsFixed(1)}', PdfColors.teal100),
+          ],
         ]),
+        if (denseHeader) ...[
+          pw.SizedBox(height: 2),
+          pw.Wrap(
+            spacing: 4,
+            children: [
+              pill(entry.difficulty, PdfColors.indigo100),
+              pill('freq ${entry.frequency.toStringAsFixed(1)}', PdfColors.teal100),
+            ],
+          ),
+        ],
         pw.SizedBox(height: 3),
         pw.Wrap(crossAxisAlignment: pw.WrapCrossAlignment.center, children: [
           pw.Text('US 美式  ', style: pw.TextStyle(fontSize: typography.phonetic - 1, color: PdfColors.grey700)),

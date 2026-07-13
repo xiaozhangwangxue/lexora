@@ -57,10 +57,11 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev
       - name: Generate platform shells
         run: flutter create --project-name lexora --platforms=android,linux,macos,windows .
-      - name: Allow Android network lookups
+      - name: Allow Android network and installer access
         if: matrix.platform == 'android'
         run: |
           sed -i '/<manifest/a\\    <uses-permission android:name="android.permission.INTERNET" />' android/app/src/main/AndroidManifest.xml
+          sed -i '/<manifest/a\\    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />' android/app/src/main/AndroidManifest.xml
           sed -i 's/compileSdk = flutter.compileSdkVersion/compileSdk = 36/' android/app/build.gradle.kts
           sed -i '/compileOptions {/a\\        isCoreLibraryDesugaringEnabled = true' android/app/build.gradle.kts
           printf '\ndependencies {\n    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.5")\n}\n' >> android/app/build.gradle.kts
@@ -94,13 +95,13 @@ jobs:
         run: flutter test
       - name: Render production PDF preview
         if: matrix.platform == 'linux'
-        run: test -s build/qa/qa-pdf-preview.pdf
+        run: test -s build/qa/qa-pdf-preview.pdf && test -s build/qa/qa-pdf-preview-small.pdf
       - name: Upload PDF layout preview
         if: matrix.platform == 'linux'
         uses: actions/upload-artifact@v4
         with:
           name: lexora-pdf-qa
-          path: apps/lexora/build/qa/qa-pdf-preview.pdf
+          path: apps/lexora/build/qa/*.pdf
           if-no-files-found: error
       - name: Build application
         run: ${{ matrix.command }}

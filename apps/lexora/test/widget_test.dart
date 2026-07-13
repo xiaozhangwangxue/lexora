@@ -18,7 +18,10 @@ void main() {
   });
 
   testWidgets('Lexora opens the localized word composer', (tester) async {
-    SharedPreferences.setMockInitialValues({'lexora.onboarding.completed.v1': true});
+    SharedPreferences.setMockInitialValues({
+      'lexora.onboarding.completed.v1': true,
+      'lexora.release-notes.seen.1.1.0': true,
+    });
     await tester.pumpWidget(const LexoraApp(locale: Locale('zh', 'CN')));
     await tester.pumpAndSettle();
     expect(find.text('Lexora'), findsOneWidget);
@@ -89,6 +92,7 @@ void main() {
           body: WordHistoryScreen(
             generationRunning: false,
             onRegenerate: (_) {},
+            onCustomizePdf: () async {},
           ),
         ),
       ),
@@ -100,5 +104,8 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.widgetWithText(FilledButton, '重新生成'), findsOneWidget);
+    await tester.tap(find.widgetWithText(FilledButton, '重新生成'));
+    await tester.pumpAndSettle();
+    expect(find.text('精细调整字体'), findsOneWidget);
   });
 }

@@ -4,6 +4,8 @@ import 'package:url_launcher/url_launcher.dart';
 import '../l10n/app_localizations.dart';
 import '../services/pdf_service.dart';
 import '../services/pdf_settings_service.dart';
+import '../services/update_service.dart';
+import '../widgets/github_button.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({
@@ -90,6 +92,102 @@ class SettingsScreen extends StatelessWidget {
         },
       );
 
+  Future<void> _checkForUpdates(BuildContext context) async {
+    final strings = AppLocalizations.of(context);
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => AlertDialog(
+        content: Row(children: [
+          const SizedBox(
+            width: 22,
+            height: 22,
+            child: CircularProgressIndicator(strokeWidth: 2.5),
+          ),
+          const SizedBox(width: 16),
+          Expanded(child: Text(strings.checkingForUpdates)),
+        ]),
+      ),
+    );
+    try {
+      final update = await UpdateService().check();
+      if (!context.mounted) return;
+      Navigator.of(context, rootNavigator: true).pop();
+      if (update == null) {
+        await showDialog<void>(
+          context: context,
+          builder: (dialogContext) => AlertDialog(
+            icon: const Icon(Icons.check_circle_outline_rounded),
+            title: Text(strings.upToDate),
+            content: Text(strings.upToDateBody),
+            actions: [
+              FilledButton(
+                onPressed: () => Navigator.of(dialogContext).pop(),
+                child: Text(strings.gotIt),
+              ),
+            ],
+          ),
+        );
+        return;
+      }
+      final notes = strings.isZh ? update.notesZh : update.notesEn;
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          icon: const Icon(Icons.system_update_alt_rounded),
+          title: Text(strings.updateAvailable(update.version)),
+          content: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 460),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(strings.whatsNew,
+                    style: Theme.of(context).textTheme.titleSmall),
+                const SizedBox(height: 10),
+                for (final note in notes) ...[
+                  Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    const Padding(
+                      padding: EdgeInsets.only(top: 7),
+                      child: Icon(Icons.circle, size: 5),
+                    ),
+                    const SizedBox(width: 9),
+                    Expanded(child: Text(note)),
+                  ]),
+                  const SizedBox(height: 7),
+                ],
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: Text(strings.cancel),
+            ),
+            FilledButton.icon(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              icon: const Icon(Icons.download_rounded),
+              label: Text(strings.downloadAndInstall),
+            ),
+          ],
+        ),
+      );
+      if (confirmed == true && context.mounted) {
+        await showDialog<void>(
+          context: context,
+          barrierDismissible: false,
+          builder: (_) => _UpdateDownloadDialog(update: update),
+        );
+      }
+    } catch (error) {
+      if (!context.mounted) return;
+      Navigator.of(context, rootNavigator: true).pop();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(strings.updateFailed(error.toString()))),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -98,16 +196,26 @@ class SettingsScreen extends StatelessWidget {
       child: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 920),
-          child: ListView(
-            padding: const EdgeInsets.fromLTRB(24, 28, 24, 36),
-            children: [
-              Text(
-                strings.settings,
-                style: theme.textTheme.headlineMedium?.copyWith(
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-              const SizedBox(height: 18),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
+            child: Column(
+              children: [
+                Row(children: [
+                  Expanded(
+                    child: Text(
+                      strings.settings,
+                      style: theme.textTheme.headlineMedium?.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                  const GitHubButton(),
+                ]),
+                const SizedBox(height: 14),
+                Expanded(
+                  child: ListView(
+                    padding: const EdgeInsets.only(bottom: 36),
+                    children: [
               Card(
                 color: theme.colorScheme.primaryContainer.withValues(alpha: .72),
                 child: Padding(
@@ -234,6 +342,26 @@ class SettingsScreen extends StatelessWidget {
                       width: 42,
                       height: 42,
                       decoration: BoxDecoration(
+                        color: theme.colorScheme.primaryContainer,
+                        borderRadius: BorderRadius.circular(13),
+                      ),
+                      child: Icon(
+                        Icons.system_update_alt_rounded,
+                        color: theme.colorScheme.primary,
+                      ),
+                    ),
+                    title: Text(strings.checkForUpdates),
+                    subtitle: Text(strings.checkForUpdatesHint),
+                    trailing: const Icon(Icons.chevron_right_rounded),
+                    onTap: () => _checkForUpdates(context),
+                  ),
+                  const Divider(height: 24),
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: Container(
+                      width: 42,
+                      height: 42,
+                      decoration: BoxDecoration(
                         gradient: LinearGradient(
                           colors: [
                             theme.colorScheme.primary,
@@ -276,9 +404,97 @@ class SettingsScreen extends StatelessWidget {
                   ),
                 ]),
               ),
-            ],
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _UpdateDownloadDialog extends StatefulWidget {
+  const _UpdateDownloadDialog({required this.update});
+
+  final UpdateInfo update;
+
+  @override
+  State<_UpdateDownloadDialog> createState() => _UpdateDownloadDialogState();
+}
+
+class _UpdateDownloadDialogState extends State<_UpdateDownloadDialog> {
+  double? _progress = 0;
+  String? _error;
+  bool _launching = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _download());
+  }
+
+  Future<void> _download() async {
+    setState(() {
+      _error = null;
+      _progress = 0;
+      _launching = false;
+    });
+    try {
+      await UpdateService().downloadAndLaunch(
+        widget.update,
+        onProgress: (value) {
+          if (mounted) setState(() => _progress = value);
+        },
+      );
+      if (!mounted) return;
+      setState(() => _launching = true);
+      await Future<void>.delayed(const Duration(milliseconds: 450));
+      if (mounted) Navigator.of(context).pop();
+    } catch (error) {
+      if (mounted) setState(() => _error = error.toString());
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final strings = AppLocalizations.of(context);
+    return PopScope(
+      canPop: _error != null,
+      child: AlertDialog(
+        icon: Icon(_error == null
+            ? Icons.downloading_rounded
+            : Icons.error_outline_rounded),
+        title: Text(_launching
+            ? strings.launchingInstaller
+            : strings.downloadingUpdate),
+        content: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 400),
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            if (_error == null) ...[
+              LinearProgressIndicator(value: _progress),
+              const SizedBox(height: 10),
+              Text(_progress == null
+                  ? strings.downloadingUpdate
+                  : '${(_progress! * 100).clamp(0, 100).round()}%'),
+            ] else
+              Text(strings.updateFailed(_error!)),
+          ]),
+        ),
+        actions: _error == null
+            ? null
+            : [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: Text(strings.cancel),
+                ),
+                FilledButton(
+                  onPressed: _download,
+                  child: Text(strings.retry),
+                ),
+              ],
       ),
     );
   }

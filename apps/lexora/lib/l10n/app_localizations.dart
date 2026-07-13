@@ -130,14 +130,27 @@ class AppLocalizations {
   String get generationReadyBody => isZh
       ? 'PDF 已保存。你可以继续整理下一批词条，也可以立即查看或分享。'
       : 'The PDF is saved. Keep preparing another list, or view and share it now.';
-  String get stayHere => isZh ? '留在此页' : 'Stay here';
-  String get viewGenerated => isZh ? '前往生成记录' : 'View generated';
+  String get stayHere => isZh ? '忽略' : 'Ignore';
+  String get viewGenerated => isZh ? '打开' : 'Open';
   String get shareNow => isZh ? '分享' : 'Share';
   String get noFilesToShare => isZh ? '所选 PDF 文件不存在，无法分享。' : 'The selected PDF files could not be found.';
   String get generationAlreadyRunning => isZh ? '已有生成任务正在进行。' : 'A generation task is already running.';
   String get quickLinks => isZh ? '快速链接' : 'Quick links';
   String get officialWebsite => isZh ? 'Lexora 官网' : 'Lexora website';
   String get officialWebsiteHint => isZh ? '下载更新、查看安装说明' : 'Downloads, updates, and installation help';
+  String get checkForUpdates => isZh ? '检查更新' : 'Check for updates';
+  String get checkForUpdatesHint => isZh ? '从 Lexora 官网获取最新版本' : 'Check the Lexora website for a newer version';
+  String get checkingForUpdates => isZh ? '正在检查更新…' : 'Checking for updates…';
+  String get upToDate => isZh ? '已是最新版本' : 'You are up to date';
+  String get upToDateBody => isZh ? '当前安装的 Lexora 已是最新版本。' : 'This Lexora installation is the latest version.';
+  String updateAvailable(String version) => isZh ? '发现 Lexora $version' : 'Lexora $version is available';
+  String get downloadAndInstall => isZh ? '下载并安装' : 'Download and install';
+  String get downloadingUpdate => isZh ? '正在下载安装包…' : 'Downloading installer…';
+  String get launchingInstaller => isZh ? '正在启动系统安装器…' : 'Opening the system installer…';
+  String updateFailed(String error) => isZh ? '更新失败：$error' : 'Update failed: $error';
+  String get retry => isZh ? '重试' : 'Retry';
+  String get whatsNew => isZh ? '本次更新内容' : 'What’s new';
+  String get continueLabel => isZh ? '继续使用' : 'Continue';
   String get openWebsiteFailed => isZh ? '无法打开 Lexora 官网。' : 'Could not open the Lexora website.';
   String get donate => isZh ? '支持 Lexora' : 'Support Lexora';
   String get donateHint => isZh ? '捐款完全自愿，不会解锁付费功能。' : 'Donations are optional and never unlock paid features.';

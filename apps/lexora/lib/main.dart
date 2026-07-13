@@ -6,9 +6,11 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'l10n/app_localizations.dart';
 import 'screens/shell_screen.dart';
 import 'services/notification_service.dart';
+import 'services/update_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await UpdateService.cleanupCachedInstallers();
   await NotificationService.instance.initialize();
   runApp(const LexoraApp());
 }

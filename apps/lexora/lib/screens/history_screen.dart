@@ -8,12 +8,15 @@ import '../l10n/app_localizations.dart';
 import '../models/word_entry.dart';
 import '../services/generation_progress.dart';
 import '../services/history_service.dart';
-import 'pdf_reader_screen.dart';
-
 class HistoryScreen extends StatefulWidget {
-  const HistoryScreen({super.key, required this.progress});
+  const HistoryScreen({
+    super.key,
+    required this.progress,
+    required this.onOpenBook,
+  });
 
   final GenerationProgress progress;
+  final ValueChanged<GeneratedBook> onOpenBook;
 
   @override
   State<HistoryScreen> createState() => _HistoryScreenState();
@@ -248,11 +251,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                             subtitle: Text('${strings.termCount(book.wordCount)} · ${_formatDate(book.createdAt)}'),
                             onTap: _selecting
                                 ? () => _toggleBook(book.id)
-                                : () => Navigator.of(context).push(
-                                      MaterialPageRoute<void>(
-                                        builder: (_) => PdfReaderScreen(book: book),
-                                      ),
-                                    ),
+                                : () => widget.onOpenBook(book),
                             trailing: _selecting
                                 ? null
                                 : PopupMenuButton<String>(
