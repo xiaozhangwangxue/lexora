@@ -1,12 +1,13 @@
 "use client";
 
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useSiteLanguage } from "./use-site-language";
 
 type SortMode = "custom" | "alphabetical" | "length" | "difficulty";
 type PlatformKey = "macos" | "windows" | "linux" | "android";
+type DragPreview = { word: string; x: number; y: number; width: number; grabOffsetY: number };
 
 const seedWords = ["serendipity", "lucid", "resilient", "wanderlust"];
 const donationQrBase = "https://raw.githubusercontent.com/xiaozhangwangxue/autoword/main/assets/donate";
@@ -49,6 +50,12 @@ export default function Home() {
   const { language, setLanguage, zh } = useSiteLanguage();
   const [progress, setProgress] = useState<number | null>(null);
   const [downloadChoice, setDownloadChoice] = useState<PlatformKey | null>(null);
+  const draggedWord = useRef<string | null>(null);
+  const listRef = useRef<HTMLOListElement | null>(null);
+  const dragPreviewRef = useRef<DragPreview | null>(null);
+  const [draggingWord, setDraggingWord] = useState<string | null>(null);
+  const [dropTargetWord, setDropTargetWord] = useState<string | null>(null);
+  const [dragPreview, setDragPreview] = useState<DragPreview | null>(null);
   const selectedPlatform = platforms.find((platform) => platform.key === downloadChoice);
 
   const visibleWords = useMemo(() => {
@@ -80,6 +87,80 @@ export default function Home() {
         window.setTimeout(() => setProgress(null), 1200);
       } else setProgress(value);
     }, 180);
+  }
+
+  function captureListPositions() {
+    const positions = new Map<string, number>();
+    listRef.current?.querySelectorAll<HTMLElement>("[data-demo-word]").forEach((item) => {
+      if (item.dataset.demoWord) positions.set(item.dataset.demoWord, item.getBoundingClientRect().top);
+    });
+    return positions;
+  }
+
+  function animateListFrom(positions: Map<string, number>) {
+    window.requestAnimationFrame(() => {
+      listRef.current?.querySelectorAll<HTMLElement>("[data-demo-word]").forEach((item) => {
+        const word = item.dataset.demoWord;
+        const previousTop = word ? positions.get(word) : undefined;
+        if (previousTop === undefined) return;
+        const delta = previousTop - item.getBoundingClientRect().top;
+        if (Math.abs(delta) < 1) return;
+        item.animate(
+          [{ transform: `translateY(${delta}px)` }, { transform: "translateY(0)" }],
+          { duration: 210, easing: "cubic-bezier(.22,1,.36,1)" },
+        );
+      });
+    });
+  }
+
+  function beginReorder(word: string, preview: DragPreview) {
+    if (sort !== "custom") {
+      setWords(visibleWords);
+      setSort("custom");
+    }
+    draggedWord.current = word;
+    dragPreviewRef.current = preview;
+    setDraggingWord(word);
+    setDropTargetWord(null);
+    setDragPreview(preview);
+  }
+
+  function reorderOver(targetWord: string) {
+    const activeWord = draggedWord.current;
+    if (!activeWord || activeWord === targetWord) return;
+    const previousPositions = captureListPositions();
+    setDropTargetWord(targetWord);
+    setWords((current) => {
+      const next = [...current];
+      const from = next.indexOf(activeWord);
+      const to = next.indexOf(targetWord);
+      if (from < 0 || to < 0) return current;
+      next.splice(from, 1);
+      next.splice(to, 0, activeWord);
+      return next;
+    });
+    animateListFrom(previousPositions);
+  }
+
+  function finishReorder() {
+    draggedWord.current = null;
+    dragPreviewRef.current = null;
+    setDraggingWord(null);
+    setDropTargetWord(null);
+    setDragPreview(null);
+  }
+
+  function moveWord(word: string, direction: -1 | 1) {
+    const next = sort === "custom" ? [...words] : [...visibleWords];
+    const from = next.indexOf(word);
+    const to = from + direction;
+    if (from < 0 || to < 0 || to >= next.length) return;
+    const previousPositions = captureListPositions();
+    next.splice(from, 1);
+    next.splice(to, 0, word);
+    setWords(next);
+    setSort("custom");
+    animateListFrom(previousPositions);
   }
 
   return (
@@ -144,6 +225,7 @@ export default function Home() {
               {progress !== null && <div className="progress" aria-label="Generation progress"><i style={{ width: `${progress}%` }} /></div>}
               <div className="listHeader">
                 <strong>{words.length} {zh ? "个单词" : words.length === 1 ? "word" : "words"}</strong>
+                <span className="reorderHint">{zh ? "拖动手柄调整顺序" : "Drag the handle to reorder"}</span>
                 <select value={sort} onChange={(event) => setSort(event.target.value as SortMode)} aria-label="Sort words">
                   <option value="custom">{zh ? "自定义顺序" : "Custom order"}</option>
                   <option value="alphabetical">A–Z</option>
@@ -151,16 +233,76 @@ export default function Home() {
                   <option value="difficulty">{zh ? "难度" : "Difficulty"}</option>
                 </select>
               </div>
-              <ol className="wordList">
+              <ol className="wordList" ref={listRef}>
                 {visibleWords.map((word, index) => (
-                  <li key={word}>
+                  <li
+                    key={word}
+                    data-demo-word={word}
+                    className={draggingWord === word ? "isDragging" : dropTargetWord === word ? "isDropTarget" : undefined}
+                  >
                     <span className="wordIndex">{String(index + 1).padStart(2, "0")}</span>
                     <span className="wordName">{word}<small>{word.length} {zh ? "个字母" : "letters"}</small></span>
                     <button aria-label={`Delete ${word}`} onClick={() => setWords((current) => current.filter((item) => item !== word))}>×</button>
-                    <span className="drag">⠿</span>
+                    <button
+                      className="dragHandle"
+                      draggable={false}
+                      aria-label={zh ? `调整 ${word} 的顺序` : `Reorder ${word}`}
+                      title={zh ? "拖动调整顺序，或用上下方向键" : "Drag to reorder, or use the arrow keys"}
+                      onDragStart={(event) => event.preventDefault()}
+                      onPointerDown={(event) => {
+                        event.preventDefault();
+                        const item = event.currentTarget.closest("[data-demo-word]") as HTMLElement | null;
+                        if (!item) return;
+                        const rect = item.getBoundingClientRect();
+                        beginReorder(word, {
+                          word,
+                          x: rect.left,
+                          y: rect.top,
+                          width: rect.width,
+                          grabOffsetY: event.clientY - rect.top,
+                        });
+                        event.currentTarget.setPointerCapture(event.pointerId);
+                      }}
+                      onPointerMove={(event) => {
+                        if (!draggedWord.current) return;
+                        const preview = dragPreviewRef.current;
+                        if (preview) {
+                          const nextPreview = { ...preview, y: event.clientY - preview.grabOffsetY };
+                          dragPreviewRef.current = nextPreview;
+                          setDragPreview(nextPreview);
+                        }
+                        const target = document.elementFromPoint(event.clientX, event.clientY)?.closest("[data-demo-word]") as HTMLElement | null;
+                        const targetWord = target?.dataset.demoWord;
+                        if (targetWord) reorderOver(targetWord);
+                      }}
+                      onPointerUp={(event) => {
+                        if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+                          event.currentTarget.releasePointerCapture(event.pointerId);
+                        }
+                        finishReorder();
+                      }}
+                      onPointerCancel={finishReorder}
+                      onKeyDown={(event) => {
+                        if (event.key === "ArrowUp" || event.key === "ArrowDown") {
+                          event.preventDefault();
+                          moveWord(word, event.key === "ArrowUp" ? -1 : 1);
+                        }
+                      }}
+                    >⠿</button>
                   </li>
                 ))}
               </ol>
+              {dragPreview && (
+                <div
+                  className="dragPreview"
+                  aria-hidden="true"
+                  style={{ left: dragPreview.x, top: dragPreview.y, width: dragPreview.width }}
+                >
+                  <span className="wordIndex">{String(visibleWords.indexOf(dragPreview.word) + 1).padStart(2, "0")}</span>
+                  <span className="wordName">{dragPreview.word}<small>{dragPreview.word.length} {zh ? "个字母" : "letters"}</small></span>
+                  <span className="dragPreviewHandle">⠿</span>
+                </div>
+              )}
             </section>
           </div>
         </div>
