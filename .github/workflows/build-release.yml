@@ -200,14 +200,14 @@ jobs:
           for file in lexora-*; do
             curl --fail --show-error --silent --retry 5 --retry-all-errors \
               --request PUT \
-              -H "Authorization: Bearer $DOWNLOAD_UPLOAD_TOKEN" \
+              -H "X-Lexora-Upload-Token: $DOWNLOAD_UPLOAD_TOKEN" \
               -H "Content-Type: application/octet-stream" \
               --data-binary "@$file" \
               "https://lexora.12323456.xyz/api/admin/downloads/$file"
           done
           curl --fail --show-error --silent --retry 5 --retry-all-errors \
             --request PUT \
-            -H "Authorization: Bearer $DOWNLOAD_UPLOAD_TOKEN" \
+            -H "X-Lexora-Upload-Token: $DOWNLOAD_UPLOAD_TOKEN" \
             -H "Content-Type: application/json" \
             --data-binary "@update-version.json" \
             "https://lexora.12323456.xyz/api/admin/downloads/version.json"

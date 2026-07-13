@@ -52,7 +52,10 @@ const worker = {
     };
 
     if (url.pathname.startsWith("/api/admin/downloads/") && request.method === "PUT") {
-      const token = request.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
+      // A dedicated header avoids Cloudflare Access interpreting a normal
+      // Authorization bearer token before the request reaches this Worker.
+      const token = request.headers.get("x-lexora-upload-token")
+        ?? request.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
       if (!env.DOWNLOAD_UPLOAD_TOKEN || token !== env.DOWNLOAD_UPLOAD_TOKEN) {
         return new Response("Unauthorized", { status: 401 });
       }
