@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../l10n/app_localizations.dart';
+import '../services/haptic_service.dart';
 import '../services/history_service.dart';
 import '../services/pdf_service.dart';
 import '../services/word_service.dart';
@@ -31,6 +34,7 @@ class _HomeScreenState extends State<HomeScreen> {
   final _wordService = WordService();
   final _pdfService = PdfService();
   final _historyService = HistoryService();
+  final _haptics = const HapticService();
   WordSort _sort = WordSort.custom;
   PdfFontSize _fontSize = PdfFontSize.medium;
   ExampleAmount _exampleAmount = ExampleAmount.one;
@@ -95,6 +99,7 @@ class _HomeScreenState extends State<HomeScreen> {
       _progress = 0;
       _status = strings.preparing;
     });
+    unawaited(_haptics.generationStarted());
     try {
       final entries = await _wordService.lookupAll(
         List.of(_words),
@@ -115,6 +120,8 @@ class _HomeScreenState extends State<HomeScreen> {
       final book = await _pdfService.create(entries, fontSize: _fontSize);
       await _historyService.save(book);
       setState(() => _progress = 1);
+      await _haptics.generationCompleted();
+      if (!mounted) return;
       widget.onGenerated();
     } catch (error) {
       _message(error.toString());
@@ -243,6 +250,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     ? _EmptyList(theme: theme, strings: strings)
                     : ReorderableListView.builder(
                         buildDefaultDragHandles: false,
+                        onReorderStart: (_) => unawaited(_haptics.dragStarted()),
                         proxyDecorator: (child, index, animation) => AnimatedBuilder(
                           animation: animation,
                           builder: (context, _) => Transform.scale(
@@ -269,11 +277,13 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                         itemCount: _words.length,
                         onReorderItem: (oldIndex, newIndex) {
+                          if (oldIndex == newIndex) return;
                           setState(() {
                             final word = _words.removeAt(oldIndex);
                             _words.insert(newIndex, word);
                             _sort = WordSort.custom;
                           });
+                          unawaited(_haptics.itemReordered());
                         },
                         itemBuilder: (context, index) {
                           final word = _words[index];
