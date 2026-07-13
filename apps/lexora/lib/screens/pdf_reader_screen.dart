@@ -13,9 +13,16 @@ class PdfReaderScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final surface = Theme.of(context).colorScheme.surface;
     return Scaffold(
+      // macOS uses a transparent app theme for the Liquid Glass shell. The
+      // reader must still be an opaque route, otherwise the generation list
+      // underneath bleeds through beside the PDF page.
+      backgroundColor: surface,
       appBar: AppBar(
         title: Text(book.title),
+        backgroundColor: surface,
+        surfaceTintColor: Colors.transparent,
         actions: [
           IconButton(
             tooltip: AppLocalizations.of(context).print,
@@ -35,7 +42,19 @@ class PdfReaderScreen extends StatelessWidget {
           ),
         ],
       ),
-      body: PdfViewer.file(book.path),
+      body: ColoredBox(
+        color: surface,
+        child: PdfViewer.file(
+          book.path,
+          params: PdfViewerParams(
+            backgroundColor: surface,
+            // Fit the complete A4 page on first open. Users can still zoom
+            // and pan, but no part of the page is cut off by a narrow window.
+            calculateInitialZoom: (_, __, fitZoom, ___) => fitZoom,
+            scrollByMouseWheel: .24,
+          ),
+        ),
+      ),
     );
   }
 }
