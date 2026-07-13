@@ -53,14 +53,18 @@ private final class LexoraHostViewController: NSViewController {
     let rootView = NSView()
     rootView.wantsLayer = true
 
-    let backdrop = NSHostingView(rootView: LexoraBackdrop())
+    // SwiftUI's `.allowsHitTesting(false)` only disables SwiftUI content. The
+    // NSHostingView itself can still win AppKit hit testing, especially while
+    // a Flutter modal route is visible. Use an AppKit-level pass-through view
+    // as well so dialog, slider, and settings clicks always reach Flutter.
+    let backdrop = NonHitTestingHostingView(rootView: LexoraBackdrop())
     backdrop.translatesAutoresizingMaskIntoConstraints = false
     rootView.addSubview(backdrop)
 
     addChild(flutterViewController)
     let flutterView = flutterViewController.view
     flutterView.translatesAutoresizingMaskIntoConstraints = false
-    rootView.addSubview(flutterView)
+    rootView.addSubview(flutterView, positioned: .above, relativeTo: backdrop)
 
     NSLayoutConstraint.activate([
       backdrop.leadingAnchor.constraint(equalTo: rootView.leadingAnchor),
@@ -79,6 +83,12 @@ private final class LexoraHostViewController: NSViewController {
   override func viewDidAppear() {
     super.viewDidAppear()
     view.window?.makeFirstResponder(flutterViewController.view)
+  }
+}
+
+private final class NonHitTestingHostingView<Content: View>: NSHostingView<Content> {
+  override func hitTest(_ point: NSPoint) -> NSView? {
+    nil
   }
 }
 
