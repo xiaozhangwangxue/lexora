@@ -1,23 +1,25 @@
 {
-  "version": "1.1.0",
+  "version": "1.1.1",
   "releaseNotes": {
     "zh": [
-      "PDF 改用紧凑的独立分栏排版，小字号可自动使用三栏。",
-      "生成完成后可忽略、分享或直接打开 PDF，并保持当前页面。",
-      "设置页采用固定标题栏，Android 上下栏加入毛玻璃过渡。",
-      "新增应用内检查更新、下载安装，以及每个版本仅显示一次的更新说明。"
+      "新增现代 Lexora 文字标，并统一应用首页、设置页与官网品牌展示。",
+      "修复检查更新时提示文字没有精确居中的问题。",
+      "官网首屏加入动态 Lexora 文字标，并优化导航与移动端视觉层级。",
+      "新增严格模糊搜索：完全匹配失败时自动校验相似词，并用红黄标记清楚说明结果。",
+      "官网新增本地设备识别与对应平台下载推荐，不会上传设备信息。"
     ],
     "en": [
-      "PDF cards now flow in compact independent columns, with three columns for sufficiently small typography.",
-      "Ignore, share, or open a completed PDF without losing your current page.",
-      "Settings now has a fixed header, and Android navigation uses a frosted-glass transition.",
-      "Added in-app update checks, installer downloads, and once-per-version release notes."
+      "Introduced a modern Lexora wordmark across the app home, Settings, and official website.",
+      "Precisely centered the update-checking message.",
+      "Added an animated hero wordmark and refined website navigation and mobile hierarchy.",
+      "Added strict fuzzy lookup with validated similar matches and clear red/yellow result markers.",
+      "Added private on-device platform detection and recommended downloads on the website."
     ]
   },
   "downloads": {
-    "android": "/downloads/lexora-android-v1.1.0.apk",
-    "macos": "/downloads/lexora-macos-v1.1.0.dmg",
-    "windows": "/downloads/lexora-windows-v1.1.0-setup.exe",
-    "linux": "/downloads/lexora-linux-v1.1.0.tar.gz"
+    "android": "/downloads/lexora-android-v1.1.1.apk",
+    "macos": "/downloads/lexora-macos-v1.1.1.dmg",
+    "windows": "/downloads/lexora-windows-v1.1.1-setup.exe",
+    "linux": "/downloads/lexora-linux-v1.1.1.tar.gz"
   }
 }

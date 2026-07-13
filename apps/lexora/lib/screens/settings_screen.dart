@@ -6,6 +6,7 @@ import '../services/pdf_service.dart';
 import '../services/pdf_settings_service.dart';
 import '../services/update_service.dart';
 import '../widgets/github_button.dart';
+import '../widgets/lexora_wordmark.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({
@@ -98,15 +99,32 @@ class SettingsScreen extends StatelessWidget {
       context: context,
       barrierDismissible: false,
       builder: (_) => AlertDialog(
-        content: Row(children: [
-          const SizedBox(
-            width: 22,
-            height: 22,
-            child: CircularProgressIndicator(strokeWidth: 2.5),
+        content: ConstrainedBox(
+          constraints: const BoxConstraints(minWidth: 260, maxWidth: 320),
+          child: SizedBox(
+            height: 32,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                const Align(
+                  alignment: Alignment.centerLeft,
+                  child: SizedBox(
+                    width: 22,
+                    height: 22,
+                    child: CircularProgressIndicator(strokeWidth: 2.5),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 34),
+                  child: Text(
+                    strings.checkingForUpdates,
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ],
+            ),
           ),
-          const SizedBox(width: 16),
-          Expanded(child: Text(strings.checkingForUpdates)),
-        ]),
+        ),
       ),
     );
     try {
@@ -224,15 +242,22 @@ class SettingsScreen extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Container(
-                        width: 52,
+                        constraints: const BoxConstraints(minWidth: 106),
                         height: 52,
+                        padding: const EdgeInsets.symmetric(horizontal: 13),
                         decoration: BoxDecoration(
-                          color: theme.colorScheme.primary,
+                          color: theme.colorScheme.surface.withValues(alpha: .72),
                           borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: theme.colorScheme.outlineVariant
+                                .withValues(alpha: .65),
+                          ),
                         ),
-                        child: Icon(
-                          Icons.auto_stories_rounded,
-                          color: theme.colorScheme.onPrimary,
+                        child: const Center(
+                          child: LexoraWordmark(
+                            fontSize: 24,
+                            alignment: TextAlign.left,
+                          ),
                         ),
                       ),
                       const SizedBox(width: 16),

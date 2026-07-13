@@ -8,6 +8,7 @@ import '../l10n/app_localizations.dart';
 import '../services/haptic_service.dart';
 import '../services/pdf_service.dart';
 import '../services/pdf_settings_service.dart';
+import '../widgets/lexora_wordmark.dart';
 
 enum WordSort { custom, alphabetical, length, difficulty }
 
@@ -149,10 +150,10 @@ class _HomeScreenState extends State<HomeScreen> {
               if (!isMac) const Spacer() else const SizedBox(height: 8),
               Align(
                 alignment: isMac ? Alignment.centerLeft : Alignment.center,
-                child: Text('Lexora', style: theme.textTheme.displaySmall?.copyWith(
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: -1.8,
-                )),
+                child: LexoraWordmark(
+                  fontSize: isMac ? 38 : 42,
+                  alignment: isMac ? TextAlign.left : TextAlign.center,
+                ),
               ),
               const SizedBox(height: 6),
               Align(

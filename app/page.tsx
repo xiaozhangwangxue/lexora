@@ -1,12 +1,16 @@
 "use client";
 
-import { FormEvent, useMemo, useRef, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import type { IconType } from "react-icons";
+import { FaAndroid, FaApple, FaDownload, FaLinux, FaWindows } from "react-icons/fa6";
+import { LexoraWordmark } from "./lexora-wordmark";
 import { useSiteLanguage } from "./use-site-language";
 
 type SortMode = "custom" | "alphabetical" | "length" | "difficulty";
 type PlatformKey = "macos" | "windows" | "linux" | "android";
+type DetectedPlatform = PlatformKey | "ios" | "unknown";
 type DragPreview = { word: string; x: number; y: number; width: number; grabOffsetY: number };
 
 const seedWords = ["serendipity", "lucid", "resilient", "wanderlust"];
@@ -15,13 +19,25 @@ const donationCodes = {
   alipay: "https://photo.12323456.xyz/api/rfile/%E6%94%AF%E4%BB%98%E5%AE%9D.jpg",
 };
 
-const currentVersion = "v1.1.0";
-const platforms: Array<{ key: PlatformKey; name: string; note: string; icon: string; file: string }> = [
-  { key: "macos", name: "macOS", note: "Drag-to-install DMG", icon: "⌘", file: `lexora-macos-${currentVersion}.dmg` },
-  { key: "windows", name: "Windows", note: "Installer · Windows 10 / 11", icon: "⊞", file: `lexora-windows-${currentVersion}-setup.exe` },
-  { key: "linux", name: "Linux", note: "64-bit bundle", icon: "◇", file: `lexora-linux-${currentVersion}.tar.gz` },
-  { key: "android", name: "Android", note: "Android 8+", icon: "◒", file: `lexora-android-${currentVersion}.apk` },
+const currentVersion = "v1.1.1";
+const platforms: Array<{ key: PlatformKey; name: string; noteZh: string; noteEn: string; Icon: IconType; file: string }> = [
+  { key: "macos", name: "macOS", noteZh: "macOS 12+ · 拖动安装 DMG", noteEn: "macOS 12+ · Drag-to-install DMG", Icon: FaApple, file: `lexora-macos-${currentVersion}.dmg` },
+  { key: "windows", name: "Windows", noteZh: "Windows 10 / 11 · 安装程序", noteEn: "Windows 10 / 11 · Installer", Icon: FaWindows, file: `lexora-windows-${currentVersion}-setup.exe` },
+  { key: "linux", name: "Linux", noteZh: "64 位 Linux · tar.gz", noteEn: "64-bit Linux · tar.gz", Icon: FaLinux, file: `lexora-linux-${currentVersion}.tar.gz` },
+  { key: "android", name: "Android", noteZh: "Android 8+ · APK", noteEn: "Android 8+ · APK", Icon: FaAndroid, file: `lexora-android-${currentVersion}.apk` },
 ];
+
+function detectPlatform(): DetectedPlatform {
+  const nav = navigator as Navigator & { userAgentData?: { platform?: string } };
+  const userAgent = nav.userAgent.toLowerCase();
+  const platform = (nav.userAgentData?.platform || nav.platform || "").toLowerCase();
+  if (/android/.test(userAgent)) return "android";
+  if (/iphone|ipad|ipod/.test(userAgent) || (platform === "macintel" && nav.maxTouchPoints > 1)) return "ios";
+  if (/win/.test(platform) || /windows/.test(userAgent)) return "windows";
+  if (/mac/.test(platform) || /macintosh/.test(userAgent)) return "macos";
+  if (/linux|x11/.test(platform) || /linux/.test(userAgent)) return "linux";
+  return "unknown";
+}
 
 const installGuides: Record<PlatformKey, { zh: string[]; en: string[] }> = {
   macos: {
@@ -37,8 +53,8 @@ const installGuides: Record<PlatformKey, { zh: string[]; en: string[] }> = {
     en: ["Extract the tar.gz archive.", "If needed, allow the lexora file to run as a program or use chmod +x.", "Launch the lexora executable."],
   },
   android: {
-    zh: ["从 v0.3.0 或更高版本可直接覆盖安装 v1.1.0；只有 v0.2.0 需先卸载一次。", "下载 APK，系统询问时允许浏览器安装未知来源应用。", "确认文件来自本官网后，选择“仍要安装”；安装后可关闭该权限。"],
-    en: ["v0.3.0 and newer can update directly to v1.1.0. Only v0.2.0 requires one uninstall first.", "Download the APK and allow your browser to install unknown apps when Android asks.", "After verifying this official site, choose Install anyway. You can revoke that permission afterward."],
+    zh: ["从 v0.3.0 或更高版本可直接覆盖安装 v1.1.1；只有 v0.2.0 需先卸载一次。", "下载 APK，系统询问时允许浏览器安装未知来源应用。", "确认文件来自本官网后，选择“仍要安装”；安装后可关闭该权限。"],
+    en: ["v0.3.0 and newer can update directly to v1.1.1. Only v0.2.0 requires one uninstall first.", "Download the APK and allow your browser to install unknown apps when Android asks.", "After verifying this official site, choose Install anyway. You can revoke that permission afterward."],
   },
 };
 
@@ -53,6 +69,7 @@ export default function Home() {
   const { language, setLanguage, zh } = useSiteLanguage();
   const [progress, setProgress] = useState<number | null>(null);
   const [downloadChoice, setDownloadChoice] = useState<PlatformKey | null>(null);
+  const [detectedPlatform, setDetectedPlatform] = useState<DetectedPlatform | null>(null);
   const draggedWord = useRef<string | null>(null);
   const listRef = useRef<HTMLOListElement | null>(null);
   const dragPreviewRef = useRef<DragPreview | null>(null);
@@ -60,6 +77,19 @@ export default function Home() {
   const [dropTargetWord, setDropTargetWord] = useState<string | null>(null);
   const [dragPreview, setDragPreview] = useState<DragPreview | null>(null);
   const selectedPlatform = platforms.find((platform) => platform.key === downloadChoice);
+  const recommendedPlatform = platforms.find((platform) => platform.key === detectedPlatform);
+  const RecommendedIcon = recommendedPlatform?.Icon ?? (detectedPlatform === "ios" ? FaApple : FaDownload);
+  const orderedPlatforms = useMemo(() => {
+    if (!recommendedPlatform) return platforms;
+    return [recommendedPlatform, ...platforms.filter((platform) => platform.key !== recommendedPlatform.key)];
+  }, [recommendedPlatform]);
+
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(() => {
+      setDetectedPlatform(detectPlatform());
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, []);
 
   const visibleWords = useMemo(() => {
     const next = [...words];
@@ -171,7 +201,7 @@ export default function Home() {
       <nav className="nav wrap" aria-label="Primary navigation">
         <a className="brand" href="#top" aria-label="Lexora home">
           <img src="/lexora-icon-192.png" alt="" width="36" height="36" />
-          <span>Lexora</span>
+          <LexoraWordmark />
         </a>
         <div className="navLinks">
           <a href="#how">{zh ? "工作方式" : "How it works"}</a>
@@ -188,8 +218,9 @@ export default function Home() {
       </nav>
 
       <section className="hero wrap" id="top">
+        <LexoraWordmark hero />
         <div className="eyebrow"><span /> {zh ? "你的词汇，终于井然有序" : "Your vocabulary, finally organized"}</div>
-        <h1>{zh ? <>把零散单词，变成<br /><em>真正想读的词汇书。</em></> : <>Turn loose words into a<br /><em>book worth reading.</em></>}</h1>
+        <h1>{zh ? <><span className="heroLine">把零散单词，变成</span><br /><em className="heroLine">真正想读的词汇书。</em></> : <>Turn loose words into a<br /><em>book worth reading.</em></>}</h1>
         <p className="heroCopy">
           {zh
             ? "输入单词，Lexora 自动补全难度、词频、英美音标、近反义词、例句与完整中文翻译，并生成紧凑精美的 PDF。"
@@ -203,7 +234,7 @@ export default function Home() {
         <div className="appWindow" id="demo">
           <div className="windowBar">
             <div className="traffic"><i /><i /><i /></div>
-            <div className="miniBrand"><img src="/lexora-icon-192.png" alt="" width="21" height="21" /> Lexora</div>
+            <div className="miniBrand"><LexoraWordmark /></div>
             <div className="windowMenu">•••</div>
           </div>
           <div className="appBody">
@@ -347,16 +378,54 @@ export default function Home() {
         <div>
           <p className="sectionLabel">{zh ? "所有设备" : "Every device"}</p>
           <h2>{zh ? "词汇跟着你走。" : "Your words go with you."}</h2>
-          <p>{zh ? "Lexora 为每个平台调整导航、交互密度和分享方式，同时保持同样安静、清晰的体验。" : "Lexora adapts navigation, density, and sharing to every platform while keeping the same calm, focused experience."}</p>
+          <p>{zh ? "Lexora 会在本地识别你的设备并推荐对应版本；设备信息不会上传。你也可以随时选择其他平台。" : "Lexora detects your device locally and recommends the matching build without uploading device data. You can still choose another platform."}</p>
         </div>
-        <div className="platformGrid">
-          {platforms.map((platform) => (
-            <a key={platform.name} href={`/downloads/${platform.file}`} onClick={(event) => { event.preventDefault(); setDownloadChoice(platform.key); }}>
-              <span className="platformIcon">{platform.icon}</span>
-              <span><strong>{platform.name}</strong><small>{platform.note}</small></span>
-              <span className="downloadArrow">↓</span>
-            </a>
-          ))}
+        <div className="downloadChoices">
+          <div className={`recommendedDownload${recommendedPlatform ? " isReady" : ""}`} aria-live="polite">
+            <div className="recommendedDownloadCopy">
+              <span className="recommendedBadge">{zh ? "为你的设备推荐" : "Recommended for your device"}</span>
+              <span className="platformIcon recommendedPlatformIcon" aria-hidden="true"><RecommendedIcon /></span>
+              <span>
+                <strong>{recommendedPlatform
+                  ? `Lexora for ${recommendedPlatform.name}`
+                  : detectedPlatform === "ios"
+                    ? (zh ? "iPhone / iPad 暂无对应版本" : "No iPhone / iPad build yet")
+                    : detectedPlatform === "unknown"
+                      ? (zh ? "选择适合你的版本" : "Choose the right version")
+                      : (zh ? "正在识别设备…" : "Detecting your device…")}</strong>
+                <small>{recommendedPlatform
+                  ? (zh ? recommendedPlatform.noteZh : recommendedPlatform.noteEn)
+                  : detectedPlatform === "ios"
+                    ? (zh ? "可在 Android 或电脑上使用 Lexora" : "Use Lexora on Android or a computer")
+                    : (zh ? "Android、macOS、Windows 与 Linux" : "Android, macOS, Windows, and Linux")}</small>
+              </span>
+            </div>
+            {recommendedPlatform ? (
+              <button onClick={() => setDownloadChoice(recommendedPlatform.key)}>
+                {zh ? `下载 ${recommendedPlatform.name} 版` : `Download for ${recommendedPlatform.name}`} <span>↓</span>
+              </button>
+            ) : (
+              <a href="#all-downloads">{zh ? "查看全部版本" : "View all versions"} <span>↓</span></a>
+            )}
+          </div>
+          <div className="platformGrid" id="all-downloads">
+            {orderedPlatforms.map((platform) => {
+              const PlatformIcon = platform.Icon;
+              return (
+              <a
+                className={platform.key === detectedPlatform ? "isRecommended" : undefined}
+                key={platform.name}
+                href={`/downloads/${platform.file}`}
+                onClick={(event) => { event.preventDefault(); setDownloadChoice(platform.key); }}
+              >
+                <span className={`platformIcon platformIcon-${platform.key}`} aria-hidden="true"><PlatformIcon /></span>
+                <span><strong>{platform.name}</strong><small>{zh ? platform.noteZh : platform.noteEn}</small></span>
+                {platform.key === detectedPlatform && <span className="platformRecommendedLabel">{zh ? "推荐" : "Recommended"}</span>}
+                <span className="downloadArrow">↓</span>
+              </a>
+              );
+            })}
+          </div>
         </div>
       </section>
 
@@ -415,7 +484,7 @@ export default function Home() {
       </section>
 
       <footer className="wrap">
-        <a className="brand" href="#top"><img src="/lexora-icon-192.png" alt="" width="30" height="30" /><span>Lexora</span></a>
+        <a className="brand" href="#top"><LexoraWordmark /></a>
         <p>{zh ? "把单词变成值得保存的东西。" : "Make your words worth keeping."}</p>
         <span>© 2026 Lexora · <Link href="/donate">{zh ? "支持项目" : "Support"}</Link></span>
       </footer>

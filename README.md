@@ -35,6 +35,7 @@ Lexora 是一款面向 Android、macOS、Windows 与 Linux 的英语单词整理
 - **快速收集**：搜索式主页，按回车添加单词，自动阻止重复和无效输入。
 - **自由整理**：长按调整顺序、向左滑动删除，支持自定义、A–Z、长度和估算难度排序。
 - **完整查词**：获取英文定义、公开语料词频信号、美式与英式音标、近义词、反义词和例句。
+- **安全模糊搜索**：完全匹配失败时，仅采用拼写高度相似且能再次取得完整词典数据的候选词；结果页会用红色标出跳过项、黄色标出相似匹配及实际采用的单词。
 - **更快批量生成**：最多四路并发查询，查询结果在本机缓存 14 天；长词表和重复生成都更快。
 - **完整中译**：释义、例句及近反义词均带中文结果；PDF 标签也采用中英双语。
 - **中英界面**：自动识别设备语言；中文设备默认显示简体中文，其他设备显示英文。
@@ -50,14 +51,14 @@ Lexora 是一款面向 Android、macOS、Windows 与 Linux 的英语单词整理
 
 ## 下载与安装
 
-推荐从[官方网站下载区](https://lexora.12323456.xyz/#download)获取由 GitHub Actions 在对应原生系统中构建的安装包。下载文件同时镜像到 Cloudflare R2，国内访问无需打开 GitHub。
+推荐从[官方网站下载区](https://lexora.12323456.xyz/#download)获取由 GitHub Actions 在对应原生系统中构建的安装包。官网只在浏览器本地识别设备系统并推荐对应版本，不会上传设备信息；下载文件同时镜像到 Cloudflare R2，国内访问无需打开 GitHub。
 
 | 平台 | 安装包 | 系统要求 | 下载 |
 | --- | --- | --- | --- |
-| Android | APK | Android 8.0+ | [官网下载](https://lexora.12323456.xyz/downloads/lexora-android-v1.1.0.apk) |
-| macOS | 拖动安装 DMG | macOS 12+ | [官网下载](https://lexora.12323456.xyz/downloads/lexora-macos-v1.1.0.dmg) |
-| Windows | 安装程序 EXE（默认安装后启动） | Windows 10 / 11 | [官网下载](https://lexora.12323456.xyz/downloads/lexora-windows-v1.1.0-setup.exe) |
-| Linux | tar.gz | 64 位 Linux | [官网下载](https://lexora.12323456.xyz/downloads/lexora-linux-v1.1.0.tar.gz) |
+| Android | APK | Android 8.0+ | [官网下载](https://lexora.12323456.xyz/downloads/lexora-android-v1.1.1.apk) |
+| macOS | 拖动安装 DMG | macOS 12+ | [官网下载](https://lexora.12323456.xyz/downloads/lexora-macos-v1.1.1.dmg) |
+| Windows | 安装程序 EXE（默认安装后启动） | Windows 10 / 11 | [官网下载](https://lexora.12323456.xyz/downloads/lexora-windows-v1.1.1-setup.exe) |
+| Linux | tar.gz | 64 位 Linux | [官网下载](https://lexora.12323456.xyz/downloads/lexora-linux-v1.1.1.tar.gz) |
 
 <details>
 <summary><strong>首次安装被系统拦截怎么办？</strong></summary>
@@ -72,7 +73,7 @@ Lexora 是一款面向 Android、macOS、Windows 与 Linux 的英语单词整理
 > [!IMPORTANT]
 > Android v0.2.0 使用了临时构建签名，旧私钥无法恢复，因此升级到采用稳定签名的 v0.3.0 时需要先卸载旧版再安装一次。自 v0.3.0 起，后续版本继续使用同一发布签名，可直接覆盖更新。请先按需导出旧版中的 PDF。
 
-所有发行文件名都包含版本号，例如 `lexora-android-v1.1.0.apk`。这样可以避免浏览器或下载目录把新旧安装包混淆。
+所有发行文件名都包含版本号，例如 `lexora-android-v1.1.1.apk`。这样可以避免浏览器或下载目录把新旧安装包混淆。
 
 ## 三步生成词汇书
 
@@ -89,7 +90,7 @@ word list → dictionary + corpus + translation → bilingual layout → local P
 | 内容 | 来源 | 说明 |
 | --- | --- | --- |
 | 定义、音标、例句 | [Dictionary API](https://dictionaryapi.dev/) | 免费公开英文词典接口 |
-| 相关词、词频信号 | [Datamuse](https://www.datamuse.com/api/) | 用于近义词补充、相对词频和难度估算 |
+| 相关词、词频信号与拼写建议 | [Datamuse](https://www.datamuse.com/api/) | 用于近义词补充、相对词频、难度估算及严格模糊匹配 |
 | 中文翻译 | [MyMemory](https://mymemory.translated.net/) | 用于释义、例句及相关词中译 |
 | PDF 中文与音标字体 | Noto Sans SC + Noto Sans | 首次生成时获取并缓存，完整覆盖 IPA 字符 |
 

@@ -20,11 +20,23 @@ class LookupFailure {
   final String message;
 }
 
+class FuzzyMatch {
+  const FuzzyMatch({required this.term, required this.matchedTerm});
+
+  final String term;
+  final String matchedTerm;
+}
+
 class LookupBatchResult {
-  const LookupBatchResult({required this.entries, required this.failures});
+  const LookupBatchResult({
+    required this.entries,
+    required this.failures,
+    required this.fuzzyMatches,
+  });
 
   final List<WordEntry> entries;
   final List<LookupFailure> failures;
+  final List<FuzzyMatch> fuzzyMatches;
 }
 
 class WordService {
@@ -46,10 +58,15 @@ class WordService {
     void Function(int completed, int total, String term)? onProgress,
   }) async {
     if (terms.isEmpty) {
-      return const LookupBatchResult(entries: [], failures: []);
+      return const LookupBatchResult(
+        entries: [],
+        failures: [],
+        fuzzyMatches: [],
+      );
     }
     final results = List<WordEntry?>.filled(terms.length, null);
     final failures = List<LookupFailure?>.filled(terms.length, null);
+    final fuzzyMatches = List<FuzzyMatch?>.filled(terms.length, null);
     var nextIndex = 0;
     var completed = 0;
 
@@ -60,6 +77,23 @@ class WordService {
         final term = terms[index];
         try {
           results[index] = await lookup(term, exampleCount: exampleCount);
+        } on WordLookupException catch (exactError) {
+          final fuzzyResult = await _lookupFuzzy(
+            term,
+            exampleCount: exampleCount,
+          );
+          if (fuzzyResult != null) {
+            results[index] = fuzzyResult.entry;
+            fuzzyMatches[index] = FuzzyMatch(
+              term: term,
+              matchedTerm: fuzzyResult.entry.word,
+            );
+          } else {
+            failures[index] = LookupFailure(
+              term: term,
+              message: exactError.message,
+            );
+          }
         } catch (error) {
           failures[index] = LookupFailure(
             term: term,
@@ -79,7 +113,74 @@ class WordService {
     return LookupBatchResult(
       entries: results.whereType<WordEntry>().toList(),
       failures: failures.whereType<LookupFailure>().toList(),
+      fuzzyMatches: fuzzyMatches.whereType<FuzzyMatch>().toList(),
     );
+  }
+
+  Future<_FuzzyLookupResult?> _lookupFuzzy(
+    String rawTerm, {
+    required int exampleCount,
+  }) async {
+    final term = _normalizeTerm(rawTerm);
+    if (term.isEmpty) return null;
+    try {
+      final suggestionUri = Uri.https('api.datamuse.com', '/sug', {
+        's': term,
+        'max': '12',
+      });
+      final response = await _client
+          .get(suggestionUri)
+          .timeout(const Duration(seconds: 10));
+      final suggestions = _decodeDatamuse(response)
+          .map((item) => _normalizeTerm(item['word'] as String? ?? ''))
+          .where((candidate) => _isSafeFuzzyMatch(term, candidate))
+          .toSet()
+          .toList()
+        ..sort((left, right) => _editDistance(term, left)
+            .compareTo(_editDistance(term, right)));
+
+      for (final candidate in suggestions.take(3)) {
+        try {
+          final entry = await lookup(candidate, exampleCount: exampleCount);
+          return _FuzzyLookupResult(entry);
+        } on WordLookupException {
+          // A spelling suggestion still needs a complete dictionary result.
+        }
+      }
+    } catch (_) {
+      // Fuzzy lookup is an optional fallback; preserve the original failure.
+    }
+    return null;
+  }
+
+  bool _isSafeFuzzyMatch(String term, String candidate) {
+    if (candidate.isEmpty || candidate == term) return false;
+    if (term.split(' ').length != candidate.split(' ').length) return false;
+    final distance = _editDistance(term, candidate);
+    final longest = max(term.length, candidate.length);
+    final maxDistance = longest <= 4 ? 1 : (longest <= 8 ? 2 : 3);
+    final similarity = longest == 0 ? 0 : 1 - (distance / longest);
+    return distance <= maxDistance && similarity >= 0.78;
+  }
+
+  int _editDistance(String left, String right) {
+    final previous = List<int>.generate(right.length + 1, (index) => index);
+    for (var leftIndex = 1; leftIndex <= left.length; leftIndex++) {
+      final current = List<int>.filled(right.length + 1, 0);
+      current[0] = leftIndex;
+      for (var rightIndex = 1; rightIndex <= right.length; rightIndex++) {
+        final substitutionCost =
+            left[leftIndex - 1] == right[rightIndex - 1] ? 0 : 1;
+        current[rightIndex] = min(
+          min(current[rightIndex - 1] + 1, previous[rightIndex] + 1),
+          previous[rightIndex - 1] + substitutionCost,
+        );
+      }
+      for (var index = 0; index < current.length; index++) {
+        previous[index] = current[index];
+      }
+    }
+    return previous.last;
   }
 
   Future<WordEntry> lookup(String rawWord, {int exampleCount = 1}) async {
@@ -343,4 +444,10 @@ class WordService {
     if (frequency >= 5 || letterCount <= 7) return 'B1–B2';
     return 'C1–C2';
   }
+}
+
+class _FuzzyLookupResult {
+  const _FuzzyLookupResult(this.entry);
+
+  final WordEntry entry;
 }

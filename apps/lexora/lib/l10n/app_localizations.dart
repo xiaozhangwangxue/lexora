@@ -57,6 +57,18 @@ class AppLocalizations {
   String get skippedItemsTitle => isZh ? '部分词条未找到' : 'Some entries were not found';
   String get skippedItemsBody => isZh ? '以下词条已跳过，其余内容已继续生成。' : 'These entries were skipped. The remaining content was generated normally.';
   String get noItemsGenerated => isZh ? '所有词条都未找到，因此没有生成 PDF。' : 'No entries were found, so no PDF was created.';
+  String get lookupResultsTitle => isZh ? '词条匹配结果' : 'Entry match results';
+  String lookupResultsBody(bool hasFailures) => isZh
+      ? (hasFailures
+          ? '红色词条未找到并已跳过；黄色词条已采用严格筛选的相似匹配。'
+          : '以下黄色词条未找到完全匹配，已采用严格筛选的相似匹配。')
+      : (hasFailures
+          ? 'Red entries were not found and were skipped. Yellow entries use a carefully checked similar match.'
+          : 'The yellow entries had no exact match, so Lexora used a carefully checked similar match.');
+  String fuzzyMatchedTerm(String term, String matchedTerm) =>
+      isZh ? '$term（匹配：$matchedTerm）' : '$term (matched: $matchedTerm)';
+  String get lookupFailed => isZh ? '匹配失败' : 'Match failed';
+  String get fuzzyMatched => isZh ? '模糊匹配' : 'Fuzzy matched';
   String generationError(String error) => isZh ? '生成失败：$error' : 'Generation failed: $error';
   String get gotIt => isZh ? '知道了' : 'Got it';
   String get customize => isZh ? '自定义 PDF' : 'Customize PDF';

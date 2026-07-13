@@ -59,6 +59,7 @@ void main() {
 
     expect(result.entries.map((entry) => entry.word), ['alpha', 'bravo', 'charlie', 'delta']);
     expect(result.failures, isEmpty);
+    expect(result.fuzzyMatches, isEmpty);
     expect(peakDictionaryRequests, greaterThan(1));
 
     final requestsAfterFirstRun = requestCount;
@@ -113,7 +114,98 @@ void main() {
 
     expect(result.entries.map((entry) => entry.word), ['alpha', 'bravo']);
     expect(result.failures.map((failure) => failure.term), ['missing']);
+    expect(result.fuzzyMatches, isEmpty);
     expect(progress, hasLength(3));
+  });
+
+  test('lookupAll accepts a close spelling suggestion after validating it', () async {
+    SharedPreferences.setMockInitialValues({});
+    final client = MockClient((request) async {
+      if (request.url.host == 'api.dictionaryapi.dev') {
+        final term = Uri.decodeComponent(request.url.pathSegments.last);
+        if (term == 'aple') return http.Response('{}', 404);
+        if (term == 'apple') {
+          return http.Response(jsonEncode([
+            {
+              'word': 'apple',
+              'phonetics': const [],
+              'meanings': [
+                {
+                  'synonyms': const [],
+                  'antonyms': const [],
+                  'definitions': [
+                    {'definition': 'a round fruit'},
+                  ],
+                },
+              ],
+            },
+          ]), 200);
+        }
+        return http.Response('{}', 404);
+      }
+      if (request.url.host == 'api.datamuse.com') {
+        if (request.url.path == '/sug') {
+          return http.Response(jsonEncode([
+            {'word': 'apple', 'score': 1000},
+            {'word': 'apply', 'score': 900},
+          ]), 200);
+        }
+        if (request.url.queryParameters['sp'] == 'apple') {
+          return http.Response(jsonEncode([
+            {
+              'word': 'apple',
+              'defs': ['n\ta round fruit'],
+              'tags': ['f:24.0'],
+            },
+          ]), 200);
+        }
+        return http.Response('[]', 200);
+      }
+      if (request.url.host == 'api.mymemory.translated.net') {
+        return http.Response(jsonEncode({
+          'responseData': {'translatedText': '苹果'},
+        }), 200);
+      }
+      return http.Response('not found', 404);
+    });
+
+    final result = await WordService(client: client).lookupAll(
+      const ['aple'],
+      exampleCount: 0,
+    );
+
+    expect(result.entries.single.word, 'apple');
+    expect(result.failures, isEmpty);
+    expect(result.fuzzyMatches, hasLength(1));
+    expect(result.fuzzyMatches.single.term, 'aple');
+    expect(result.fuzzyMatches.single.matchedTerm, 'apple');
+  });
+
+  test('lookupAll rejects a suggestion that is not sufficiently similar', () async {
+    SharedPreferences.setMockInitialValues({});
+    final client = MockClient((request) async {
+      if (request.url.host == 'api.dictionaryapi.dev') {
+        return http.Response('{}', 404);
+      }
+      if (request.url.host == 'api.datamuse.com') {
+        if (request.url.path == '/sug') {
+          return http.Response(jsonEncode([
+            {'word': 'unrelated', 'score': 1000},
+          ]), 200);
+        }
+        return http.Response('[]', 200);
+      }
+      return http.Response('not found', 404);
+    });
+
+    final result = await WordService(client: client).lookupAll(
+      const ['zzqx'],
+      exampleCount: 0,
+    );
+
+    expect(result.entries, isEmpty);
+    expect(result.fuzzyMatches, isEmpty);
+    expect(result.failures.single.term, 'zzqx');
   });
 
   test('lookup supports a phrase and keeps related phrase meanings', () async {

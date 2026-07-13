@@ -165,12 +165,15 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - name: Prepare bilingual release notes
+        run: node tool/generate_release_notes.mjs
       - uses: actions/download-artifact@v4
         with:
           merge-multiple: true
       - uses: softprops/action-gh-release@v2
         with:
           generate_release_notes: true
+          body_path: release-notes.md
           files: lexora-*
       - name: Mirror downloads to Cloudflare R2
         env:

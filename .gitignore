@@ -39,6 +39,9 @@ next-env.d.ts
 /dist/
 /.wrangler/
 /outputs/
+/output/
+/.playwright-cli/
+/release-notes.md
 /work/
 /tmp/
 

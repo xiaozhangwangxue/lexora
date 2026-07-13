@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { LexoraWordmark } from "../lexora-wordmark";
 import { useSiteLanguage } from "../use-site-language";
 
 const donationCodes = {
@@ -16,7 +17,7 @@ export default function DonatePage() {
       <nav className="nav wrap" aria-label={zh ? "捐款页面导航" : "Donation navigation"}>
         <Link className="brand" href="/">
           <img src="/lexora-icon-192.png" alt="" width="36" height="36" />
-          <span>Lexora</span>
+          <LexoraWordmark />
         </Link>
         <div className="donateNavActions">
           <button className="language" onClick={() => setLanguage(language === "zh" ? "en" : "zh")}>

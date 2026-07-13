@@ -35,6 +35,7 @@ Lexora is an English vocabulary organizer for Android, macOS, Windows, and Linux
 - **Fast capture:** focused search-style home, Enter to add, duplicate and input validation.
 - **Flexible ordering:** long-press to reorder, swipe left to delete, and sort by custom order, A–Z, length, or estimated difficulty.
 - **Full lookup:** English definition, corpus frequency signal, US and UK phonetics, synonyms, antonyms, and examples.
+- **Safe fuzzy lookup:** when no exact result exists, Lexora accepts only a highly similar spelling that also returns complete dictionary data; the results dialog marks skipped terms in red and validated matches in yellow with the word actually used.
 - **Faster batches:** up to four concurrent lookups plus a 14-day on-device cache speed up long lists and repeated generation.
 - **Complete Chinese layer:** definitions, examples, and related words receive Chinese translations; PDF labels are bilingual too.
 - **Automatic language:** follows the device language, using Simplified Chinese on Chinese devices and English elsewhere.
@@ -50,19 +51,19 @@ Lexora is an English vocabulary organizer for Android, macOS, Windows, and Linux
 
 ## Download and install
 
-Use the [official download section](https://lexora.12323456.xyz/#download) for binaries built by GitHub Actions on each platform’s native runner. Files are mirrored to Cloudflare R2 so downloads do not depend on GitHub access.
+Use the [official download section](https://lexora.12323456.xyz/#download) for binaries built by GitHub Actions on each platform’s native runner. The website detects the device platform locally and recommends the matching build without uploading device information. Files are mirrored to Cloudflare R2 so downloads do not depend on GitHub access.
 
 | Platform | Package | Requirement | Download |
 | --- | --- | --- | --- |
-| Android | APK | Android 8.0+ | [Official mirror](https://lexora.12323456.xyz/downloads/lexora-android-v1.1.0.apk) |
-| macOS | Drag-to-install DMG | macOS 12+ | [Official mirror](https://lexora.12323456.xyz/downloads/lexora-macos-v1.1.0.dmg) |
-| Windows | Setup EXE (launch option checked by default) | Windows 10 / 11 | [Official mirror](https://lexora.12323456.xyz/downloads/lexora-windows-v1.1.0-setup.exe) |
-| Linux | tar.gz | 64-bit Linux | [Official mirror](https://lexora.12323456.xyz/downloads/lexora-linux-v1.1.0.tar.gz) |
+| Android | APK | Android 8.0+ | [Official mirror](https://lexora.12323456.xyz/downloads/lexora-android-v1.1.1.apk) |
+| macOS | Drag-to-install DMG | macOS 12+ | [Official mirror](https://lexora.12323456.xyz/downloads/lexora-macos-v1.1.1.dmg) |
+| Windows | Setup EXE (launch option checked by default) | Windows 10 / 11 | [Official mirror](https://lexora.12323456.xyz/downloads/lexora-windows-v1.1.1-setup.exe) |
+| Linux | tar.gz | 64-bit Linux | [Official mirror](https://lexora.12323456.xyz/downloads/lexora-linux-v1.1.1.tar.gz) |
 
 > [!IMPORTANT]
 > Android v0.2.0 used an ephemeral build signature whose private key cannot be recovered. Moving to the stable v0.3.0 signing key therefore requires one uninstall and reinstall. From v0.3.0 onward, future APKs use the same release key and install directly over the existing app. Export any PDFs you need before removing v0.2.0.
 
-Every release filename contains its version, such as `lexora-android-v1.1.0.apk`, so old and new installers remain easy to distinguish.
+Every release filename contains its version, such as `lexora-android-v1.1.1.apk`, so old and new installers remain easy to distinguish.
 
 ## Three steps to a vocabulary book
 
@@ -79,7 +80,7 @@ word list → dictionary + corpus + translation → bilingual layout → local P
 | Content | Source | Use |
 | --- | --- | --- |
 | Definitions, phonetics, examples | [Dictionary API](https://dictionaryapi.dev/) | Public English dictionary data |
-| Related words, frequency signals | [Datamuse](https://www.datamuse.com/api/) | Synonym enrichment, relative frequency, and difficulty estimate |
+| Related words, frequency signals, spelling suggestions | [Datamuse](https://www.datamuse.com/api/) | Synonym enrichment, relative frequency, difficulty estimate, and strict fuzzy matching |
 | Chinese translation | [MyMemory](https://mymemory.translated.net/) | Definitions, examples, and related words |
 | PDF Chinese and IPA fonts | Noto Sans SC + Noto Sans | Fetched and cached on first generation |
 

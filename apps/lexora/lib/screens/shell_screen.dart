@@ -204,7 +204,11 @@ class _ShellScreenState extends State<ShellScreen>
         _generationProgress.fail(strings.noItemsGenerated);
         if (mounted) setState(() {});
         if (mounted && result.failures.isNotEmpty) {
-          await _showSkippedItems(result.failures, generated: false);
+          await _showLookupResults(
+            result.failures,
+            result.fuzzyMatches,
+            generated: false,
+          );
         }
         return;
       }
@@ -230,8 +234,13 @@ class _ShellScreenState extends State<ShellScreen>
           isZh: strings.isZh,
         );
       }
-      if (mounted && result.failures.isNotEmpty) {
-        await _showSkippedItems(result.failures, generated: true);
+      if (mounted &&
+          (result.failures.isNotEmpty || result.fuzzyMatches.isNotEmpty)) {
+        await _showLookupResults(
+          result.failures,
+          result.fuzzyMatches,
+          generated: true,
+        );
       }
       if (mounted) await _showGenerationComplete(book);
     } catch (error) {
@@ -311,47 +320,72 @@ class _ShellScreenState extends State<ShellScreen>
     }
   }
 
-  Future<void> _showSkippedItems(
-    List<LookupFailure> failures, {
+  Future<void> _showLookupResults(
+    List<LookupFailure> failures,
+    List<FuzzyMatch> fuzzyMatches, {
     required bool generated,
   }) async {
     final strings = AppLocalizations.of(context);
+    final itemCount = failures.length + fuzzyMatches.length;
     await showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
         icon: const Icon(Icons.manage_search_rounded),
-        title: Text(strings.skippedItemsTitle),
+        title: Text(fuzzyMatches.isEmpty
+            ? strings.skippedItemsTitle
+            : strings.lookupResultsTitle),
         content: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 420, maxHeight: 340),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(generated
-                  ? strings.skippedItemsBody
-                  : strings.noItemsGenerated),
+              Text(fuzzyMatches.isNotEmpty
+                  ? strings.lookupResultsBody(failures.isNotEmpty)
+                  : (generated
+                      ? strings.skippedItemsBody
+                      : strings.noItemsGenerated)),
               const SizedBox(height: 12),
               Flexible(
                 child: ListView.separated(
                   shrinkWrap: true,
-                  itemCount: failures.length,
+                  itemCount: itemCount,
                   separatorBuilder: (_, __) => const Divider(height: 12),
-                  itemBuilder: (context, index) => Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Padding(
-                        padding: EdgeInsets.only(top: 2),
-                        child: Icon(Icons.close_rounded, size: 17),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          failures[index].term,
-                          style: const TextStyle(fontWeight: FontWeight.w600),
+                  itemBuilder: (context, index) {
+                    final isFailure = index < failures.length;
+                    final text = isFailure
+                        ? failures[index].term
+                        : strings.fuzzyMatchedTerm(
+                            fuzzyMatches[index - failures.length].term,
+                            fuzzyMatches[index - failures.length].matchedTerm,
+                          );
+                    final color = isFailure
+                        ? Theme.of(context).colorScheme.error
+                        : Colors.amber.shade700;
+                    return Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.only(top: 2),
+                          child: Icon(
+                            Icons.close_rounded,
+                            size: 17,
+                            color: color,
+                            semanticLabel: isFailure
+                                ? strings.lookupFailed
+                                : strings.fuzzyMatched,
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            text,
+                            style: const TextStyle(fontWeight: FontWeight.w600),
+                          ),
+                        ),
+                      ],
+                    );
+                  },
                 ),
               ),
             ],

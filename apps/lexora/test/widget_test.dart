@@ -20,7 +20,7 @@ void main() {
   testWidgets('Lexora opens the localized word composer', (tester) async {
     SharedPreferences.setMockInitialValues({
       'lexora.onboarding.completed.v1': true,
-      'lexora.release-notes.seen.1.1.0': true,
+      'lexora.release-notes.seen.1.1.1': true,
     });
     await tester.pumpWidget(const LexoraApp(locale: Locale('zh', 'CN')));
     await tester.pumpAndSettle();
