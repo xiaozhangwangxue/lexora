@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lexora/l10n/app_localizations.dart';
 import 'package:lexora/main.dart';
 import 'package:lexora/screens/word_history_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -77,6 +78,7 @@ void main() {
       MaterialApp(
         locale: const Locale('zh', 'CN'),
         supportedLocales: const [Locale('zh', 'CN')],
+        localizationsDelegates: const [AppLocalizationsDelegate()],
         home: WordHistoryScreen(
           generationRunning: false,
           onRegenerate: (_) {},
