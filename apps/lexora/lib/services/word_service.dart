@@ -13,11 +13,25 @@ class WordLookupException implements Exception {
   String toString() => message;
 }
 
+class LookupFailure {
+  const LookupFailure({required this.term, required this.message});
+
+  final String term;
+  final String message;
+}
+
+class LookupBatchResult {
+  const LookupBatchResult({required this.entries, required this.failures});
+
+  final List<WordEntry> entries;
+  final List<LookupFailure> failures;
+}
+
 class WordService {
   WordService({http.Client? client}) : _client = client ?? http.Client();
 
   final http.Client _client;
-  static const _cachePrefix = 'lexora.word.v3';
+  static const _cachePrefix = 'lexora.word.v4';
   static const _cacheLifetime = Duration(days: 14);
 
   /// Looks up several words concurrently while preserving their input order.
@@ -25,34 +39,51 @@ class WordService {
   /// Dictionary work is network-bound, so a small pool of asynchronous workers
   /// is faster and lighter than creating CPU isolates. The limit also avoids
   /// overwhelming the public dictionary and translation services.
-  Future<List<WordEntry>> lookupAll(
-    List<String> words, {
+  Future<LookupBatchResult> lookupAll(
+    List<String> terms, {
     int exampleCount = 1,
     int maxConcurrency = 4,
-    void Function(int completed, int total, String word)? onProgress,
+    void Function(int completed, int total, String term)? onProgress,
   }) async {
-    if (words.isEmpty) return const [];
-    final results = List<WordEntry?>.filled(words.length, null);
+    if (terms.isEmpty) {
+      return const LookupBatchResult(entries: [], failures: []);
+    }
+    final results = List<WordEntry?>.filled(terms.length, null);
+    final failures = List<LookupFailure?>.filled(terms.length, null);
     var nextIndex = 0;
     var completed = 0;
 
     Future<void> worker() async {
       while (true) {
         final index = nextIndex++;
-        if (index >= words.length) return;
-        results[index] = await lookup(words[index], exampleCount: exampleCount);
-        completed++;
-        onProgress?.call(completed, words.length, words[index]);
+        if (index >= terms.length) return;
+        final term = terms[index];
+        try {
+          results[index] = await lookup(term, exampleCount: exampleCount);
+        } catch (error) {
+          failures[index] = LookupFailure(
+            term: term,
+            message: error is WordLookupException
+                ? error.message
+                : error.toString(),
+          );
+        } finally {
+          completed++;
+          onProgress?.call(completed, terms.length, term);
+        }
       }
     }
 
-    final workerCount = min(max(1, maxConcurrency), words.length);
+    final workerCount = min(max(1, maxConcurrency), terms.length);
     await Future.wait(List.generate(workerCount, (_) => worker()));
-    return results.cast<WordEntry>();
+    return LookupBatchResult(
+      entries: results.whereType<WordEntry>().toList(),
+      failures: failures.whereType<LookupFailure>().toList(),
+    );
   }
 
   Future<WordEntry> lookup(String rawWord, {int exampleCount = 1}) async {
-    final word = rawWord.trim().toLowerCase();
+    final word = _normalizeTerm(rawWord);
     final preferences = await SharedPreferences.getInstance();
     final cacheKey = '$_cachePrefix.$exampleCount.$word';
     final cached = _readCache(preferences.getString(cacheKey));
@@ -63,38 +94,66 @@ class WordService {
     );
     final relatedUri = Uri.https('api.datamuse.com', '/words', {
       'ml': word,
-      'md': 'f',
-      'max': '12',
+      'md': 'dfr',
+      'ipa': '1',
+      'max': '30',
+    });
+    final exactUri = Uri.https('api.datamuse.com', '/words', {
+      'sp': word,
+      'qe': 'sp',
+      'md': 'dfr',
+      'ipa': '1',
+      'max': '8',
     });
 
     final responses = await Future.wait([
       _client.get(dictionaryUri).timeout(const Duration(seconds: 15)),
       _client.get(relatedUri).timeout(const Duration(seconds: 15)),
+      _client.get(exactUri).timeout(const Duration(seconds: 15)),
     ]);
-    if (responses.first.statusCode != 200) {
-      throw WordLookupException('No dictionary entry was found for “$word”.');
+
+    Map<String, dynamic>? dictionary;
+    if (responses.first.statusCode == 200) {
+      try {
+        final decoded = jsonDecode(responses.first.body) as List;
+        if (decoded.isNotEmpty) {
+          dictionary = decoded.first as Map<String, dynamic>;
+        }
+      } catch (_) {
+        dictionary = null;
+      }
     }
 
-    final dictionary = (jsonDecode(responses.first.body) as List).first
-        as Map<String, dynamic>;
-    final meanings = (dictionary['meanings'] as List? ?? const [])
+    final meanings = (dictionary?['meanings'] as List? ?? const [])
         .cast<Map<String, dynamic>>();
-    if (meanings.isEmpty) {
-      throw WordLookupException('The dictionary entry for “$word” is empty.');
-    }
-    final definitions = (meanings.first['definitions'] as List? ?? const [])
-        .cast<Map<String, dynamic>>();
+    final definitions = meanings.isEmpty
+        ? <Map<String, dynamic>>[]
+        : (meanings.first['definitions'] as List? ?? const [])
+            .cast<Map<String, dynamic>>();
     final primary = definitions.isEmpty
         ? <String, dynamic>{}
         : definitions.first;
-    final definition = primary['definition'] as String? ?? 'No definition';
+    final related = _decodeDatamuse(responses[1]);
+    final exactResults = _decodeDatamuse(responses[2]);
+    final exact = _exactDatamuseItem(exactResults, word);
+    final dictionaryDefinition = primary['definition'] as String? ?? '';
+    final datamuseDefinition = _definitionFromDatamuse(exact);
+    final definition = dictionaryDefinition.isNotEmpty
+        ? dictionaryDefinition
+        : datamuseDefinition;
+    if (definition.isEmpty) {
+      throw WordLookupException('No dictionary entry was found for “$word”.');
+    }
     final examples = _findExamples(meanings).take(exampleCount).toList();
 
-    final phonetics = (dictionary['phonetics'] as List? ?? const [])
+    final phonetics = (dictionary?['phonetics'] as List? ?? const [])
         .cast<Map<String, dynamic>>();
-    final phonetic = dictionary['phonetic'] as String? ?? '';
-    final usPhonetic = _phoneticFor(phonetics, '-us') ?? phonetic;
-    final ukPhonetic = _phoneticFor(phonetics, '-uk') ?? phonetic;
+    final phonetic = dictionary?['phonetic'] as String? ?? '';
+    final datamusePhonetic = _metadataTag(exact, 'pron:');
+    final fallbackPhonetic =
+        phonetic.isEmpty ? datamusePhonetic : phonetic;
+    final usPhonetic = _phoneticFor(phonetics, '-us') ?? fallbackPhonetic;
+    final ukPhonetic = _phoneticFor(phonetics, '-uk') ?? fallbackPhonetic;
 
     final sameMeaning = meanings
         .expand((meaning) => (meaning['synonyms'] as List? ?? const []))
@@ -107,17 +166,24 @@ class WordService {
         .where((item) => item.isNotEmpty)
         .toList();
 
-    double frequency = 0;
-    final related = jsonDecode(responses.last.body) as List;
-    for (final item in related.cast<Map<String, dynamic>>()) {
-      if ((item['word'] as String?)?.toLowerCase() == word) {
-        final tags = (item['tags'] as List? ?? const []).cast<String>();
-        final frequencyTag = tags.where((tag) => tag.startsWith('f:'));
-        if (frequencyTag.isNotEmpty) {
-          frequency = double.tryParse(frequencyTag.first.substring(2)) ?? 0;
+    var frequency = _frequencyFromDatamuse(exact);
+    final phraseDrafts = <MapEntry<String, String>>[];
+    final seenPhrases = <String>{};
+    for (final item in related) {
+      final relatedWord = _normalizeTerm(item['word'] as String? ?? '');
+      if (relatedWord.isEmpty) continue;
+      if (relatedWord == word && frequency == 0) {
+        frequency = _frequencyFromDatamuse(item);
+      } else if (!relatedWord.contains(' ') && sameMeaning.length < 6) {
+        sameMeaning.add(relatedWord);
+      }
+      if (relatedWord != word &&
+          relatedWord.contains(' ') &&
+          seenPhrases.add(relatedWord)) {
+        final meaning = _definitionFromDatamuse(item);
+        if (meaning.isNotEmpty) {
+          phraseDrafts.add(MapEntry(relatedWord, meaning));
         }
-      } else if (sameMeaning.length < 6) {
-        sameMeaning.add(item['word'] as String);
       }
     }
 
@@ -128,6 +194,7 @@ class WordService {
       ...examples.map(_translate),
       if (synonyms.isNotEmpty) _translate(synonyms.join(', ')),
       if (antonyms.isNotEmpty) _translate(antonyms.join(', ')),
+      ...phraseDrafts.take(3).map((item) => _translate(item.value)),
     ]);
     var translationIndex = 0;
     final definitionZh = translations[translationIndex++];
@@ -136,6 +203,14 @@ class WordService {
     ];
     final synonymsZh = synonyms.isEmpty ? '' : translations[translationIndex++];
     final antonymsZh = antonyms.isEmpty ? '' : translations[translationIndex++];
+    final phrases = <PhraseEntry>[
+      for (final phrase in phraseDrafts.take(3))
+        PhraseEntry(
+          phrase: phrase.key,
+          meaning: phrase.value,
+          meaningZh: translations[translationIndex++],
+        ),
+    ];
 
     final entry = WordEntry(
       word: word,
@@ -151,6 +226,7 @@ class WordService {
       antonymsZh: antonymsZh,
       examples: examples,
       examplesZh: examplesZh,
+      phrases: phrases,
     );
     await preferences.setString(cacheKey, jsonEncode({
       'cachedAt': DateTime.now().toUtc().toIso8601String(),
@@ -158,6 +234,52 @@ class WordService {
     }));
     return entry;
   }
+
+  String _normalizeTerm(String value) => value
+      .trim()
+      .toLowerCase()
+      .replaceAll(RegExp(r'\s+'), ' ');
+
+  List<Map<String, dynamic>> _decodeDatamuse(http.Response response) {
+    if (response.statusCode != 200) return const [];
+    try {
+      return (jsonDecode(response.body) as List).cast<Map<String, dynamic>>();
+    } catch (_) {
+      return const [];
+    }
+  }
+
+  Map<String, dynamic>? _exactDatamuseItem(
+    List<Map<String, dynamic>> results,
+    String term,
+  ) {
+    for (final item in results) {
+      if (_normalizeTerm(item['word'] as String? ?? '') == term) return item;
+    }
+    return null;
+  }
+
+  String _definitionFromDatamuse(Map<String, dynamic>? item) {
+    final definitions = (item?['defs'] as List? ?? const [])
+        .map((value) => value.toString().trim())
+        .where((value) => value.isNotEmpty);
+    if (definitions.isEmpty) return '';
+    final first = definitions.first;
+    final separator = first.indexOf('\t');
+    return separator >= 0 ? first.substring(separator + 1).trim() : first;
+  }
+
+  String _metadataTag(Map<String, dynamic>? item, String prefix) {
+    final tags = (item?['tags'] as List? ?? const [])
+        .map((value) => value.toString());
+    for (final tag in tags) {
+      if (tag.startsWith(prefix)) return tag.substring(prefix.length).trim();
+    }
+    return '';
+  }
+
+  double _frequencyFromDatamuse(Map<String, dynamic>? item) =>
+      double.tryParse(_metadataTag(item, 'f:')) ?? 0;
 
   WordEntry? _readCache(String? value) {
     if (value == null) return null;
@@ -213,8 +335,9 @@ class WordService {
   }
 
   String _difficulty(String word, double frequency) {
-    if (frequency >= 20 || (frequency == 0 && word.length <= 4)) return 'A1–A2';
-    if (frequency >= 5 || word.length <= 7) return 'B1–B2';
+    final letterCount = word.replaceAll(' ', '').length;
+    if (frequency >= 20 || (frequency == 0 && letterCount <= 4)) return 'A1–A2';
+    if (frequency >= 5 || letterCount <= 7) return 'B1–B2';
     return 'C1–C2';
   }
 }

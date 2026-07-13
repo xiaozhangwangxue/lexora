@@ -92,6 +92,16 @@ jobs:
       - name: Run Flutter tests
         if: matrix.platform == 'linux'
         run: flutter test
+      - name: Render production PDF preview
+        if: matrix.platform == 'linux'
+        run: dart run tool/generate_pdf_preview.dart
+      - name: Upload PDF layout preview
+        if: matrix.platform == 'linux'
+        uses: actions/upload-artifact@v4
+        with:
+          name: lexora-pdf-qa
+          path: apps/lexora/build/qa/qa-pdf-preview.pdf
+          if-no-files-found: error
       - name: Build application
         run: ${{ matrix.command }}
         env:

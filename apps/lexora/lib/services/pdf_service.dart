@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
@@ -27,6 +28,36 @@ class PdfService {
     List<WordEntry> entries, {
     PdfFontSize fontSize = PdfFontSize.medium,
   }) async {
+    final now = DateTime.now();
+    final bytes = await buildBytes(
+      entries,
+      fontSize: fontSize,
+      generatedAt: now,
+    );
+    final directory = await getApplicationDocumentsDirectory();
+    final id = const Uuid().v4();
+    final filename = 'lexora-${DateFormat('yyyyMMdd-HHmm').format(now)}.pdf';
+    final file = File('${directory.path}/$filename');
+    await file.writeAsBytes(bytes, flush: true);
+    return GeneratedBook(
+      id: id,
+      title: filename,
+      path: file.path,
+      createdAt: now,
+      wordCount: entries.length,
+      previewWords: entries.map((entry) => entry.word).take(6).toList(),
+    );
+  }
+
+  /// Builds the exact PDF bytes used by the app without writing a platform
+  /// file. This keeps layout verification and the production export on the
+  /// same code path.
+  Future<Uint8List> buildBytes(
+    List<WordEntry> entries, {
+    PdfFontSize fontSize = PdfFontSize.medium,
+    DateTime? generatedAt,
+  }) async {
+    final date = generatedAt ?? DateTime.now();
     final fonts = await Future.wait([_regularFont, _boldFont, _ipaFont]);
     final regular = fonts[0];
     final bold = fonts[1];
@@ -51,7 +82,7 @@ class PdfService {
             mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
             children: [
               pw.Text('LEXORA', style: pw.TextStyle(font: bold, fontSize: size(11))),
-              pw.Text('${entries.length} words / 单词 · ${DateFormat('yyyy-MM-dd').format(DateTime.now())}',
+              pw.Text('${entries.length} entries / 词条 · ${DateFormat('yyyy-MM-dd').format(date)}',
                   style: pw.TextStyle(fontSize: size(8), color: PdfColors.grey600)),
             ],
           ),
@@ -79,19 +110,7 @@ class PdfService {
       ),
     );
 
-    final directory = await getApplicationDocumentsDirectory();
-    final id = const Uuid().v4();
-    final filename = 'lexora-${DateFormat('yyyyMMdd-HHmm').format(DateTime.now())}.pdf';
-    final file = File('${directory.path}/$filename');
-    await file.writeAsBytes(await document.save(), flush: true);
-    return GeneratedBook(
-      id: id,
-      title: filename,
-      path: file.path,
-      createdAt: DateTime.now(),
-      wordCount: entries.length,
-      previewWords: entries.map((entry) => entry.word).take(6).toList(),
-    );
+    return document.save();
   }
 
   List<pw.Widget> _entryLayout(
@@ -224,6 +243,36 @@ class PdfService {
               ],
             ),
           ),
+        ],
+        if (entry.phrases.isNotEmpty) ...[
+          pw.SizedBox(height: 5),
+          pw.Text(
+            'Phrases / 常用短语',
+            style: pw.TextStyle(
+              font: bold,
+              fontSize: size(7.4),
+              color: PdfColors.indigo900,
+            ),
+          ),
+          pw.SizedBox(height: 2),
+          for (var i = 0; i < entry.phrases.length; i++) ...[
+            if (i > 0) pw.SizedBox(height: 3),
+            pw.Text(
+              entry.phrases[i].phrase,
+              style: pw.TextStyle(font: bold, fontSize: size(7.2)),
+            ),
+            pw.Text(
+              entry.phrases[i].meaning,
+              style: pw.TextStyle(fontSize: size(7)),
+            ),
+            pw.Text(
+              entry.phrases[i].meaningZh,
+              style: pw.TextStyle(
+                fontSize: size(7),
+                color: PdfColors.indigo700,
+              ),
+            ),
+          ],
         ],
       ]),
     );

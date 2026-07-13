@@ -1,3 +1,27 @@
+class PhraseEntry {
+  const PhraseEntry({
+    required this.phrase,
+    required this.meaning,
+    required this.meaningZh,
+  });
+
+  final String phrase;
+  final String meaning;
+  final String meaningZh;
+
+  Map<String, dynamic> toJson() => {
+        'phrase': phrase,
+        'meaning': meaning,
+        'meaningZh': meaningZh,
+      };
+
+  factory PhraseEntry.fromJson(Map<String, dynamic> json) => PhraseEntry(
+        phrase: json['phrase'] as String,
+        meaning: json['meaning'] as String,
+        meaningZh: json['meaningZh'] as String,
+      );
+}
+
 class WordEntry {
   const WordEntry({
     required this.word,
@@ -13,6 +37,7 @@ class WordEntry {
     required this.antonymsZh,
     required this.examples,
     required this.examplesZh,
+    this.phrases = const [],
   });
 
   final String word;
@@ -28,6 +53,7 @@ class WordEntry {
   final String antonymsZh;
   final List<String> examples;
   final List<String> examplesZh;
+  final List<PhraseEntry> phrases;
 
   Map<String, dynamic> toJson() => {
         'word': word,
@@ -43,6 +69,7 @@ class WordEntry {
         'antonymsZh': antonymsZh,
         'examples': examples,
         'examplesZh': examplesZh,
+        'phrases': phrases.map((item) => item.toJson()).toList(),
       };
 
   factory WordEntry.fromJson(Map<String, dynamic> json) => WordEntry(
@@ -59,6 +86,9 @@ class WordEntry {
         antonymsZh: json['antonymsZh'] as String,
         examples: (json['examples'] as List).cast<String>(),
         examplesZh: (json['examplesZh'] as List).cast<String>(),
+        phrases: (json['phrases'] as List? ?? const [])
+            .map((item) => PhraseEntry.fromJson(item as Map<String, dynamic>))
+            .toList(),
       );
 }
 

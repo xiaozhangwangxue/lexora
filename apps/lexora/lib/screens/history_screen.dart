@@ -6,11 +6,14 @@ import 'package:share_plus/share_plus.dart';
 
 import '../l10n/app_localizations.dart';
 import '../models/word_entry.dart';
+import '../services/generation_progress.dart';
 import '../services/history_service.dart';
 import 'pdf_reader_screen.dart';
 
 class HistoryScreen extends StatefulWidget {
-  const HistoryScreen({super.key});
+  const HistoryScreen({super.key, required this.progress});
+
+  final GenerationProgress progress;
 
   @override
   State<HistoryScreen> createState() => _HistoryScreenState();
@@ -71,7 +74,19 @@ class _HistoryScreenState extends State<HistoryScreen> {
               const SizedBox(height: 4),
               Text(strings.historySubtitle,
                   style: theme.textTheme.bodyLarge?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
-              const SizedBox(height: 22),
+              AnimatedBuilder(
+                animation: widget.progress,
+                builder: (context, _) => widget.progress.isVisible
+                    ? Padding(
+                        padding: const EdgeInsets.only(top: 18),
+                        child: _GenerationProgressCard(
+                          progress: widget.progress,
+                          strings: strings,
+                        ),
+                      )
+                    : const SizedBox.shrink(),
+              ),
+              const SizedBox(height: 18),
               Expanded(
                 child: FutureBuilder<List<GeneratedBook>>(
                   future: _books,
@@ -101,7 +116,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                               child: Icon(Icons.picture_as_pdf_rounded, color: theme.colorScheme.primary),
                             ),
                             title: Text(book.title, maxLines: 1, overflow: TextOverflow.ellipsis),
-                            subtitle: Text('${strings.wordCount(book.wordCount)} · ${_formatDate(book.createdAt)}'),
+                            subtitle: Text('${strings.termCount(book.wordCount)} · ${_formatDate(book.createdAt)}'),
                             onTap: () => Navigator.of(context).push(
                               MaterialPageRoute<void>(builder: (_) => PdfReaderScreen(book: book)),
                             ),
@@ -172,5 +187,94 @@ class _HistoryScreenState extends State<HistoryScreen> {
     final local = date.toLocal();
     return '${local.year}-${local.month.toString().padLeft(2, '0')}-${local.day.toString().padLeft(2, '0')}'
         ' ${local.hour.toString().padLeft(2, '0')}:${local.minute.toString().padLeft(2, '0')}';
+  }
+}
+
+class _GenerationProgressCard extends StatelessWidget {
+  const _GenerationProgressCard({
+    required this.progress,
+    required this.strings,
+  });
+
+  final GenerationProgress progress;
+  final AppLocalizations strings;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final failed = progress.stage == GenerationStage.failed;
+    final completed = progress.stage == GenerationStage.completed;
+    final color = failed
+        ? theme.colorScheme.error
+        : completed
+            ? Colors.teal
+            : theme.colorScheme.primary;
+    final title = switch (progress.stage) {
+      GenerationStage.idle => '',
+      GenerationStage.lookingUp => strings.lookupProgressTitle,
+      GenerationStage.typesetting => strings.typesetting,
+      GenerationStage.completed => strings.generationCompleted,
+      GenerationStage.failed => strings.generationFailed,
+    };
+    final detail = switch (progress.stage) {
+      GenerationStage.lookingUp => progress.currentTerm.isEmpty
+          ? strings.preparing
+          : strings.lookup(
+              progress.currentTerm,
+              progress.completed,
+              progress.total,
+            ),
+      GenerationStage.typesetting => strings.typesettingHint,
+      GenerationStage.completed => strings.generationCompletedHint,
+      GenerationStage.failed => progress.error,
+      GenerationStage.idle => '',
+    };
+
+    return Card(
+      color: color.withValues(alpha: .09),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(14),
+        side: BorderSide(color: color.withValues(alpha: .28)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(children: [
+            Icon(
+              failed
+                  ? Icons.error_outline_rounded
+                  : completed
+                      ? Icons.check_circle_outline_rounded
+                      : Icons.auto_awesome_rounded,
+              color: color,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                title,
+                style: theme.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+            Text('${(progress.value * 100).round()}%'),
+          ]),
+          const SizedBox(height: 10),
+          LinearProgressIndicator(
+            value: progress.value,
+            color: color,
+            backgroundColor: color.withValues(alpha: .14),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            detail,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ]),
+      ),
+    );
   }
 }

@@ -51,9 +51,12 @@ class LexoraApp extends StatelessWidget {
     required bool transparent,
   }) {
     final scheme = ColorScheme.fromSeed(seedColor: seed, brightness: brightness);
+    final radius = transparent ? 12.0 : 24.0;
     return ThemeData(
       useMaterial3: true,
       colorScheme: scheme,
+      fontFamily: transparent ? 'SF Pro Text' : null,
+      visualDensity: transparent ? VisualDensity.compact : VisualDensity.standard,
       scaffoldBackgroundColor: transparent
           ? Colors.transparent
           : brightness == Brightness.light
@@ -69,12 +72,24 @@ class LexoraApp extends StatelessWidget {
                 ? Colors.white
                 : const Color(0xFF1A1C23),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(24),
-          borderSide: BorderSide.none,
+          borderRadius: BorderRadius.circular(radius),
+          borderSide: transparent
+              ? BorderSide(
+                  color: scheme.outlineVariant.withValues(alpha: .5),
+                )
+              : BorderSide.none,
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(radius),
+          borderSide: transparent
+              ? BorderSide(
+                  color: scheme.outlineVariant.withValues(alpha: .5),
+                )
+              : BorderSide.none,
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(24),
-          borderSide: BorderSide(color: scheme.primary, width: 1.5),
+          borderRadius: BorderRadius.circular(radius),
+          borderSide: BorderSide(color: scheme.primary, width: 1.25),
         ),
       ),
       cardTheme: CardThemeData(
@@ -88,8 +103,15 @@ class LexoraApp extends StatelessWidget {
                 ? Colors.white
                 : const Color(0xFF1A1C23),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(transparent ? 12 : 20),
           side: BorderSide(color: scheme.outlineVariant.withValues(alpha: .55)),
+        ),
+      ),
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(transparent ? 10 : 20),
+          ),
         ),
       ),
     );

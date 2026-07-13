@@ -61,15 +61,15 @@ class NotificationService {
   }
 
   Future<void> showGenerationComplete({
-    required int wordCount,
+    required int entryCount,
     required bool isZh,
   }) async {
     await initialize();
     if (!_initialized) return;
     final title = isZh ? '词汇书已生成' : 'Vocabulary book ready';
     final body = isZh
-        ? '已完成 $wordCount 个单词的查询与 PDF 排版。'
-        : '$wordCount ${wordCount == 1 ? 'word is' : 'words are'} ready in your PDF.';
+        ? '已完成 $entryCount 个词条的查询与 PDF 排版。'
+        : '$entryCount ${entryCount == 1 ? 'entry is' : 'entries are'} ready in your PDF.';
     const details = NotificationDetails(
       android: AndroidNotificationDetails(
         'lexora_generation',

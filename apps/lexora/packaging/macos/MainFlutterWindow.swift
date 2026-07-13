@@ -7,10 +7,20 @@ class MainFlutterWindow: NSWindow {
     let flutterViewController = FlutterViewController()
     flutterViewController.backgroundColor = NSColor.clear
 
-    backgroundColor = NSColor.clear
+    title = "Lexora"
+    titleVisibility = .hidden
+    backgroundColor = NSColor.windowBackgroundColor
     isOpaque = false
     titlebarAppearsTransparent = true
-    styleMask.insert(.fullSizeContentView)
+    styleMask.remove(.fullSizeContentView)
+    minSize = NSSize(width: 900, height: 620)
+    isMovableByWindowBackground = true
+
+    let nativeToolbar = NSToolbar(identifier: "LexoraToolbar")
+    nativeToolbar.displayMode = .iconOnly
+    nativeToolbar.showsBaselineSeparator = false
+    toolbar = nativeToolbar
+    toolbarStyle = .unifiedCompact
 
     let windowFrame = frame
     contentViewController = NSHostingController(
@@ -28,32 +38,15 @@ private struct LexoraWindowRoot: View {
 
   var body: some View {
     ZStack {
-      LinearGradient(
-        colors: [
-          Color(red: 0.91, green: 0.93, blue: 1.0),
-          Color(red: 0.97, green: 0.95, blue: 1.0),
-          Color(red: 0.91, green: 0.97, blue: 0.98),
-        ],
-        startPoint: .topLeading,
-        endPoint: .bottomTrailing
-      )
-      .ignoresSafeArea()
+      LegacyVisualEffect(material: .underWindowBackground)
+        .ignoresSafeArea()
 
-      Circle()
-        .fill(Color(red: 0.31, green: 0.28, blue: 0.94).opacity(0.16))
-        .frame(width: 360, height: 360)
-        .blur(radius: 70)
-        .offset(x: -260, y: -210)
-
-      Circle()
-        .fill(Color(red: 0.12, green: 0.72, blue: 0.82).opacity(0.12))
-        .frame(width: 420, height: 420)
-        .blur(radius: 82)
-        .offset(x: 330, y: 260)
+      Color(nsColor: .windowBackgroundColor)
+        .opacity(0.46)
+        .ignoresSafeArea()
 
       navigationMaterial
       FlutterSurface(controller: flutterViewController)
-        .ignoresSafeArea()
     }
   }
 
@@ -62,20 +55,21 @@ private struct LexoraWindowRoot: View {
     HStack(spacing: 0) {
       if #available(macOS 26.0, *) {
         Color.clear
-          .frame(width: 118)
+          .frame(width: 220)
           .glassEffect(
             .regular,
-            in: RoundedRectangle(cornerRadius: 28, style: .continuous)
+            in: Rectangle()
           )
-          .padding(10)
       } else {
-        LegacyVisualEffect()
-          .frame(width: 118)
-          .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
-          .padding(10)
+        LegacyVisualEffect(material: .sidebar)
+          .frame(width: 220)
       }
+      Rectangle()
+        .fill(Color(nsColor: .separatorColor).opacity(0.38))
+        .frame(width: 0.5)
       Spacer(minLength: 0)
     }
+    .ignoresSafeArea()
   }
 }
 
@@ -93,9 +87,11 @@ private struct FlutterSurface: NSViewControllerRepresentable {
 }
 
 private struct LegacyVisualEffect: NSViewRepresentable {
+  let material: NSVisualEffectView.Material
+
   func makeNSView(context: Context) -> NSVisualEffectView {
     let view = NSVisualEffectView()
-    view.material = .sidebar
+    view.material = material
     view.blendingMode = .behindWindow
     view.state = .active
     return view

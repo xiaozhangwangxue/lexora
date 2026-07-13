@@ -15,11 +15,12 @@ class AppLocalizations {
   String get generationRecords => isZh ? '生成记录' : 'Generated';
   String get history => isZh ? '历史' : 'History';
   String get settings => isZh ? '设置' : 'Settings';
-  String get tagline => isZh ? '输入单词，生成精美的双语词汇书。' : 'Words in. A beautiful bilingual book out.';
-  String get inputHint => isZh ? '输入英文单词后按回车' : 'Type an English word and press Enter';
-  String get addWord => isZh ? '添加单词' : 'Add word';
+  String get tagline => isZh ? '输入单词或短语，生成精美的双语词汇书。' : 'Words and phrases in. A beautiful bilingual book out.';
+  String get inputHint => isZh ? '输入英文单词或短语后按回车' : 'Type an English word or phrase and press Enter';
+  String get addWord => isZh ? '添加词条' : 'Add entry';
   String get generate => isZh ? '开始生成' : 'Start generating';
   String get generating => isZh ? '正在生成…' : 'Generating…';
+  String get generationInProgress => isZh ? '生成任务进行中' : 'Generation in progress';
   String get github => 'GitHub';
   String get openGitHubFailed => isZh ? '无法打开 GitHub 页面。' : 'Could not open the GitHub page.';
   String get preparing => isZh ? '正在准备词汇书…' : 'Preparing your vocabulary book…';
@@ -27,9 +28,10 @@ class AppLocalizations {
       ? '已完成 $word  ·  $current/$total（并发查询）'
       : 'Completed $word  ·  $current/$total (parallel lookup)';
   String get typesetting => isZh ? '正在排版双语 PDF…' : 'Typesetting the bilingual PDF…';
-  String get invalidWord => isZh ? '请输入一个有效的英文单词。' : 'Please enter one English word.';
+  String get invalidWord => isZh ? '请输入有效的英文单词或短语。' : 'Please enter a valid English word or phrase.';
   String duplicate(String word) => isZh ? '“$word” 已在列表中。' : '“$word” is already in the list.';
   String wordCount(int count) => isZh ? '$count 个单词' : '$count ${count == 1 ? 'word' : 'words'}';
+  String termCount(int count) => isZh ? '$count 个词条' : '$count ${count == 1 ? 'entry' : 'entries'}';
   String get sortWords => isZh ? '排序单词' : 'Sort words';
   String get customOrder => isZh ? '自定义顺序' : 'Custom order';
   String get alphabetical => isZh ? '字母顺序' : 'Alphabetical';
@@ -37,8 +39,26 @@ class AppLocalizations {
   String get estimatedDifficulty => isZh ? '预估难度' : 'Estimated difficulty';
   String get custom => isZh ? '自定义' : 'Custom';
   String letters(int count) => isZh ? '$count 个字母' : '$count letters';
-  String get emptyTitle => isZh ? '你的单词将显示在这里' : 'Your words will appear here';
+  String characters(int count) => isZh ? '$count 个字母' : '$count letters';
+  String get phrase => isZh ? '短语' : 'Phrase';
+  String get emptyTitle => isZh ? '你的单词和短语将显示在这里' : 'Your words and phrases will appear here';
   String get emptyHint => isZh ? '长按拖动排序 · 向左滑动删除' : 'Long-press to reorder · swipe left to delete';
+  String get confirmGenerationTitle => isZh ? '开始生成词汇书？' : 'Start generating?';
+  String confirmGenerationBody(int count) => isZh
+      ? '将开始查询 $count 个词条，并把当前列表清空，方便你继续准备下一本词汇书。生成进度会显示在“生成记录”中。'
+      : 'Lexora will look up $count entries and clear this list so you can prepare the next book. Progress will appear under Generated.';
+  String get cancel => isZh ? '取消' : 'Cancel';
+  String get confirmGeneration => isZh ? '确认并开始' : 'Confirm and start';
+  String get lookupProgressTitle => isZh ? '正在查询词条' : 'Looking up entries';
+  String get typesettingHint => isZh ? '查询完成，正在整理短语并排版 PDF。' : 'Lookup is complete. Adding phrases and typesetting the PDF.';
+  String get generationCompleted => isZh ? '词汇书已完成' : 'Vocabulary book completed';
+  String get generationCompletedHint => isZh ? 'PDF 已保存，可在下方记录中打开。' : 'The PDF is saved and ready below.';
+  String get generationFailed => isZh ? '生成未完成' : 'Generation did not finish';
+  String get skippedItemsTitle => isZh ? '部分词条未找到' : 'Some entries were not found';
+  String get skippedItemsBody => isZh ? '以下词条已跳过，其余内容已继续生成。' : 'These entries were skipped. The remaining content was generated normally.';
+  String get noItemsGenerated => isZh ? '所有词条都未找到，因此没有生成 PDF。' : 'No entries were found, so no PDF was created.';
+  String generationError(String error) => isZh ? '生成失败：$error' : 'Generation failed: $error';
+  String get gotIt => isZh ? '知道了' : 'Got it';
   String get customize => isZh ? '自定义 PDF' : 'Customize PDF';
   String get pdfSettings => isZh ? 'PDF 自定义' : 'PDF customization';
   String get settingsIntroTitle => isZh ? '把零散单词，变成真正想读的词汇书。' : 'Turn loose words into a book worth reading.';
@@ -89,10 +109,10 @@ class AppLocalizations {
   String get onboardingSkip => isZh ? '跳过' : 'Skip';
   String get onboardingNext => isZh ? '下一步' : 'Next';
   String get onboardingStart => isZh ? '开始使用' : 'Get started';
-  String get onboardingOneTitle => isZh ? '先收集你的单词' : 'Collect your words';
-  String get onboardingOneBody => isZh ? '输入英文单词后按回车。长按可调整顺序，向左滑可删除。' : 'Type a word and press Enter. Long-press to reorder it, or swipe left to delete it.';
+  String get onboardingOneTitle => isZh ? '先收集单词和短语' : 'Collect words and phrases';
+  String get onboardingOneBody => isZh ? '输入英文单词或短语后按回车。长按可调整顺序，向左滑可删除。' : 'Type a word or phrase and press Enter. Long-press to reorder it, or swipe left to delete it.';
   String get onboardingTwoTitle => isZh ? '按你喜欢的方式生成' : 'Make the PDF yours';
-  String get onboardingTwoBody => isZh ? '在“设置”中选择字号和例句数量，Lexora 会自动补全音标、词频、难度和中文翻译。' : 'Choose font size and example count in Settings. Lexora adds phonetics, frequency, difficulty, and Chinese translations.';
+  String get onboardingTwoBody => isZh ? '在“设置”中选择字号和例句数量，Lexora 会自动补全音标、词频、难度、常用短语和中文翻译。' : 'Choose font size and example count in Settings. Lexora adds phonetics, frequency, difficulty, useful phrases, and Chinese translations.';
   String get onboardingThreeTitle => isZh ? '随时阅读与分享' : 'Read and share anytime';
   String get onboardingThreeBody => isZh ? '完成后可在“生成记录”中阅读 PDF，也可导出或调用系统分享。' : 'Open finished PDFs from Generated, export them, or use your device’s share sheet.';
 }

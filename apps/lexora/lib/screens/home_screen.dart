@@ -1,15 +1,12 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 
 import '../l10n/app_localizations.dart';
-import '../models/word_entry.dart';
 import '../services/haptic_service.dart';
-import '../services/history_service.dart';
-import '../services/notification_service.dart';
 import '../services/pdf_service.dart';
 import '../services/pdf_settings_service.dart';
-import '../services/word_service.dart';
 
 enum WordSort { custom, alphabetical, length, difficulty }
 
@@ -17,14 +14,14 @@ class HomeScreen extends StatefulWidget {
   const HomeScreen({
     super.key,
     required this.settings,
-    required this.appIsActive,
-    required this.onGenerated,
+    required this.generationRunning,
+    required this.onStartGeneration,
     required this.onOpenSettings,
   });
 
   final PdfSettings settings;
-  final bool appIsActive;
-  final ValueChanged<GeneratedBook> onGenerated;
+  final bool generationRunning;
+  final ValueChanged<List<String>> onStartGeneration;
   final VoidCallback onOpenSettings;
 
   @override
@@ -35,15 +32,8 @@ class _HomeScreenState extends State<HomeScreen> {
   final _controller = TextEditingController();
   final _focusNode = FocusNode();
   final _words = <String>[];
-  final _wordService = WordService();
-  final _pdfService = PdfService();
-  final _historyService = HistoryService();
   final _haptics = const HapticService();
-  final _notifications = NotificationService.instance;
   WordSort _sort = WordSort.custom;
-  bool _generating = false;
-  double _progress = 0;
-  String _status = '';
 
   @override
   void dispose() {
@@ -54,8 +44,12 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _addWord([String? raw]) {
     final strings = AppLocalizations.of(context);
-    final word = (raw ?? _controller.text).trim().toLowerCase();
-    if (!RegExp(r"^[a-z][a-z'-]*$").hasMatch(word)) {
+    final word = (raw ?? _controller.text)
+        .trim()
+        .toLowerCase()
+        .replaceAll(RegExp(r'\s+'), ' ');
+    if (!RegExp(r"^[a-z][a-z'-]*(?:\s+[a-z][a-z'-]*)*$")
+        .hasMatch(word)) {
       _message(strings.invalidWord);
       return;
     }
@@ -91,62 +85,37 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   int _estimatedDifficulty(String word) =>
-      word.length + word.split('').where((letter) => 'qxzj'.contains(letter)).length * 2;
+      word.replaceAll(' ', '').length +
+      word.split('').where((letter) => 'qxzj'.contains(letter)).length * 2;
 
   Future<void> _generate() async {
-    if (_words.isEmpty || _generating) return;
+    if (_words.isEmpty || widget.generationRunning) return;
     final strings = AppLocalizations.of(context);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        icon: const Icon(Icons.auto_awesome_rounded),
+        title: Text(strings.confirmGenerationTitle),
+        content: Text(strings.confirmGenerationBody(_words.length)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: Text(strings.cancel),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: Text(strings.confirmGeneration),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    final terms = List<String>.of(_words);
     setState(() {
-      _generating = true;
-      _progress = 0;
-      _status = strings.preparing;
+      _words.clear();
+      _sort = WordSort.custom;
     });
-    unawaited(_haptics.generationStarted());
-    unawaited(_notifications.requestPermission());
-    try {
-      final entries = await _wordService.lookupAll(
-        List.of(_words),
-        exampleCount: widget.settings.exampleAmount.count,
-        maxConcurrency: 4,
-        onProgress: (completed, total, word) {
-          if (!mounted) return;
-          setState(() {
-            _status = strings.lookup(word, completed, total);
-            _progress = completed / total * .88;
-          });
-        },
-      );
-      setState(() {
-        _status = strings.typesetting;
-        _progress = .92;
-      });
-      final book = await _pdfService.create(
-        entries,
-        fontSize: widget.settings.fontSize,
-      );
-      await _historyService.save(book);
-      await _historyService.recordWords(entries, book.createdAt);
-      setState(() => _progress = 1);
-      await _haptics.generationCompleted();
-      if (!mounted) return;
-      if (!widget.appIsActive) {
-        await _notifications.showGenerationComplete(
-          wordCount: entries.length,
-          isZh: strings.isZh,
-        );
-      }
-      if (!mounted) return;
-      widget.onGenerated(book);
-    } catch (error) {
-      _message(error.toString());
-    } finally {
-      if (mounted) {
-        setState(() {
-          _generating = false;
-          _status = '';
-        });
-      }
-    }
+    widget.onStartGeneration(terms);
   }
 
   void _message(String text) =>
@@ -156,26 +125,38 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final strings = AppLocalizations.of(context);
+    final isMac = Platform.isMacOS;
+    final itemRadius = isMac ? 12.0 : 20.0;
     return SafeArea(
       child: Center(
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 840),
+          constraints: BoxConstraints(maxWidth: isMac ? 920 : 840),
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 24, 20, 16),
+            padding: EdgeInsets.fromLTRB(
+              isMac ? 36 : 20,
+              isMac ? 24 : 24,
+              isMac ? 36 : 20,
+              16,
+            ),
             child: Column(children: [
-              const Spacer(),
-              Text('Lexora', style: theme.textTheme.displaySmall?.copyWith(
-                fontWeight: FontWeight.w800,
-                letterSpacing: -1.8,
-              )),
+              if (!isMac) const Spacer() else const SizedBox(height: 8),
+              Align(
+                alignment: isMac ? Alignment.centerLeft : Alignment.center,
+                child: Text('Lexora', style: theme.textTheme.displaySmall?.copyWith(
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -1.8,
+                )),
+              ),
               const SizedBox(height: 6),
-              Text(strings.tagline,
-                  style: theme.textTheme.bodyLarge?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
-              const SizedBox(height: 24),
+              Align(
+                alignment: isMac ? Alignment.centerLeft : Alignment.center,
+                child: Text(strings.tagline,
+                    style: theme.textTheme.bodyLarge?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+              ),
+              SizedBox(height: isMac ? 20 : 24),
               TextField(
                 controller: _controller,
                 focusNode: _focusNode,
-                enabled: !_generating,
                 autofocus: true,
                 textInputAction: TextInputAction.done,
                 onSubmitted: _addWord,
@@ -184,7 +165,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   prefixIcon: const Icon(Icons.search_rounded),
                   suffixIcon: IconButton(
                     tooltip: strings.addWord,
-                    onPressed: _generating ? null : _addWord,
+                    onPressed: _addWord,
                     icon: const Icon(Icons.keyboard_return_rounded),
                   ),
                 ),
@@ -192,20 +173,28 @@ class _HomeScreenState extends State<HomeScreen> {
               const SizedBox(height: 14),
               SizedBox(
                 width: double.infinity,
-                height: 50,
+                height: isMac ? 44 : 50,
                 child: FilledButton.icon(
-                  onPressed: _words.isEmpty || _generating ? null : _generate,
-                  icon: _generating
-                      ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                  onPressed: _words.isEmpty || widget.generationRunning
+                      ? null
+                      : _generate,
+                  icon: widget.generationRunning
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
                       : const Icon(Icons.auto_awesome_rounded),
-                  label: Text(_generating ? strings.generating : strings.generate),
+                  label: Text(widget.generationRunning
+                      ? strings.generationInProgress
+                      : strings.generate),
                 ),
               ),
               const SizedBox(height: 6),
               Align(
                 alignment: Alignment.centerLeft,
                 child: TextButton.icon(
-                  onPressed: _generating ? null : widget.onOpenSettings,
+                  onPressed: widget.onOpenSettings,
                   icon: const Icon(Icons.tune_rounded),
                   label: Text(
                     '${strings.pdfSettings}  ·  '
@@ -214,16 +203,10 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
               ),
-              if (_generating) ...[
-                const SizedBox(height: 8),
-                LinearProgressIndicator(value: _progress, borderRadius: BorderRadius.circular(6)),
-                const SizedBox(height: 6),
-                Align(alignment: Alignment.centerLeft, child: Text(_status, style: theme.textTheme.bodySmall)),
-              ],
               const SizedBox(height: 12),
               if (_words.isNotEmpty)
                 Row(children: [
-                  Expanded(child: Text(strings.wordCount(_words.length), style: theme.textTheme.titleSmall)),
+                  Expanded(child: Text(strings.termCount(_words.length), style: theme.textTheme.titleSmall)),
                   PopupMenuButton<WordSort>(
                     initialValue: _sort,
                     onSelected: _applySort,
@@ -261,10 +244,10 @@ class _HomeScreenState extends State<HomeScreen> {
                               color: Colors.transparent,
                               elevation: 0,
                               child: ClipRRect(
-                                borderRadius: BorderRadius.circular(20),
+                                borderRadius: BorderRadius.circular(itemRadius),
                                 child: DecoratedBox(
                                   decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(20),
+                                    borderRadius: BorderRadius.circular(itemRadius),
                                     boxShadow: [BoxShadow(
                                       color: theme.shadowColor.withValues(alpha: .18 * animation.value),
                                       blurRadius: 22,
@@ -299,7 +282,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               alignment: Alignment.centerRight,
                               decoration: BoxDecoration(
                                 color: theme.colorScheme.error,
-                                borderRadius: BorderRadius.circular(18),
+                                borderRadius: BorderRadius.circular(itemRadius),
                               ),
                               child: Icon(Icons.delete_outline, color: theme.colorScheme.onError),
                             ),
@@ -308,7 +291,10 @@ class _HomeScreenState extends State<HomeScreen> {
                               child: ListTile(
                                 leading: CircleAvatar(child: Text('${index + 1}')),
                                 title: Text(word, style: const TextStyle(fontWeight: FontWeight.w600)),
-                                subtitle: Text(strings.letters(word.length)),
+                                subtitle: Text(
+                                  '${strings.characters(word.replaceAll(' ', '').length)}'
+                                  '${word.contains(' ') ? ' · ${strings.phrase}' : ''}',
+                                ),
                                 trailing: ReorderableDelayedDragStartListener(
                                   index: index,
                                   child: const Padding(
