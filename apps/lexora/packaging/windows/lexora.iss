@@ -30,6 +30,7 @@ UninstallDisplayIcon={app}\lexora.exe
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
+Name: "chinesesimplified"; MessagesFile: "compiler:Languages\ChineseSimplified.isl"
 
 [Files]
 Source: "{#SourceDir}\*"; DestDir: "{app}"; Flags: recursesubdirs ignoreversion
@@ -39,7 +40,7 @@ Name: "{autoprograms}\Lexora"; Filename: "{app}\lexora.exe"
 Name: "{autodesktop}\Lexora"; Filename: "{app}\lexora.exe"; Tasks: desktopicon
 
 [Tasks]
-Name: "desktopicon"; Description: "Create a desktop shortcut"; GroupDescription: "Additional icons:"
+Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"
 
 [Run]
-Filename: "{app}\lexora.exe"; Description: "Launch Lexora"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\lexora.exe"; Description: "{cm:LaunchProgram,Lexora}"; Flags: nowait postinstall skipifsilent
