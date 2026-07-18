@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:lexora/app_version.dart';
 import 'package:lexora/l10n/app_localizations.dart';
 import 'package:lexora/main.dart';
 import 'package:lexora/screens/word_history_screen.dart';
@@ -25,7 +26,7 @@ void main() {
   testWidgets('Lexora opens the localized word composer', (tester) async {
     SharedPreferences.setMockInitialValues({
       'lexora.onboarding.completed.v1': true,
-      'lexora.release-notes.seen.1.1.3': true,
+      'lexora.release-notes.seen.$appVersion': true,
     });
     await tester.pumpWidget(const LexoraApp(locale: Locale('zh', 'CN')));
     await tester.pumpAndSettle();
@@ -88,7 +89,7 @@ void main() {
       });
       SharedPreferences.setMockInitialValues({
         'lexora.onboarding.completed.v1': true,
-        'lexora.release-notes.seen.1.1.3': true,
+        'lexora.release-notes.seen.$appVersion': true,
       });
 
       await tester.pumpWidget(

@@ -1,60 +1,58 @@
 {
-  "version": "1.1.3",
+  "version": "1.1.4",
   "releaseNotes": {
     "zh": [
-      "新增 DOC、DOCX、PDF、TXT、RTF、ODT 等文档批量导入，按换行快速加入单词或短语。",
-      "将未找到、模糊匹配与生成完成信息合并为一个窗口，并用可滚动列表保持界面紧凑。",
-      "增强精确搜索的容错与备用词典来源，避免可用的常见单词因单个网络服务失败而被跳过。",
-      "PDF 会突出显示模糊匹配后的正确单词，并以较小灰字保留用户原始输入。"
+      "修复安卓端更新说明中文乱码，并恢复国内网络优先的下载线路。",
+      "修复 Cloudflare 将安装包请求误判为自动流量而导致下载失败的问题。",
+      "修复 macOS 应用内更新产生错误隔离标记、安装后无法打开的问题，并确保打开安装包后退出旧版本。"
     ],
     "en": [
-      "Added newline-based bulk import from DOC, DOCX, PDF, TXT, RTF, ODT, and other document formats.",
-      "Combined missing terms, fuzzy matches, and completion actions into one compact dialog with a scrollable result list.",
-      "Improved exact-search resilience and dictionary fallback so a single optional provider failure cannot hide common words.",
-      "PDF exports now show the corrected fuzzy-match term prominently and retain the original input in smaller gray text."
+      "Fixed garbled Chinese update notes and restored mainland-friendly download routing.",
+      "Fixed installer requests being misclassified as automated Cloudflare traffic.",
+      "Fixed invalid macOS quarantine metadata, unopenable in-app updates, and unreliable old-app termination."
     ]
   },
   "downloads": {
-    "android": "/downloads/lexora-android-v1.1.3.apk",
-    "macos": "/downloads/lexora-macos-v1.1.3.dmg",
-    "windows": "/downloads/lexora-windows-v1.1.3-setup.exe",
-    "linux": "/downloads/lexora-linux-v1.1.3.tar.gz"
+    "android": "/downloads/lexora-android-v1.1.4.apk",
+    "macos": "/downloads/lexora-macos-v1.1.4.dmg",
+    "windows": "/downloads/lexora-windows-v1.1.4-setup.exe",
+    "linux": "/downloads/lexora-linux-v1.1.4.tar.gz"
   },
   "verifiedDownloads": {
     "android": {
-      "filename": "lexora-android-v1.1.3.apk",
-      "url": "/updates/lexora-android-v1.1.3.apk",
+      "filename": "lexora-android-v1.1.4.apk",
+      "url": "/updates/lexora-android-v1.1.4.apk",
       "sources": [
-        "https://lexora-official.xiaozhangwangxue.workers.dev/updates/lexora-android-v1.1.3.apk",
-        "/updates/lexora-android-v1.1.3.apk",
-        "https://github.com/xiaozhangwangxue/lexora/releases/download/v1.1.3/lexora-android-v1.1.3.apk"
+        "/updates/lexora-android-v1.1.4.apk",
+        "https://lexora-official.xiaozhangwangxue.workers.dev/updates/lexora-android-v1.1.4.apk",
+        "https://github.com/xiaozhangwangxue/lexora/releases/download/v1.1.4/lexora-android-v1.1.4.apk"
       ]
     },
     "macos": {
-      "filename": "lexora-macos-v1.1.3.dmg",
-      "url": "/updates/lexora-macos-v1.1.3.dmg",
+      "filename": "lexora-macos-v1.1.4.dmg",
+      "url": "/updates/lexora-macos-v1.1.4.dmg",
       "sources": [
-        "https://lexora-official.xiaozhangwangxue.workers.dev/updates/lexora-macos-v1.1.3.dmg",
-        "/updates/lexora-macos-v1.1.3.dmg",
-        "https://github.com/xiaozhangwangxue/lexora/releases/download/v1.1.3/lexora-macos-v1.1.3.dmg"
+        "/updates/lexora-macos-v1.1.4.dmg",
+        "https://lexora-official.xiaozhangwangxue.workers.dev/updates/lexora-macos-v1.1.4.dmg",
+        "https://github.com/xiaozhangwangxue/lexora/releases/download/v1.1.4/lexora-macos-v1.1.4.dmg"
       ]
     },
     "windows": {
-      "filename": "lexora-windows-v1.1.3-setup.exe",
-      "url": "/updates/lexora-windows-v1.1.3-setup.exe",
+      "filename": "lexora-windows-v1.1.4-setup.exe",
+      "url": "/updates/lexora-windows-v1.1.4-setup.exe",
       "sources": [
-        "https://lexora-official.xiaozhangwangxue.workers.dev/updates/lexora-windows-v1.1.3-setup.exe",
-        "/updates/lexora-windows-v1.1.3-setup.exe",
-        "https://github.com/xiaozhangwangxue/lexora/releases/download/v1.1.3/lexora-windows-v1.1.3-setup.exe"
+        "/updates/lexora-windows-v1.1.4-setup.exe",
+        "https://lexora-official.xiaozhangwangxue.workers.dev/updates/lexora-windows-v1.1.4-setup.exe",
+        "https://github.com/xiaozhangwangxue/lexora/releases/download/v1.1.4/lexora-windows-v1.1.4-setup.exe"
       ]
     },
     "linux": {
-      "filename": "lexora-linux-v1.1.3.tar.gz",
-      "url": "/updates/lexora-linux-v1.1.3.tar.gz",
+      "filename": "lexora-linux-v1.1.4.tar.gz",
+      "url": "/updates/lexora-linux-v1.1.4.tar.gz",
       "sources": [
-        "https://lexora-official.xiaozhangwangxue.workers.dev/updates/lexora-linux-v1.1.3.tar.gz",
-        "/updates/lexora-linux-v1.1.3.tar.gz",
-        "https://github.com/xiaozhangwangxue/lexora/releases/download/v1.1.3/lexora-linux-v1.1.3.tar.gz"
+        "/updates/lexora-linux-v1.1.4.tar.gz",
+        "https://lexora-official.xiaozhangwangxue.workers.dev/updates/lexora-linux-v1.1.4.tar.gz",
+        "https://github.com/xiaozhangwangxue/lexora/releases/download/v1.1.4/lexora-linux-v1.1.4.tar.gz"
       ]
     }
   }

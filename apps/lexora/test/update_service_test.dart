@@ -176,6 +176,7 @@ void main() {
             platformKey: 'macos',
             cacheDirectory: () async => cache,
             openInstaller: (_) async => true,
+            prepareMacInstaller: (_) async {},
             finishMacUpdate: () async => finished = true,
             isMacOS: true,
           );
@@ -188,6 +189,77 @@ void main() {
       expect(finished, isTrue);
     },
   );
+
+  test('decodes Chinese release notes as UTF-8 without a charset', () async {
+    await _withServer(
+      (request, origin) async {
+        final bytes = utf8.encode(
+          jsonEncode(
+            _manifest(origin, apkBytes, sources: ['/updates/lexora.apk']),
+          ),
+        );
+        request.response.headers.contentType = ContentType(
+          'application',
+          'octet-stream',
+        );
+        request.response.add(bytes);
+        await request.response.close();
+      },
+      (origin, cache) async {
+        final service = UpdateService(
+          manifestUri: origin.resolve('/version.json'),
+          platformKey: 'android',
+          cacheDirectory: () async => cache,
+          openInstaller: (_) async => true,
+          isMacOS: false,
+        );
+        final update = await service.check();
+        expect(update?.notesZh, ['测试']);
+      },
+    );
+  });
+
+  test('prepares a macOS installer before opening it and then exits', () async {
+    final events = <String>[];
+    await _withServer(
+      (request, origin) async {
+        if (request.uri.path == '/version.json') {
+          await _json(
+            request.response,
+            _manifest(
+              origin,
+              apkBytes,
+              platform: 'macos',
+              filename: 'lexora-macos.zip',
+              sources: ['/updates/lexora-macos.zip'],
+            ),
+          );
+        } else {
+          request.response.add(apkBytes);
+          await request.response.close();
+        }
+      },
+      (origin, cache) async {
+        final service = UpdateService(
+          manifestUri: origin.resolve('/version.json'),
+          platformKey: 'macos',
+          cacheDirectory: () async => cache,
+          prepareMacInstaller: (_) async => events.add('prepare'),
+          openInstaller: (_) async {
+            events.add('open');
+            return true;
+          },
+          finishMacUpdate: () async => events.add('finish'),
+          isMacOS: true,
+        );
+        await service.downloadAndLaunch(
+          (await service.check())!,
+          onProgress: (_) {},
+        );
+      },
+    );
+    expect(events, ['prepare', 'open', 'finish']);
+  });
 }
 
 Map<String, dynamic> _manifest(

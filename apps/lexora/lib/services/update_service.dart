@@ -12,6 +12,7 @@ import '../app_version.dart';
 typedef InstallerOpener = Future<bool> Function(File file);
 typedef CacheDirectoryProvider = Future<Directory> Function();
 typedef MacUpdateFinisher = Future<void> Function();
+typedef MacInstallerPreparer = Future<void> Function(File file);
 
 class UpdateDownload {
   const UpdateDownload({
@@ -51,6 +52,7 @@ class UpdateService {
     CacheDirectoryProvider? cacheDirectory,
     InstallerOpener? openInstaller,
     MacUpdateFinisher? finishMacUpdate,
+    MacInstallerPreparer? prepareMacInstaller,
     bool? isMacOS,
   }) : _client = client ?? http.Client(),
        _manifestUri = manifestUri ?? _defaultManifestUri,
@@ -58,6 +60,8 @@ class UpdateService {
        _cacheDirectoryOverride = cacheDirectory,
        _openInstaller = openInstaller ?? _defaultOpenInstaller,
        _finishMacUpdate = finishMacUpdate ?? _defaultFinishMacUpdate,
+       _prepareMacInstaller =
+           prepareMacInstaller ?? _defaultPrepareMacInstaller,
        _isMacOS = isMacOS ?? Platform.isMacOS;
 
   static final Uri _defaultManifestUri = Uri.parse(
@@ -70,6 +74,7 @@ class UpdateService {
   final CacheDirectoryProvider? _cacheDirectoryOverride;
   final InstallerOpener _openInstaller;
   final MacUpdateFinisher _finishMacUpdate;
+  final MacInstallerPreparer _prepareMacInstaller;
   final bool _isMacOS;
 
   Future<UpdateInfo?> check() async {
@@ -82,7 +87,11 @@ class UpdateService {
     if (response.statusCode != 200) {
       throw HttpException('Update server returned ${response.statusCode}.');
     }
-    final json = jsonDecode(response.body) as Map<String, dynamic>;
+    // R2 objects may not carry a charset. response.body would then use
+    // Latin-1 and corrupt Chinese release notes, so always decode JSON bytes
+    // explicitly as UTF-8.
+    final json =
+        jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
     final version = json['version'] as String? ?? '';
     if (version.isEmpty || !_isNewer(version, appVersion)) return null;
     final downloads = json['downloads'] as Map<String, dynamic>? ?? const {};
@@ -109,6 +118,7 @@ class UpdateService {
     required void Function(double?) onProgress,
   }) async {
     final file = await _downloadValidated(info.download, onProgress);
+    if (_isMacOS) await _prepareMacInstaller(file);
     if (!await _openInstaller(file)) {
       throw FileSystemException(
         'The system installer could not be opened.',
@@ -143,9 +153,11 @@ class UpdateService {
     UpdateDownload download,
     void Function(double?) onProgress,
   ) async {
+    // Keep the HTTP client's normal User-Agent. A custom updater agent was
+    // classified as automated traffic by the site's Cloudflare rules even
+    // though the manifest request from the same device was allowed.
     final request = http.Request('GET', url)
-      ..headers['accept'] = 'application/octet-stream'
-      ..headers['user-agent'] = 'Lexora/$appVersion updater';
+      ..headers['accept'] = 'application/octet-stream';
     final response = await _client
         .send(request)
         .timeout(const Duration(seconds: 35));
@@ -307,28 +319,64 @@ class UpdateService {
   }
 
   static Future<bool> _defaultOpenInstaller(File file) async {
+    if (Platform.isMacOS) {
+      try {
+        final result = await Process.run('/usr/bin/open', [file.path]);
+        if (result.exitCode == 0) return true;
+      } catch (_) {
+        // Fall through to the cross-platform opener.
+      }
+    }
     final result = await OpenFilex.open(file.path);
     return result.type == ResultType.done;
   }
 
+  static Future<void> _defaultPrepareMacInstaller(File file) async {
+    // Files created by a sandboxed app are tagged with quarantine flag 0x02
+    // ("created without user consent"). macOS then denies the copied app with
+    // a generic "can't be opened" error before Gatekeeper can offer Open
+    // Anyway. The update button is an explicit user action, so replace that
+    // flag with the normal user-approved download quarantine value.
+    final timestamp = (DateTime.now().millisecondsSinceEpoch ~/ 1000)
+        .toRadixString(16);
+    final value = '0081;$timestamp;Lexora;';
+    final result = await Process.run('/usr/bin/xattr', [
+      '-w',
+      'com.apple.quarantine',
+      value,
+      file.path,
+    ]);
+    if (result.exitCode != 0) {
+      throw FileSystemException(
+        'The macOS installer could not be prepared.',
+        file.path,
+      );
+    }
+  }
+
   static Future<void> _defaultFinishMacUpdate() async {
-    await Future<void>.delayed(const Duration(milliseconds: 700));
-    final opened = await launchUrl(
-      Uri.parse(
-        'x-apple.systempreferences:com.apple.settings.PrivacySecurity.extension',
-      ),
-      mode: LaunchMode.externalApplication,
-    );
-    if (!opened) {
-      await launchUrl(
+    try {
+      await Future<void>.delayed(const Duration(milliseconds: 700));
+      final opened = await launchUrl(
         Uri.parse(
-          'x-apple.systempreferences:com.apple.preference.security?General',
+          'x-apple.systempreferences:com.apple.settings.PrivacySecurity.extension',
         ),
         mode: LaunchMode.externalApplication,
       );
+      if (!opened) {
+        await launchUrl(
+          Uri.parse(
+            'x-apple.systempreferences:com.apple.preference.security?General',
+          ),
+          mode: LaunchMode.externalApplication,
+        );
+      }
+      await Future<void>.delayed(const Duration(milliseconds: 900));
+    } finally {
+      // Opening System Settings is best-effort; it must never prevent the old
+      // app from terminating after the installer is ready.
+      exit(0);
     }
-    await Future<void>.delayed(const Duration(milliseconds: 900));
-    exit(0);
   }
 
   static String get _platformKey {

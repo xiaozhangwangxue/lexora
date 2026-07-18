@@ -1,13 +1,13 @@
 ; Lexora Windows installer. The postinstall entry is intentionally checked
 ; by default so users can launch Lexora as soon as setup finishes.
 #ifndef AppVersion
-  #define AppVersion "1.1.3"
+  #define AppVersion "1.1.4"
 #endif
 #ifndef SourceDir
   #define SourceDir "build/windows/x64/runner/Release"
 #endif
 #ifndef OutputBaseFilename
-  #define OutputBaseFilename "lexora-windows-v1.1.3-setup"
+  #define OutputBaseFilename "lexora-windows-v1.1.4-setup"
 #endif
 
 [Setup]

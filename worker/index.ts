@@ -42,6 +42,12 @@ const worker = {
       } else {
         headers.delete("content-disposition");
       }
+      if (key === "version.json") {
+        // Existing clients rely on the response charset when decoding Chinese
+        // release notes. R2's default application/octet-stream would make the
+        // Dart HTTP client decode them as Latin-1.
+        headers.set("content-type", "application/json; charset=utf-8");
+      }
       headers.set(
         "cache-control",
         /-v\d+\.\d+\.\d+\./.test(key)
