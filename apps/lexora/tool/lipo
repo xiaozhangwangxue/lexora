@@ -1,0 +1,25 @@
+#!/bin/bash
+
+# Xcode 26's lipo accepts one architecture per -verify_arch invocation,
+# while current Flutter passes every requested architecture at once. Split
+# only that verification form and preserve native lipo behavior otherwise.
+set -euo pipefail
+
+verify_index=-1
+for ((index = 1; index <= $#; index++)); do
+  if [[ "${!index}" == "-verify_arch" ]]; then
+    verify_index=$index
+    break
+  fi
+done
+
+if ((verify_index > 1 && verify_index < $#)); then
+  binary_index=$((verify_index - 1))
+  binary="${!binary_index}"
+  for ((index = verify_index + 1; index <= $#; index++)); do
+    /usr/bin/lipo "$binary" -verify_arch "${!index}"
+  done
+  exit 0
+fi
+
+exec /usr/bin/lipo "$@"

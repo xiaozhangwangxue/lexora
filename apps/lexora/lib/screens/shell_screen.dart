@@ -12,10 +12,10 @@ import '../app_version.dart';
 import '../l10n/app_localizations.dart';
 import '../models/word_entry.dart';
 import '../services/generation_progress.dart';
+import '../services/document_export_service.dart';
 import '../services/haptic_service.dart';
 import '../services/history_service.dart';
 import '../services/notification_service.dart';
-import '../services/pdf_service.dart';
 import '../services/pdf_settings_service.dart';
 import '../services/word_service.dart';
 import '../widgets/github_button.dart';
@@ -43,7 +43,7 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
   final _pageController = PageController();
   final _generationProgress = GenerationProgress();
   final _wordService = WordService();
-  final _pdfService = PdfService();
+  final _documentService = DocumentExportService();
   final _historyService = HistoryService();
   final _haptics = const HapticService();
   final _notifications = NotificationService.instance;
@@ -55,6 +55,8 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
   PdfSettings? _settings;
   bool _releaseNotesPending = false;
   bool _releaseNotesShowing = false;
+  bool? _desktopSidebarExpandedPreference;
+  Completer<void>? _resumeCompleter;
 
   bool get _isAndroid =>
       Platform.isAndroid ||
@@ -72,6 +74,7 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
     WidgetsBinding.instance.removeObserver(this);
     _pageController.dispose();
     _generationProgress.dispose();
+    if (_resumeCompleter?.isCompleted == false) _resumeCompleter!.complete();
     super.dispose();
   }
 
@@ -80,13 +83,17 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
     if (_isAndroid) {
       if (state == AppLifecycleState.resumed) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted) unawaited(_synchronizeAndroidKeyboardAfterResume());
+          if (mounted) unawaited(_synchronizeAndroidAfterResume());
         });
       } else {
         _dismissAndroidKeyboard();
       }
     }
     final active = state == AppLifecycleState.resumed;
+    if (active && _resumeCompleter?.isCompleted == false) {
+      _resumeCompleter!.complete();
+      _resumeCompleter = null;
+    }
     if (_appIsActive != active && mounted) {
       setState(() => _appIsActive = active);
     }
@@ -97,7 +104,7 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
     unawaited(SystemChannels.textInput.invokeMethod<void>('TextInput.hide'));
   }
 
-  Future<void> _synchronizeAndroidKeyboardAfterResume() async {
+  Future<void> _synchronizeAndroidAfterResume() async {
     _dismissAndroidKeyboard();
     // Android can restore the Flutter surface before dispatching the final IME
     // inset. Repeating the hide request on the next frame prevents a stale
@@ -105,6 +112,20 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
     await Future<void>.delayed(const Duration(milliseconds: 120));
     if (!mounted) return;
     _dismissAndroidKeyboard();
+    if (_pageController.hasClients) {
+      // A PageView ballistic animation can be suspended while Android parks
+      // the Flutter surface. Jumping to the selected page on resume releases
+      // the stale gesture/animation state that otherwise makes the whole UI
+      // appear frozen after a long idle period.
+      _pageController.jumpToPage(_index);
+    }
+    setState(() {});
+  }
+
+  Future<void> _waitUntilAppIsActive() async {
+    if (_appIsActive || !mounted) return;
+    _resumeCompleter ??= Completer<void>();
+    await _resumeCompleter!.future;
   }
 
   Future<void> _loadInitialState() async {
@@ -252,8 +273,9 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
       }
 
       _generationProgress.typesetting();
-      final book = await _pdfService.create(
+      final book = await _documentService.create(
         result.entries,
+        format: settings.format,
         fontSize: settings.fontSize,
         typography: settings.typography,
       );
@@ -271,6 +293,10 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
           entryCount: result.entries.length,
           isZh: strings.isZh,
         );
+        // Never create a modal route while Android has parked the Flutter
+        // surface. A background dialog can leave a stale modal barrier after
+        // long idle periods and make the resumed UI appear completely frozen.
+        await _waitUntilAppIsActive();
       }
       if (mounted) {
         await _showGenerationComplete(
@@ -293,7 +319,7 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
   Future<void> _shareBook(GeneratedBook book) async {
     final strings = AppLocalizations.of(context);
     await Share.shareXFiles([
-      XFile(book.path, mimeType: 'application/pdf'),
+      XFile(book.path, mimeType: book.format.mimeType),
     ], subject: strings.vocabularyBook);
   }
 
@@ -506,7 +532,10 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
   @override
   Widget build(BuildContext context) {
     if (_onboardingCompleted == null || _settings == null) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      return Scaffold(
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        body: const Center(child: CircularProgressIndicator()),
+      );
     }
     if (!_onboardingCompleted!) {
       return OnboardingScreen(onFinished: _finishOnboarding);
@@ -515,7 +544,9 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
     final strings = AppLocalizations.of(context);
     final windowWidth = MediaQuery.sizeOf(context).width;
     final wide = _isAndroid ? windowWidth >= 680 : windowWidth >= 520;
-    final expandedNavigation = windowWidth >= 800;
+    final autoExpandedNavigation = windowWidth >= 820;
+    final expandedNavigation =
+        autoExpandedNavigation && (_desktopSidebarExpandedPreference ?? true);
     final showGitHub = _index == 0;
     final pages = [
       HomeScreen(
@@ -622,60 +653,32 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
     ];
 
     if (wide) {
-      if (Platform.isMacOS) {
-        return Scaffold(
-          backgroundColor: Colors.transparent,
-          body: Row(
-            children: [
-              SizedBox(
-                width: expandedNavigation ? 220 : 76,
-                child: _MacSidebar(
-                  selectedIndex: _index,
-                  destinations: destinations,
-                  onSelected: _selectPage,
-                  expanded: expandedNavigation,
-                ),
-              ),
-              VerticalDivider(
-                width: 1,
-                thickness: .6,
-                color: Theme.of(
-                  context,
-                ).colorScheme.outlineVariant.withValues(alpha: .32),
-              ),
-              Expanded(child: body),
-            ],
-          ),
-        );
-      }
       return Scaffold(
         // The generated Windows runner has an opaque light window. Using a
         // transparent Scaffold here exposes the runner's black clear color
         // around desktop pages, especially during the first frame.
-        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        backgroundColor: Platform.isMacOS
+            ? Colors.transparent
+            : Theme.of(context).scaffoldBackgroundColor,
         resizeToAvoidBottomInset: !_isAndroid,
         body: Row(
           children: [
-            SafeArea(
-              child: NavigationRail(
-                backgroundColor: Colors.transparent,
+            AnimatedContainer(
+              key: const Key('desktop-sidebar'),
+              duration: const Duration(milliseconds: 460),
+              curve: Curves.easeInOutCubicEmphasized,
+              width: expandedNavigation ? 220 : 76,
+              clipBehavior: Clip.hardEdge,
+              decoration: const BoxDecoration(),
+              child: _DesktopSidebar(
                 selectedIndex: _index,
-                onDestinationSelected: _selectPage,
-                labelType: expandedNavigation
-                    ? NavigationRailLabelType.all
-                    : NavigationRailLabelType.none,
-                leading: Padding(
-                  padding: const EdgeInsets.only(bottom: 20),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: Image.asset(
-                      'assets/icon/lexora-icon.png',
-                      width: 42,
-                      height: 42,
-                    ),
-                  ),
-                ),
                 destinations: destinations,
+                onSelected: _selectPage,
+                expanded: expandedNavigation,
+                isMacOS: Platform.isMacOS,
+                onToggle: () => setState(() {
+                  _desktopSidebarExpandedPreference = !expandedNavigation;
+                }),
               ),
             ),
             VerticalDivider(
@@ -749,85 +752,128 @@ class _LexoraPagePhysics extends PageScrollPhysics {
       const SpringDescription(mass: .9, stiffness: 260, damping: 31);
 }
 
-class _MacSidebar extends StatelessWidget {
-  const _MacSidebar({
+class _DesktopSidebar extends StatelessWidget {
+  const _DesktopSidebar({
     required this.selectedIndex,
     required this.destinations,
     required this.onSelected,
     required this.expanded,
+    required this.isMacOS,
+    required this.onToggle,
   });
 
   final int selectedIndex;
   final List<NavigationRailDestination> destinations;
   final ValueChanged<int> onSelected;
   final bool expanded;
+  final bool isMacOS;
+  final VoidCallback onToggle;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(12, 14, 12, 14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(8, 2, 8, 18),
-              child: Row(
-                children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: Image.asset(
-                      'assets/icon/lexora-icon.png',
-                      width: 30,
-                      height: 30,
-                    ),
-                  ),
-                  if (expanded) ...[
-                    const SizedBox(width: 10),
-                    Text(
-                      'Lexora',
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: -.4,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final theme = Theme.of(context);
+        // AnimatedContainer changes the constraint on every frame. Waiting
+        // until there is enough real space before revealing labels prevents
+        // text from overflowing during expansion, while hiding it early makes
+        // the collapse feel continuous instead of snapping at the end.
+        final showLabels = expanded && constraints.maxWidth >= 180;
+        final content = SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(12, 14, 12, 14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(8, 2, 8, 18),
+                  child: Row(
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: Image.asset(
+                          'assets/icon/lexora-icon.png',
+                          width: 30,
+                          height: 30,
+                        ),
                       ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-            for (var index = 0; index < destinations.length; index++) ...[
-              _MacSidebarItem(
-                selected: selectedIndex == index,
-                icon: selectedIndex == index
-                    ? destinations[index].selectedIcon
-                    : destinations[index].icon,
-                label: destinations[index].label,
-                onTap: () => onSelected(index),
-                expanded: expanded,
-              ),
-              const SizedBox(height: 4),
-            ],
-            const Spacer(),
-            if (expanded)
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 10),
-                child: Text(
-                  'Lexora $appVersion',
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
+                      if (showLabels) ...[
+                        const SizedBox(width: 10),
+                        Text(
+                          'Lexora',
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: -.4,
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
                 ),
-              ),
-          ],
-        ),
-      ),
+                for (var index = 0; index < destinations.length; index++) ...[
+                  _DesktopSidebarItem(
+                    selected: selectedIndex == index,
+                    icon: selectedIndex == index
+                        ? destinations[index].selectedIcon
+                        : destinations[index].icon,
+                    label: destinations[index].label,
+                    onTap: () => onSelected(index),
+                    expanded: showLabels,
+                  ),
+                  const SizedBox(height: 4),
+                ],
+                const Spacer(),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 2),
+                  child: Row(
+                    children: [
+                      IconButton(
+                        key: const Key('desktop-sidebar-toggle'),
+                        tooltip: expanded
+                            ? 'Collapse sidebar'
+                            : 'Expand sidebar',
+                        onPressed: onToggle,
+                        icon: AnimatedRotation(
+                          turns: expanded ? 0 : .5,
+                          duration: const Duration(milliseconds: 460),
+                          curve: Curves.easeInOutCubicEmphasized,
+                          child: const Icon(Icons.menu_rounded),
+                        ),
+                      ),
+                      if (showLabels)
+                        Expanded(
+                          child: Text(
+                            'Lexora $appVersion',
+                            textAlign: TextAlign.right,
+                            style: theme.textTheme.labelSmall?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+        if (!isMacOS) return content;
+        return ClipRect(
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 26, sigmaY: 26),
+            child: ColoredBox(
+              color: theme.colorScheme.surface.withValues(alpha: .46),
+              child: content,
+            ),
+          ),
+        );
+      },
     );
   }
 }
 
-class _MacSidebarItem extends StatelessWidget {
-  const _MacSidebarItem({
+class _DesktopSidebarItem extends StatelessWidget {
+  const _DesktopSidebarItem({
     required this.selected,
     required this.icon,
     required this.label,
@@ -844,7 +890,7 @@ class _MacSidebarItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Material(
+    final item = Material(
       color: selected
           ? theme.colorScheme.primary.withValues(alpha: .13)
           : Colors.transparent,
@@ -886,5 +932,8 @@ class _MacSidebarItem extends StatelessWidget {
         ),
       ),
     );
+    if (expanded) return item;
+    final message = label is Text ? (label as Text).data : null;
+    return Tooltip(message: message ?? '', child: item);
   }
 }

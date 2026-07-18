@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lexora/models/word_entry.dart';
 import 'package:lexora/services/pdf_service.dart';
 import 'package:lexora/services/pdf_settings_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -25,6 +26,7 @@ void main() {
     SharedPreferences.setMockInitialValues({});
     final service = PdfSettingsService();
     final customized = const PdfSettings().copyWith(
+      format: BookFormat.docx,
       typography: const PdfTypography(
         word: 24,
         phonetic: 13,
@@ -42,5 +44,6 @@ void main() {
     expect(loaded.typography.phonetic, 13);
     expect(loaded.typography.definition, 12);
     expect(loaded.typography.example, 11);
+    expect(loaded.format, BookFormat.docx);
   });
 }

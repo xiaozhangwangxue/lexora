@@ -46,7 +46,7 @@ class AppLocalizations {
       ? '已完成 $word  ·  $current/$total（并发查询）'
       : 'Completed $word  ·  $current/$total (parallel lookup)';
   String get typesetting =>
-      isZh ? '正在排版双语 PDF…' : 'Typesetting the bilingual PDF…';
+      isZh ? '正在排版双语词汇书…' : 'Typesetting the bilingual vocabulary book…';
   String get invalidWord =>
       isZh ? '请输入有效的英文单词或短语。' : 'Please enter a valid English word or phrase.';
   String duplicate(String word) =>
@@ -106,20 +106,21 @@ class AppLocalizations {
   String generationError(String error) =>
       isZh ? '生成失败：$error' : 'Generation failed: $error';
   String get gotIt => isZh ? '知道了' : 'Got it';
-  String get customize => isZh ? '自定义 PDF' : 'Customize PDF';
-  String get pdfSettings => isZh ? 'PDF 自定义' : 'PDF customization';
+  String get customize => isZh ? '自定义文档' : 'Customize document';
+  String get pdfSettings => isZh ? '文档自定义' : 'Document customization';
+  String get exportFormat => isZh ? '导出格式' : 'Export format';
   String get settingsIntroTitle => isZh
       ? '把零散单词，变成真正想读的词汇书。'
       : 'Turn loose words into a book worth reading.';
   String get settingsIntroBody => isZh
-      ? 'Lexora 会联网补全难度、词频、英美音标、近反义词、双语例句与中文翻译，再排版成适合手机阅读和打印的 PDF。'
-      : 'Lexora completes difficulty, frequency, US and UK phonetics, related words, bilingual examples, and Chinese translations, then typesets a PDF made for phones and print.';
-  String get pdfFontSize => isZh ? 'PDF 字号' : 'PDF font size';
+      ? 'Lexora 会联网补全难度、词频、英美音标、近反义词、双语例句与中文翻译，再排版成 PDF、EPUB 或可编辑 DOCX。'
+      : 'Lexora completes difficulty, frequency, phonetics, related words, bilingual examples, and Chinese translations, then typesets PDF, EPUB, or editable DOCX.';
+  String get pdfFontSize => isZh ? '文档字号' : 'Document font size';
   String get fontPreset => isZh ? '字号预设' : 'Font preset';
   String get fineTuneTypography => isZh ? '精细调整字体' : 'Fine-tune typography';
   String get fineTuneTypographyHint => isZh
-      ? '分别调整各部分字号，数值会直接用于下一份 PDF。'
-      : 'Adjust each section independently. These values apply to the next PDF.';
+      ? '分别调整各部分字号，数值会直接用于下一份词汇书。'
+      : 'Adjust each section independently. These values apply to the next book.';
   String get scrollToAdjust => isZh
       ? '滚轮、双指或拖动内容继续调整'
       : 'Scroll, swipe, or drag the content to see every control';
@@ -142,7 +143,7 @@ class AppLocalizations {
       ? '阅读、导出或分享已生成的词汇书。'
       : 'Read, export, or share your generated vocabulary books.';
   String get emptyHistory =>
-      isZh ? '生成的 PDF 将显示在这里。' : 'Your generated PDFs will appear here.';
+      isZh ? '生成的词汇书将显示在这里。' : 'Your generated books will appear here.';
   String get wordHistorySubtitle => isZh
       ? '查看所有生成过的单词，并用星标将重要单词置顶。'
       : 'Browse every generated word and star important words to keep them on top.';
@@ -155,6 +156,10 @@ class AppLocalizations {
   String get exportTo => isZh ? '导出到…' : 'Export to…';
   String get share => isZh ? '分享…' : 'Share…';
   String get print => isZh ? '打印' : 'Print';
+  String get openExternally => isZh ? '用其他应用打开' : 'Open in another app';
+  String get readerContentUnavailable => isZh
+      ? '这是旧版生成的文档，暂无内置阅读数据。可使用右上角在其他应用中打开。'
+      : 'This older document has no in-app reading data. Open it in another app from the top-right button.';
   String get delete => isZh ? '删除' : 'Delete';
   String get vocabularyBook => isZh ? 'Lexora 词汇书' : 'Lexora vocabulary book';
   String get sortBy => isZh ? '排序方式' : 'Sort by';
@@ -187,8 +192,9 @@ class AppLocalizations {
       ? '将使用当前 PDF 设置重新查询并生成 $count 个单词。'
       : 'Lexora will look up $count words again using the current PDF settings.';
   String get generationReadyBody => isZh
-      ? 'PDF 已保存。你可以继续整理下一批词条，也可以立即查看或分享。'
-      : 'The PDF is saved. Keep preparing another list, or view and share it now.';
+      ? '词汇书已保存。你可以继续整理下一批词条，也可以立即查看或分享。'
+      : 'The vocabulary book is saved. Keep preparing another list, or view and share it now.';
+  String get dismissProgress => isZh ? '移除已完成任务' : 'Dismiss completed task';
   String get stayHere => isZh ? '忽略' : 'Ignore';
   String get viewGenerated => isZh ? '打开' : 'Open';
   String get shareNow => isZh ? '分享' : 'Share';

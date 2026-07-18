@@ -36,15 +36,14 @@ class _HistoryScreenState extends State<HistoryScreen> {
   }
 
   Future<void> _export(GeneratedBook book) async {
-    const pdfType = XTypeGroup(
-      label: 'PDF',
-      extensions: ['pdf'],
-      mimeTypes: ['application/pdf'],
-      uniformTypeIdentifiers: ['com.adobe.pdf'],
+    final type = XTypeGroup(
+      label: book.format.name.toUpperCase(),
+      extensions: [book.format.extension],
+      mimeTypes: [book.format.mimeType],
     );
     final output = await getSaveLocation(
       suggestedName: book.title,
-      acceptedTypeGroups: const [pdfType],
+      acceptedTypeGroups: [type],
     );
     if (output == null) return;
     await File(book.path).copy(output.path);
@@ -53,7 +52,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
   Future<void> _share(GeneratedBook book) async {
     final strings = AppLocalizations.of(context);
     await Share.shareXFiles([
-      XFile(book.path, mimeType: 'application/pdf'),
+      XFile(book.path, mimeType: book.format.mimeType),
     ], subject: strings.vocabularyBook);
   }
 
@@ -61,6 +60,11 @@ class _HistoryScreenState extends State<HistoryScreen> {
     await _service.remove(book.id);
     final file = File(book.path);
     if (await file.exists()) await file.delete();
+    final contentPath = book.contentPath;
+    if (contentPath != null) {
+      final content = File(contentPath);
+      if (await content.exists()) await content.delete();
+    }
     setState(() => _books = _service.load());
   }
 
@@ -94,7 +98,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
     final files = <XFile>[];
     for (final book in books.where((book) => _selectedIds.contains(book.id))) {
       if (await File(book.path).exists()) {
-        files.add(XFile(book.path, mimeType: 'application/pdf'));
+        files.add(XFile(book.path, mimeType: book.format.mimeType));
       }
     }
     if (!mounted) return;
@@ -134,6 +138,11 @@ class _HistoryScreenState extends State<HistoryScreen> {
     for (final book in books.where((book) => selected.contains(book.id))) {
       final file = File(book.path);
       if (await file.exists()) await file.delete();
+      final contentPath = book.contentPath;
+      if (contentPath != null) {
+        final content = File(contentPath);
+        if (await content.exists()) await content.delete();
+      }
     }
     if (!mounted) return;
     setState(() {
@@ -194,6 +203,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                           child: _GenerationProgressCard(
                             progress: widget.progress,
                             strings: strings,
+                            onDismiss: widget.progress.reset,
                           ),
                         )
                       : const SizedBox.shrink(),
@@ -262,7 +272,14 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                                   BorderRadius.circular(8),
                                             ),
                                             child: Icon(
-                                              Icons.picture_as_pdf_rounded,
+                                              switch (book.format) {
+                                                BookFormat.pdf =>
+                                                  Icons.picture_as_pdf_rounded,
+                                                BookFormat.epub =>
+                                                  Icons.menu_book_rounded,
+                                                BookFormat.docx =>
+                                                  Icons.description_rounded,
+                                              },
                                               color: theme.colorScheme.primary,
                                             ),
                                           ),
@@ -432,10 +449,12 @@ class _GenerationProgressCard extends StatelessWidget {
   const _GenerationProgressCard({
     required this.progress,
     required this.strings,
+    required this.onDismiss,
   });
 
   final GenerationProgress progress;
   final AppLocalizations strings;
+  final VoidCallback onDismiss;
 
   @override
   Widget build(BuildContext context) {
@@ -482,14 +501,15 @@ class _GenerationProgressCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                Icon(
-                  failed
-                      ? Icons.error_outline_rounded
-                      : completed
-                      ? Icons.check_circle_outline_rounded
-                      : Icons.auto_awesome_rounded,
-                  color: color,
-                ),
+                if (failed || completed)
+                  IconButton(
+                    tooltip: strings.dismissProgress,
+                    visualDensity: VisualDensity.compact,
+                    onPressed: onDismiss,
+                    icon: Icon(Icons.close_rounded, color: color),
+                  )
+                else
+                  Icon(Icons.auto_awesome_rounded, color: color),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(

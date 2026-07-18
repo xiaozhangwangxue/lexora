@@ -29,9 +29,9 @@ test("server-renders the finished Lexora landing page", async () => {
   assert.match(html, /\/lɛkˈsɔːrə\//);
   assert.match(html, /正在识别设备/);
   assert.match(html, /id="all-downloads"/);
-  assert.match(html, /lexora-android-v1\.1\.4\.apk/);
-  assert.match(html, /lexora-macos-v1\.1\.4\.dmg/);
-  assert.match(html, /lexora-windows-v1\.1\.4-setup\.exe/);
+  assert.match(html, /lexora-android-v1\.2\.0\.apk/);
+  assert.match(html, /lexora-macos-v1\.2\.0\.dmg/);
+  assert.match(html, /lexora-windows-v1\.2\.0-setup\.exe/);
   assert.match(html, /拖动手柄调整顺序/);
   assert.match(html, /href="\/favicon\.png\?v=5"/);
   assert.doesNotMatch(html, /\[object%20Object\]/);

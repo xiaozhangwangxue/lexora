@@ -1,0 +1,74 @@
+import 'dart:convert';
+import 'dart:io';
+
+import 'package:archive/archive.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:lexora/models/word_entry.dart';
+import 'package:lexora/services/document_export_service.dart';
+
+void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  test('builds editable DOCX and valid EPUB previews', () async {
+    final entries = [
+      _entry('serendipity', '意外发现美好事物的运气', originalTerm: 'serendipty'),
+      _entry('take off', '起飞；突然成功；脱下'),
+      _entry('meticulous', '一丝不苟的；非常仔细的'),
+      _entry('resilient', '有韧性的；能迅速恢复的'),
+    ];
+    final service = DocumentExportService();
+    final docx = await service.buildDocxBytes(
+      entries,
+      generatedAt: DateTime.utc(2026, 7, 19),
+    );
+    final epub = service.buildEpubBytes(
+      entries,
+      generatedAt: DateTime.utc(2026, 7, 19),
+    );
+    final output = Directory('build/qa');
+    await output.create(recursive: true);
+    await File('${output.path}/qa-docx-preview.docx').writeAsBytes(docx);
+    await File('${output.path}/qa-epub-preview.epub').writeAsBytes(epub);
+
+    final docxArchive = ZipDecoder().decodeBytes(docx, verify: true);
+    final document = docxArchive.findFile('word/document.xml');
+    expect(document, isNotNull);
+    final documentXml = utf8.decode(document!.content);
+    expect(documentXml, contains('serendipity'));
+    expect(documentXml, contains('意外发现美好事物的运气'));
+    expect(documentXml, contains('<w:tbl'));
+
+    final epubArchive = ZipDecoder().decodeBytes(epub, verify: true);
+    expect(
+      utf8.decode(epubArchive.findFile('mimetype')!.content),
+      'application/epub+zip',
+    );
+    expect(epubArchive.findFile('EPUB/book.xhtml'), isNotNull);
+  });
+}
+
+WordEntry _entry(String word, String chinese, {String? originalTerm}) =>
+    WordEntry(
+      word: word,
+      originalTerm: originalTerm,
+      difficulty: 'B1–B2',
+      frequency: 7.5,
+      usPhonetic: '/ˌserənˈdɪpəti/',
+      ukPhonetic: '/ˌserənˈdɪpɪti/',
+      definition:
+          'A concise English definition for an editable vocabulary card.',
+      definitionZh: chinese,
+      synonyms: const ['useful', 'clear'],
+      synonymsZh: '实用的，清晰的',
+      antonyms: const [],
+      antonymsZh: '',
+      examples: const ['This is a natural example sentence.'],
+      examplesZh: const ['这是一句自然的例句。'],
+      phrases: const [
+        PhraseEntry(
+          phrase: 'a useful phrase',
+          meaning: 'A phrase used with this entry.',
+          meaningZh: '与该词条一起使用的短语。',
+        ),
+      ],
+    );

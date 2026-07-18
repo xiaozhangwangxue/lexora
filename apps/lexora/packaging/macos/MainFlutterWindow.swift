@@ -94,37 +94,12 @@ private final class NonHitTestingHostingView<Content: View>: NSHostingView<Conte
 
 private struct LexoraBackdrop: View {
   var body: some View {
-    GeometryReader { geometry in
-      let sidebarWidth: CGFloat = geometry.size.width >= 800
-        ? 220
-        : geometry.size.width >= 520 ? 76 : 0
-
-      ZStack {
-        LegacyVisualEffect(material: .underWindowBackground)
-          .ignoresSafeArea()
-
-        Color(nsColor: .windowBackgroundColor)
-          .opacity(0.48)
-          .ignoresSafeArea()
-
-        if sidebarWidth > 0 {
-          HStack(spacing: 0) {
-            if #available(macOS 26.0, *) {
-              Color.clear
-                .frame(width: sidebarWidth)
-                .glassEffect(.regular, in: Rectangle())
-            } else {
-              LegacyVisualEffect(material: .sidebar)
-                .frame(width: sidebarWidth)
-            }
-            Rectangle()
-              .fill(Color(nsColor: .separatorColor).opacity(0.38))
-              .frame(width: 0.5)
-            Spacer(minLength: 0)
-          }
-          .ignoresSafeArea()
-        }
-      }
+    ZStack {
+      LegacyVisualEffect(material: .underWindowBackground)
+        .ignoresSafeArea()
+      Color(nsColor: .windowBackgroundColor)
+        .opacity(0.48)
+        .ignoresSafeArea()
     }
     .allowsHitTesting(false)
   }

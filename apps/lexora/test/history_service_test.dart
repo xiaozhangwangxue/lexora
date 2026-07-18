@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lexora/models/word_entry.dart';
@@ -82,6 +83,53 @@ void main() {
     expect((await service.load()).map((book) => book.id), ['two']);
     expect((await service.loadWords()).map((record) => record.word), ['bravo']);
   });
+
+  test(
+    'durable snapshot restores history after a preferences-domain change',
+    () async {
+      SharedPreferences.setMockInitialValues({});
+      final directory = await Directory.systemTemp.createTemp(
+        'lexora-history-',
+      );
+      addTearDown(() => directory.delete(recursive: true));
+      final createdAt = DateTime.utc(2026, 7, 19, 1);
+      await File('${directory.path}/lexora-history-v2.json').writeAsString(
+        jsonEncode({
+          'version': 2,
+          'books': [
+            {
+              'id': 'recovered',
+              'title': 'lexora-recovered.pdf',
+              'path': '${directory.path}/lexora-recovered.pdf',
+              'createdAt': createdAt.toIso8601String(),
+              'wordCount': 2,
+              'previewWords': ['alpha', 'bravo'],
+              'format': 'pdf',
+            },
+          ],
+          'words': [
+            {
+              'word': 'alpha',
+              'generationCount': 3,
+              'firstGeneratedAt': createdAt.toIso8601String(),
+              'lastGeneratedAt': createdAt.toIso8601String(),
+              'difficulty': 'A1–A2',
+            },
+          ],
+        }),
+      );
+      final service = HistoryService(documentsDirectory: () async => directory);
+
+      expect((await service.load()).single.id, 'recovered');
+      expect((await service.loadWords()).single.word, 'alpha');
+      final preferences = await SharedPreferences.getInstance();
+      expect(preferences.getStringList('lexora.generated.books'), isNotEmpty);
+      expect(
+        preferences.getStringList('lexora.generated.words.v1'),
+        isNotEmpty,
+      );
+    },
+  );
 }
 
 WordEntry _entry(String word, String difficulty) => WordEntry(

@@ -51,7 +51,9 @@ jobs:
           cache: true
       - name: Select Xcode 26 for Liquid Glass
         if: matrix.platform == 'macos'
-        run: sudo xcode-select -s /Applications/Xcode_26.3.app/Contents/Developer
+        run: |
+          sudo xcode-select -s /Applications/Xcode_26.3.app/Contents/Developer
+          chmod +x tool/lipo
       - name: Install Linux build libraries
         if: matrix.platform == 'linux'
         run: sudo apt-get update && sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev
@@ -85,6 +87,7 @@ jobs:
         run: |
           cp packaging/macos/MainFlutterWindow.swift macos/Runner/MainFlutterWindow.swift
           sed -i '' 's/MACOSX_DEPLOYMENT_TARGET = 10.15/MACOSX_DEPLOYMENT_TARGET = 12.0/g' macos/Runner.xcodeproj/project.pbxproj
+          dart run tool/configure_macos_lipo.dart
           /usr/libexec/PlistBuddy -c "Add :com.apple.security.network.client bool true" macos/Runner/Release.entitlements || /usr/libexec/PlistBuddy -c "Set :com.apple.security.network.client true" macos/Runner/Release.entitlements
           /usr/libexec/PlistBuddy -c "Add :com.apple.security.files.user-selected.read-write bool true" macos/Runner/Release.entitlements || /usr/libexec/PlistBuddy -c "Set :com.apple.security.files.user-selected.read-write true" macos/Runner/Release.entitlements
       - run: flutter pub get
@@ -120,8 +123,14 @@ jobs:
       - name: Apply and verify macOS ad-hoc signature
         if: matrix.platform == 'macos'
         run: |
-          codesign --force --deep --sign - "${{ matrix.source }}"
+          # Preserve the runner's sandbox entitlements. Re-signing the app
+          # without them changes the NSUserDefaults container, which makes an
+          # update look as if all generated history has disappeared.
+          codesign --force --deep --sign - \
+            --entitlements macos/Runner/Release.entitlements \
+            "${{ matrix.source }}"
           codesign --verify --deep --strict --verbose=2 "${{ matrix.source }}"
+          codesign -d --entitlements :- "${{ matrix.source }}" 2>&1 | grep -q 'com.apple.security.app-sandbox'
       - name: Package Unix desktop build
         if: matrix.platform == 'linux'
         run: tar -C build/linux/x64/release/bundle -czf "lexora-linux-${RELEASE_VERSION}.tar.gz" .

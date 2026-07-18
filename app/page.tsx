@@ -19,7 +19,7 @@ const donationCodes = {
   alipay: "https://photo.12323456.xyz/api/rfile/%E6%94%AF%E4%BB%98%E5%AE%9D.jpg",
 };
 
-const currentVersion = "v1.1.4";
+const currentVersion = "v1.2.0";
 const platforms: Array<{ key: PlatformKey; name: string; noteZh: string; noteEn: string; Icon: IconType; file: string }> = [
   { key: "macos", name: "macOS", noteZh: "macOS 12+ · 拖动安装 DMG", noteEn: "macOS 12+ · Drag-to-install DMG", Icon: FaApple, file: `lexora-macos-${currentVersion}.dmg` },
   { key: "windows", name: "Windows", noteZh: "Windows 10 / 11 · 安装程序", noteEn: "Windows 10 / 11 · Installer", Icon: FaWindows, file: `lexora-windows-${currentVersion}-setup.exe` },
@@ -53,8 +53,8 @@ const installGuides: Record<PlatformKey, { zh: string[]; en: string[] }> = {
     en: ["Extract the tar.gz archive.", "If needed, allow the lexora file to run as a program or use chmod +x.", "Launch the lexora executable."],
   },
   android: {
-    zh: ["从 v0.3.0 或更高版本可直接覆盖安装 v1.1.4；只有 v0.2.0 需先卸载一次。", "下载 APK，系统询问时允许浏览器安装未知来源应用。", "确认文件来自本官网后，选择“仍要安装”；安装后可关闭该权限。"],
-    en: ["v0.3.0 and newer can update directly to v1.1.4. Only v0.2.0 requires one uninstall first.", "Download the APK and allow your browser to install unknown apps when Android asks.", "After verifying this official site, choose Install anyway. You can revoke that permission afterward."],
+    zh: ["从 v0.3.0 或更高版本可直接覆盖安装 v1.2.0；只有 v0.2.0 需先卸载一次。", "下载 APK，系统询问时允许浏览器安装未知来源应用。", "确认文件来自本官网后，选择“仍要安装”；安装后可关闭该权限。"],
+    en: ["v0.3.0 and newer can update directly to v1.2.0. Only v0.2.0 requires one uninstall first.", "Download the APK and allow your browser to install unknown apps when Android asks.", "After verifying this official site, choose Install anyway. You can revoke that permission afterward."],
   },
 };
 
@@ -224,8 +224,8 @@ export default function Home() {
         <h1>{zh ? <><span className="heroLine">把零散单词，变成</span><br /><em className="heroLine">真正想读的词汇书。</em></> : <>Turn loose words into a<br /><em>book worth reading.</em></>}</h1>
         <p className="heroCopy">
           {zh
-            ? "输入单词，Lexora 自动补全难度、词频、英美音标、近反义词、例句与完整中文翻译，并生成紧凑精美的 PDF。"
-            : "Type your words. Lexora adds difficulty, frequency, US & UK phonetics, related words, examples, and complete Chinese translations—then typesets a beautiful PDF."}
+            ? "输入单词，Lexora 自动补全难度、词频、英美音标、近反义词、例句与完整中文翻译，并生成紧凑精美的 PDF、EPUB 或可编辑 DOCX。"
+            : "Type your words. Lexora adds difficulty, frequency, US & UK phonetics, related words, examples, and complete Chinese translations—then typesets a beautiful PDF, EPUB, or editable DOCX."}
         </p>
         <div className="heroActions">
           <a className="primaryButton" href="#download">{zh ? "免费下载" : "Download free"} <span>↓</span></a>
@@ -347,7 +347,7 @@ export default function Home() {
         <div className="wrap statementGrid">
           <p className="sectionLabel">{zh ? "从列表到词汇书" : "From list to lexicon"}</p>
           <h2>{zh ? "查词应该是过程，阅读才是结果。" : "Lookup is the process. Reading is the point."}</h2>
-          <p>{zh ? "Lexora 从可靠的在线词典与语料数据中整理每个单词，再用为学习设计的双语版式生成 PDF。信息足够完整，页面仍然轻盈。" : "Lexora gathers each word from trusted dictionary and corpus sources, then creates a bilingual PDF designed for study—rich in context, light on clutter."}</p>
+          <p>{zh ? "Lexora 从可靠的在线词典与语料数据中整理每个单词，再用为学习设计的双语版式生成 PDF、EPUB 或可编辑 DOCX。信息足够完整，页面仍然轻盈。" : "Lexora gathers each word from trusted dictionary and corpus sources, then creates a bilingual PDF, EPUB, or editable DOCX designed for study—rich in context, light on clutter."}</p>
         </div>
       </section>
 
@@ -370,8 +370,8 @@ export default function Home() {
         <article className="feature darkFeature">
           <span className="featureNumber">03</span>
           <div className="pdfMini"><b>LEXORA</b><strong>lucid</strong><small>/ˈluːsɪd/ · B2</small><p>expressed clearly; easy to understand</p><em>清晰的；易懂的</em></div>
-          <h3>{zh ? "PDF 不只是导出，而是成品。" : "Not an export. A finished book."}</h3>
-          <p>{zh ? "中号使用紧凑双栏，小字号可自动切换三栏；设置、生成记录和完整单词历史都在手边。" : "Medium type uses two compact columns, while sufficiently small type automatically switches to three."}</p>
+          <h3>{zh ? "不只是导出，而是三种成品。" : "Three formats. One finished book."}</h3>
+          <p>{zh ? "PDF 适合打印，EPUB 适合电子阅读，可编辑 DOCX 方便继续整理；三种格式都可在 Lexora 内阅读、缩放和分享。" : "Print the PDF, read the EPUB, or keep editing the DOCX. Every format opens, zooms, and shares inside Lexora."}</p>
         </article>
       </section>
 

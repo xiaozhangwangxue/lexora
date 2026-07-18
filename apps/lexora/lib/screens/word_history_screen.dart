@@ -17,18 +17,20 @@ class WordHistoryScreen extends StatefulWidget {
     required this.generationRunning,
     required this.onRegenerate,
     required this.onCustomizePdf,
+    this.historyService,
   });
 
   final bool generationRunning;
   final ValueChanged<List<String>> onRegenerate;
   final Future<void> Function() onCustomizePdf;
+  final HistoryService? historyService;
 
   @override
   State<WordHistoryScreen> createState() => _WordHistoryScreenState();
 }
 
 class _WordHistoryScreenState extends State<WordHistoryScreen> {
-  final _service = HistoryService();
+  late final HistoryService _service;
   final _selectedWords = <String>{};
   late Future<List<GeneratedWordRecord>> _records;
   WordHistorySort _sort = WordHistorySort.generatedTime;
@@ -38,6 +40,7 @@ class _WordHistoryScreenState extends State<WordHistoryScreen> {
   @override
   void initState() {
     super.initState();
+    _service = widget.historyService ?? HistoryService();
     _records = _service.loadWords();
   }
 

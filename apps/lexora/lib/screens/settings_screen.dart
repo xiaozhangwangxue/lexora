@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../l10n/app_localizations.dart';
+import '../models/word_entry.dart';
 import '../services/pdf_service.dart';
 import '../services/pdf_settings_service.dart';
 import '../services/update_service.dart';
@@ -337,6 +338,36 @@ class SettingsScreen extends StatelessWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
+                            Text(
+                              strings.exportFormat,
+                              style: theme.textTheme.labelLarge,
+                            ),
+                            const SizedBox(height: 10),
+                            SizedBox(
+                              width: double.infinity,
+                              child: SegmentedButton<BookFormat>(
+                                showSelectedIcon: false,
+                                segments: const [
+                                  ButtonSegment(
+                                    value: BookFormat.pdf,
+                                    label: Text('PDF'),
+                                  ),
+                                  ButtonSegment(
+                                    value: BookFormat.epub,
+                                    label: Text('EPUB'),
+                                  ),
+                                  ButtonSegment(
+                                    value: BookFormat.docx,
+                                    label: Text('DOCX'),
+                                  ),
+                                ],
+                                selected: {settings.format},
+                                onSelectionChanged: (value) => onChanged(
+                                  settings.copyWith(format: value.first),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 18),
                             Text(
                               strings.pdfFontSize,
                               style: theme.textTheme.labelLarge,

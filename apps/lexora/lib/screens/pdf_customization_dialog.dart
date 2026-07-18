@@ -5,6 +5,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
 import '../l10n/app_localizations.dart';
+import '../models/word_entry.dart';
 import '../services/pdf_service.dart';
 import '../services/pdf_settings_service.dart';
 
@@ -204,6 +205,49 @@ class _PdfCustomizationDialogState extends State<_PdfCustomizationDialog> {
                                     crossAxisAlignment:
                                         CrossAxisAlignment.start,
                                     children: [
+                                      Text(
+                                        strings.exportFormat,
+                                        style: theme.textTheme.labelLarge,
+                                      ),
+                                      const SizedBox(height: 10),
+                                      SizedBox(
+                                        width: double.infinity,
+                                        child: SegmentedButton<BookFormat>(
+                                          showSelectedIcon: false,
+                                          segments: const [
+                                            ButtonSegment(
+                                              value: BookFormat.pdf,
+                                              label: Text('PDF'),
+                                              icon: Icon(
+                                                Icons.picture_as_pdf_outlined,
+                                              ),
+                                            ),
+                                            ButtonSegment(
+                                              value: BookFormat.epub,
+                                              label: Text('EPUB'),
+                                              icon: Icon(
+                                                Icons.menu_book_outlined,
+                                              ),
+                                            ),
+                                            ButtonSegment(
+                                              value: BookFormat.docx,
+                                              label: Text('DOCX'),
+                                              icon: Icon(
+                                                Icons.description_outlined,
+                                              ),
+                                            ),
+                                          ],
+                                          selected: {_settings.format},
+                                          onSelectionChanged: (value) =>
+                                              setState(
+                                                () => _settings = _settings
+                                                    .copyWith(
+                                                      format: value.first,
+                                                    ),
+                                              ),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 20),
                                       Row(
                                         children: [
                                           Expanded(

@@ -1,5 +1,6 @@
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../models/word_entry.dart';
 import 'pdf_service.dart';
 
 enum ExampleAmount {
@@ -15,6 +16,7 @@ class PdfSettings {
   const PdfSettings({
     this.fontSize = PdfFontSize.medium,
     this.exampleAmount = ExampleAmount.one,
+    this.format = BookFormat.pdf,
     this.typography = const PdfTypography(
       word: 18,
       phonetic: 9,
@@ -27,15 +29,18 @@ class PdfSettings {
 
   final PdfFontSize fontSize;
   final ExampleAmount exampleAmount;
+  final BookFormat format;
   final PdfTypography typography;
 
   PdfSettings copyWith({
     PdfFontSize? fontSize,
     ExampleAmount? exampleAmount,
+    BookFormat? format,
     PdfTypography? typography,
   }) => PdfSettings(
     fontSize: fontSize ?? this.fontSize,
     exampleAmount: exampleAmount ?? this.exampleAmount,
+    format: format ?? this.format,
     typography: typography ?? this.typography,
   );
 
@@ -46,6 +51,7 @@ class PdfSettings {
 class PdfSettingsService {
   static const _fontSizeKey = 'lexora.pdf.font-size.v1';
   static const _exampleAmountKey = 'lexora.pdf.example-amount.v1';
+  static const _formatKey = 'lexora.document.format.v1';
   static const _typographyPrefix = 'lexora.pdf.typography.v1';
 
   Future<PdfSettings> load() async {
@@ -62,6 +68,11 @@ class PdfSettingsService {
         ExampleAmount.values,
         preferences.getString(_exampleAmountKey),
         ExampleAmount.one,
+      ),
+      format: _enumByName(
+        BookFormat.values,
+        preferences.getString(_formatKey),
+        BookFormat.pdf,
       ),
       typography: PdfTypography(
         word: preferences.getDouble('$_typographyPrefix.word') ?? defaults.word,
@@ -88,6 +99,7 @@ class PdfSettingsService {
     final preferences = await SharedPreferences.getInstance();
     await preferences.setString(_fontSizeKey, settings.fontSize.name);
     await preferences.setString(_exampleAmountKey, settings.exampleAmount.name);
+    await preferences.setString(_formatKey, settings.format.name);
     await Future.wait([
       preferences.setDouble(
         '$_typographyPrefix.word',

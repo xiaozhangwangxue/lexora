@@ -1,4 +1,33 @@
-# Lexora 1.1.2 Design QA
+# Lexora 1.2.0 Design QA
+
+## v1.2.0 macOS sidebar comparison
+
+- Reported source: `/tmp/lexora-sidebar-reference.png`
+- Corrected implementation: `/tmp/lexora-v120-qa/build/qa/macos-onboarding-after.png`
+- Combined comparison: `/tmp/lexora-onboarding-comparison.png`
+- Viewport: 1594 x 1332 for both source and corrected render
+- State checked: fresh install, onboarding visible before the main application shell
+
+### Fidelity review
+
+1. The source showed a 435-pixel gray native sidebar material behind the opaque onboarding flow. The corrected render uses one continuous onboarding surface across the full window; the phantom sidebar is absent.
+2. Existing Lexora spacing, lavender primary color, rounded icon panel, progress dots, Skip action, and full-width primary action are preserved. No new visual language or replacement assets were introduced.
+3. The comparison harness uses Flutter's test font, so text appears as measurable glyph blocks in the corrected capture. Production builds continue to bundle the existing Noto font assets; this is not a production rendering defect.
+4. The compact desktop sidebar now reveals labels only after the animated width can contain them. Automated mid-transition inspection found no overflow, and the nonlinear 460 ms curve remains continuous in both directions.
+
+### Findings
+
+- P0: none
+- P1: none
+- P2: none
+
+### v1.2.0 final result
+
+final result: passed
+
+---
+
+## Archived Lexora 1.1.2 Design QA
 
 ## Evidence
 

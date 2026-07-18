@@ -121,6 +121,20 @@ class WordEntry {
   );
 }
 
+enum BookFormat {
+  pdf('pdf', 'application/pdf'),
+  epub('epub', 'application/epub+zip'),
+  docx(
+    'docx',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  );
+
+  const BookFormat(this.extension, this.mimeType);
+
+  final String extension;
+  final String mimeType;
+}
+
 class GeneratedBook {
   const GeneratedBook({
     required this.id,
@@ -129,6 +143,8 @@ class GeneratedBook {
     required this.createdAt,
     required this.wordCount,
     this.previewWords = const [],
+    this.format = BookFormat.pdf,
+    this.contentPath,
   });
 
   final String id;
@@ -137,6 +153,23 @@ class GeneratedBook {
   final DateTime createdAt;
   final int wordCount;
   final List<String> previewWords;
+  final BookFormat format;
+
+  /// A compact JSON sidecar used by Lexora's EPUB/DOCX reader. Keeping the
+  /// semantic entries separate from the editable export also lets the reader
+  /// preserve the same cards, translations and zoom behavior on every device.
+  final String? contentPath;
+
+  GeneratedBook copyWith({String? contentPath}) => GeneratedBook(
+    id: id,
+    title: title,
+    path: path,
+    createdAt: createdAt,
+    wordCount: wordCount,
+    previewWords: previewWords,
+    format: format,
+    contentPath: contentPath ?? this.contentPath,
+  );
 
   Map<String, dynamic> toJson() => {
     'id': id,
@@ -145,6 +178,8 @@ class GeneratedBook {
     'createdAt': createdAt.toIso8601String(),
     'wordCount': wordCount,
     'previewWords': previewWords,
+    'format': format.name,
+    if (contentPath != null) 'contentPath': contentPath,
   };
 
   factory GeneratedBook.fromJson(Map<String, dynamic> json) => GeneratedBook(
@@ -156,6 +191,11 @@ class GeneratedBook {
     previewWords: (json['previewWords'] as List? ?? const [])
         .map((item) => item.toString())
         .toList(),
+    format: BookFormat.values.firstWhere(
+      (value) => value.name == json['format'],
+      orElse: () => BookFormat.pdf,
+    ),
+    contentPath: json['contentPath'] as String?,
   );
 }
 

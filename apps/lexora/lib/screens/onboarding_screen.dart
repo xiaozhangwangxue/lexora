@@ -42,6 +42,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     ];
     final theme = Theme.of(context);
     return Scaffold(
+      // The macOS app surface is transparent so the main workspace can use a
+      // native glass backdrop. First launch is a separate experience and must
+      // be opaque, otherwise the native sidebar material shows through as a
+      // wide gray strip before onboarding is finished.
+      backgroundColor: theme.colorScheme.surface,
       body: SafeArea(
         child: Column(
           children: [

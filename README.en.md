@@ -19,7 +19,7 @@
 
 ---
 
-Lexora is an English vocabulary organizer for Android, macOS, Windows, and Linux. Enter a loose word list and it enriches every item with difficulty, frequency, US and UK phonetics, synonyms, antonyms, examples, and complete Chinese translations, then typesets the result as a compact bilingual PDF.
+Lexora is an English vocabulary organizer for Android, macOS, Windows, and Linux. Enter a loose word list and it enriches every item with difficulty, frequency, US and UK phonetics, synonyms, antonyms, examples, and complete Chinese translations, then typesets the result as a compact bilingual PDF, EPUB, or editable DOCX.
 
 > [!IMPORTANT]
 > Lexora needs no account. Word lists, history, and generated PDFs stay on the device by default. Only after **Start generating** is selected are words, definitions, and examples sent to public dictionary and translation services.
@@ -41,10 +41,11 @@ Lexora is an English vocabulary organizer for Android, macOS, Windows, and Linux
 - **Complete Chinese layer:** definitions, examples, and related words receive Chinese translations; PDF labels are bilingual too.
 - **Automatic language:** follows the device language, using Simplified Chinese on Chinese devices and English elsewhere.
 - **First-run guidance:** a concise three-step tutorial introduces capture, ordering, generation, and sharing.
-- **Dedicated settings:** PDF type and example count live in Settings alongside quick website access and donation QR codes.
-- **Custom PDF:** small, medium, and large type plus 0, 1, or 2–3 examples; medium uses two compact columns, sufficiently small typography switches to three, and independent column flow removes gaps between uneven cards.
-- **Polished PDF:** Noto Sans SC for Chinese and IPA-complete Noto Sans for phonetics; missing synonyms or antonyms no longer leave empty space.
-- **Generated records:** pinch to zoom, read, export, share, or delete PDFs, with a first-words preview in each overflow menu.
+- **Dedicated settings:** document format, type, and example count live in Settings alongside quick website access and donation QR codes.
+- **Three export formats:** print-ready PDF, standards-based EPUB, and structured DOCX that remains easy to edit.
+- **Custom layout:** small, medium, and large type plus 0, 1, or 2–3 examples; medium uses two compact columns, sufficiently small typography switches to three, and independent column flow removes gaps between uneven cards.
+- **Stable fonts:** Noto Sans SC for Chinese and IPA-complete Noto Sans for phonetics; DOCX embeds both fonts to avoid missing glyphs across devices.
+- **Generated records:** pinch to zoom, read, export, share, or delete PDF, EPUB, and DOCX books, with a first-words preview in each overflow menu.
 - **Word history:** sort every generated word both ways by count, first letter, time, or difficulty; starred words stay pinned.
 - **Background completion alerts:** the system notifies you when generation finishes while Lexora is out of focus.
 - **Native sharing:** Export to… on desktop and the system share sheet on Android.
@@ -56,24 +57,24 @@ Use the [official download section](https://lexora.12323456.xyz/#download) for b
 
 | Platform | Package | Requirement | Download |
 | --- | --- | --- | --- |
-| Android | APK | Android 8.0+ | [Official mirror](https://lexora.12323456.xyz/downloads/lexora-android-v1.1.4.apk) |
-| macOS | Drag-to-install DMG | macOS 12+ | [Official mirror](https://lexora.12323456.xyz/downloads/lexora-macos-v1.1.4.dmg) |
-| Windows | Setup EXE (launch option checked by default) | Windows 10 / 11 | [Official mirror](https://lexora.12323456.xyz/downloads/lexora-windows-v1.1.4-setup.exe) |
-| Linux | tar.gz | 64-bit Linux | [Official mirror](https://lexora.12323456.xyz/downloads/lexora-linux-v1.1.4.tar.gz) |
+| Android | APK | Android 8.0+ | [Official mirror](https://lexora.12323456.xyz/downloads/lexora-android-v1.2.0.apk) |
+| macOS | Drag-to-install DMG | macOS 12+ | [Official mirror](https://lexora.12323456.xyz/downloads/lexora-macos-v1.2.0.dmg) |
+| Windows | Setup EXE (launch option checked by default) | Windows 10 / 11 | [Official mirror](https://lexora.12323456.xyz/downloads/lexora-windows-v1.2.0-setup.exe) |
+| Linux | tar.gz | 64-bit Linux | [Official mirror](https://lexora.12323456.xyz/downloads/lexora-linux-v1.2.0.tar.gz) |
 
 > [!IMPORTANT]
 > Android v0.2.0 used an ephemeral build signature whose private key cannot be recovered. Moving to the stable v0.3.0 signing key therefore requires one uninstall and reinstall. From v0.3.0 onward, future APKs use the same release key and install directly over the existing app. Export any PDFs you need before removing v0.2.0.
 
-Every release filename contains its version, such as `lexora-android-v1.1.4.apk`, so old and new installers remain easy to distinguish. In-app updates prefer Cloudflare R2 and verify download completeness plus SHA-256 before opening an installer.
+Every release filename contains its version, such as `lexora-android-v1.2.0.apk`, so old and new installers remain easy to distinguish. In-app updates prefer Cloudflare R2 and verify download completeness plus SHA-256 before opening an installer.
 
 ## Three steps to a vocabulary book
 
 1. Type an English word and press Enter, or import a newline-delimited document to add a large batch of words and phrases.
 2. Long-press to reorder or select a sort mode, choose type and examples in **Settings**, then select **Start generating**.
-3. Read, export, or share PDFs in **Generated**; browse every generated word in **History**.
+3. Choose PDF, EPUB, or DOCX; read, export, or share the result in **Generated**, and browse every generated word in **History**.
 
 ```text
-word list → dictionary + corpus + translation → bilingual layout → local PDF → history / export / share
+word list → dictionary + corpus + translation → bilingual layout → PDF / EPUB / DOCX → history / export / share
 ```
 
 ## Data and accuracy
