@@ -29,8 +29,8 @@
         "https://lexora-official.xiaozhangwangxue.workers.dev/updates/lexora-android-v1.2.0.apk",
         "https://github.com/xiaozhangwangxue/lexora/releases/download/v1.2.0/lexora-android-v1.2.0.apk"
       ],
-      "sha256": "e0135b64f36f81b246842118dc84528d6ac10f27c206543d2d999e97de1129f6",
-      "size": 97103687
+      "sha256": "c4c34452e3ca0bb6199133b34ca39d823b78929942ff0758224ddbbc64a3e54b",
+      "size": 97415631
     },
     "macos": {
       "filename": "lexora-macos-v1.2.0.dmg",
@@ -40,8 +40,8 @@
         "https://lexora-official.xiaozhangwangxue.workers.dev/updates/lexora-macos-v1.2.0.dmg",
         "https://github.com/xiaozhangwangxue/lexora/releases/download/v1.2.0/lexora-macos-v1.2.0.dmg"
       ],
-      "sha256": "fbbfffa796bac5f4179c60b3147e1db752ac948de8ce3c0f1ae44473dc38e017",
-      "size": 46288123
+      "sha256": "b05f6850d08d852843975cb830071d17c0fad9745f2cd64169939eb4ec9bf952",
+      "size": 46430521
     },
     "windows": {
       "filename": "lexora-windows-v1.2.0-setup.exe",
@@ -51,8 +51,8 @@
         "https://lexora-official.xiaozhangwangxue.workers.dev/updates/lexora-windows-v1.2.0-setup.exe",
         "https://github.com/xiaozhangwangxue/lexora/releases/download/v1.2.0/lexora-windows-v1.2.0-setup.exe"
       ],
-      "sha256": "3c10745f60819c5df727898f570479ab07c69becdf3f3bf4f0f47f889cc096fb",
-      "size": 27033634
+      "sha256": "133fba6aa2638780e17c41f3136c68b3e540f79c445ad3d1233963f9cc648e4f",
+      "size": 27072143
     },
     "linux": {
       "filename": "lexora-linux-v1.2.0.tar.gz",
@@ -62,8 +62,8 @@
         "https://lexora-official.xiaozhangwangxue.workers.dev/updates/lexora-linux-v1.2.0.tar.gz",
         "https://github.com/xiaozhangwangxue/lexora/releases/download/v1.2.0/lexora-linux-v1.2.0.tar.gz"
       ],
-      "sha256": "a26b94d481952a279133ed223fcadcc0408be5068bef68e97abd1efef77e1a67",
-      "size": 31129563
+      "sha256": "a406ac8474d678899b2d1db4c8a744ba4dbc20be7aa202a129872373b6ab304e",
+      "size": 31189620
     }
   }
 }
