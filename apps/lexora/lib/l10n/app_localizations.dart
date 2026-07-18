@@ -21,6 +21,19 @@ class AppLocalizations {
   String get inputHint =>
       isZh ? '输入英文单词或短语后按回车' : 'Type an English word or phrase and press Enter';
   String get addWord => isZh ? '添加词条' : 'Add entry';
+  String get importFile => isZh ? '导入文件' : 'Import files';
+  String get importFileHint => isZh
+      ? '每行一个词条 · DOC、DOCX、PDF、TXT 等'
+      : 'One entry per line · DOC, DOCX, PDF, TXT and more';
+  String get importingFile => isZh ? '正在读取文件…' : 'Reading files…';
+  String importSummary(int added, int duplicates, int invalid) => isZh
+      ? '已添加 $added 个词条；跳过 $duplicates 个重复项、$invalid 个无效行。'
+      : 'Added $added entries; skipped $duplicates duplicates and $invalid invalid lines.';
+  String importFailed(String error) =>
+      isZh ? '导入失败：$error' : 'Import failed: $error';
+  String get noImportableEntries => isZh
+      ? '文件中没有找到可导入的英文单词或短语。请确保每行只有一个词条。'
+      : 'No importable English words or phrases were found. Put one entry on each line.';
   String get generate => isZh ? '开始生成' : 'Start generating';
   String get generating => isZh ? '正在生成…' : 'Generating…';
   String get generationInProgress =>
@@ -87,7 +100,7 @@ class AppLocalizations {
             ? 'Red entries were not found and were skipped. Yellow entries use a carefully checked similar match.'
             : 'The yellow entries had no exact match, so Lexora used a carefully checked similar match.');
   String fuzzyMatchedTerm(String term, String matchedTerm) =>
-      isZh ? '$term（匹配：$matchedTerm）' : '$term (matched: $matchedTerm)';
+      isZh ? '$term（$matchedTerm）' : '$term ($matchedTerm)';
   String get lookupFailed => isZh ? '匹配失败' : 'Match failed';
   String get fuzzyMatched => isZh ? '模糊匹配' : 'Fuzzy matched';
   String generationError(String error) =>

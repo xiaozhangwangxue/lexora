@@ -272,15 +272,13 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
           isZh: strings.isZh,
         );
       }
-      if (mounted &&
-          (result.failures.isNotEmpty || result.fuzzyMatches.isNotEmpty)) {
-        await _showLookupResults(
-          result.failures,
-          result.fuzzyMatches,
-          generated: true,
+      if (mounted) {
+        await _showGenerationComplete(
+          book,
+          failures: result.failures,
+          fuzzyMatches: result.fuzzyMatches,
         );
       }
-      if (mounted) await _showGenerationComplete(book);
     } catch (error) {
       _generationProgress.fail(error.toString());
       if (mounted) {
@@ -308,19 +306,60 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
     if (mounted) _selectPage(recordsPage, animate: false);
   }
 
-  Future<void> _showGenerationComplete(GeneratedBook book) async {
+  Future<void> _showGenerationComplete(
+    GeneratedBook book, {
+    List<LookupFailure> failures = const [],
+    List<FuzzyMatch> fuzzyMatches = const [],
+  }) async {
     final strings = AppLocalizations.of(context);
+    final itemCount = failures.length + fuzzyMatches.length;
+    final listHeight = (itemCount * 48.0).clamp(64.0, 190.0).toDouble();
     final action = await showDialog<_GenerationCompleteAction>(
       context: context,
       builder: (dialogContext) => AlertDialog(
         icon: const Icon(Icons.check_circle_rounded),
         title: Text(strings.generationCompleted),
         content: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 430),
+          constraints: const BoxConstraints(maxWidth: 430, maxHeight: 520),
           child: Column(
             mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(strings.generationReadyBody),
+              if (itemCount > 0) ...[
+                const SizedBox(height: 14),
+                const Divider(height: 1),
+                const SizedBox(height: 12),
+                Text(
+                  strings.lookupResultsTitle,
+                  style: Theme.of(dialogContext).textTheme.titleSmall,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  fuzzyMatches.isNotEmpty
+                      ? strings.lookupResultsBody(failures.isNotEmpty)
+                      : strings.skippedItemsBody,
+                  style: Theme.of(dialogContext).textTheme.bodySmall,
+                ),
+                const SizedBox(height: 10),
+                SizedBox(
+                  height: listHeight,
+                  child: Scrollbar(
+                    child: ListView.separated(
+                      padding: EdgeInsets.zero,
+                      itemCount: itemCount,
+                      separatorBuilder: (_, __) => const Divider(height: 10),
+                      itemBuilder: (context, index) => _lookupResultRow(
+                        context,
+                        strings,
+                        failures,
+                        fuzzyMatches,
+                        index,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
               const SizedBox(height: 22),
               Row(
                 children: [
@@ -400,41 +439,13 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
                   shrinkWrap: true,
                   itemCount: itemCount,
                   separatorBuilder: (_, __) => const Divider(height: 12),
-                  itemBuilder: (context, index) {
-                    final isFailure = index < failures.length;
-                    final text = isFailure
-                        ? failures[index].term
-                        : strings.fuzzyMatchedTerm(
-                            fuzzyMatches[index - failures.length].term,
-                            fuzzyMatches[index - failures.length].matchedTerm,
-                          );
-                    final color = isFailure
-                        ? Theme.of(context).colorScheme.error
-                        : Colors.amber.shade700;
-                    return Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.only(top: 2),
-                          child: Icon(
-                            Icons.close_rounded,
-                            size: 17,
-                            color: color,
-                            semanticLabel: isFailure
-                                ? strings.lookupFailed
-                                : strings.fuzzyMatched,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            text,
-                            style: const TextStyle(fontWeight: FontWeight.w600),
-                          ),
-                        ),
-                      ],
-                    );
-                  },
+                  itemBuilder: (context, index) => _lookupResultRow(
+                    context,
+                    strings,
+                    failures,
+                    fuzzyMatches,
+                    index,
+                  ),
                 ),
               ),
             ],
@@ -447,6 +458,48 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _lookupResultRow(
+    BuildContext context,
+    AppLocalizations strings,
+    List<LookupFailure> failures,
+    List<FuzzyMatch> fuzzyMatches,
+    int index,
+  ) {
+    final isFailure = index < failures.length;
+    final text = isFailure
+        ? failures[index].term
+        : strings.fuzzyMatchedTerm(
+            fuzzyMatches[index - failures.length].term,
+            fuzzyMatches[index - failures.length].matchedTerm,
+          );
+    final color = isFailure
+        ? Theme.of(context).colorScheme.error
+        : Colors.amber.shade700;
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(top: 2),
+          child: Icon(
+            Icons.close_rounded,
+            size: 17,
+            color: color,
+            semanticLabel: isFailure
+                ? strings.lookupFailed
+                : strings.fuzzyMatched,
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            text,
+            style: const TextStyle(fontWeight: FontWeight.w600),
+          ),
+        ),
+      ],
     );
   }
 

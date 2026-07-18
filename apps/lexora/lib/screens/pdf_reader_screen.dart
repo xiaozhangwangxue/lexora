@@ -29,7 +29,10 @@ class PdfReaderScreen extends StatelessWidget {
             icon: const Icon(Icons.print_outlined),
             onPressed: () async {
               final bytes = await File(book.path).readAsBytes();
-              await Printing.layoutPdf(name: book.title, onLayout: (_) async => bytes);
+              await Printing.layoutPdf(
+                name: book.title,
+                onLayout: (_) async => bytes,
+              );
             },
           ),
           IconButton(

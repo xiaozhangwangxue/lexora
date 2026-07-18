@@ -11,9 +11,10 @@ class HistoryService {
   Future<List<GeneratedBook>> load() async {
     final preferences = await SharedPreferences.getInstance();
     return (preferences.getStringList(_key) ?? const [])
-        .map((item) => GeneratedBook.fromJson(
-              jsonDecode(item) as Map<String, dynamic>,
-            ))
+        .map(
+          (item) =>
+              GeneratedBook.fromJson(jsonDecode(item) as Map<String, dynamic>),
+        )
         .toList()
       ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
   }
@@ -49,9 +50,11 @@ class HistoryService {
     final records = <GeneratedWordRecord>[];
     for (final item in preferences.getStringList(_wordKey) ?? const []) {
       try {
-        records.add(GeneratedWordRecord.fromJson(
-          jsonDecode(item) as Map<String, dynamic>,
-        ));
+        records.add(
+          GeneratedWordRecord.fromJson(
+            jsonDecode(item) as Map<String, dynamic>,
+          ),
+        );
       } catch (_) {
         // Keep one malformed legacy entry from hiding the rest of the history.
       }
@@ -96,9 +99,7 @@ class HistoryService {
   Future<void> removeWords(Set<String> words) async {
     if (words.isEmpty) return;
     final records = await loadWords();
-    await _saveWords(
-      records.where((record) => !words.contains(record.word)),
-    );
+    await _saveWords(records.where((record) => !words.contains(record.word)));
   }
 
   Future<void> _saveWords(Iterable<GeneratedWordRecord> records) async {

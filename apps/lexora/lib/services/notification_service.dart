@@ -21,9 +21,7 @@ class NotificationService {
         requestBadgePermission: false,
         requestSoundPermission: false,
       ),
-      linux: LinuxInitializationSettings(
-        defaultActionName: 'Open Lexora',
-      ),
+      linux: LinuxInitializationSettings(defaultActionName: 'Open Lexora'),
       windows: WindowsInitializationSettings(
         appName: 'Lexora',
         appUserModelId: 'xyz.12323456.lexora',
@@ -47,12 +45,14 @@ class NotificationService {
       if (Platform.isAndroid) {
         await _plugin
             .resolvePlatformSpecificImplementation<
-                AndroidFlutterLocalNotificationsPlugin>()
+              AndroidFlutterLocalNotificationsPlugin
+            >()
             ?.requestNotificationsPermission();
       } else if (Platform.isMacOS) {
         await _plugin
             .resolvePlatformSpecificImplementation<
-                MacOSFlutterLocalNotificationsPlugin>()
+              MacOSFlutterLocalNotificationsPlugin
+            >()
             ?.requestPermissions(alert: true, badge: false, sound: true);
       }
     } catch (_) {
@@ -78,10 +78,7 @@ class NotificationService {
         importance: Importance.high,
         priority: Priority.high,
       ),
-      macOS: DarwinNotificationDetails(
-        presentAlert: true,
-        presentSound: true,
-      ),
+      macOS: DarwinNotificationDetails(presentAlert: true, presentSound: true),
       linux: LinuxNotificationDetails(),
       windows: WindowsNotificationDetails(),
     );

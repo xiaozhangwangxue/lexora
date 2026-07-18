@@ -102,14 +102,12 @@ class _WordHistoryScreenState extends State<WordHistoryScreen> {
     });
   }
 
-  Future<void> _regenerateSelected(
-    List<GeneratedWordRecord> records,
-  ) async {
+  Future<void> _regenerateSelected(List<GeneratedWordRecord> records) async {
     final strings = AppLocalizations.of(context);
     if (widget.generationRunning) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(strings.generationAlreadyRunning)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(strings.generationAlreadyRunning)));
       return;
     }
     if (_selectedWords.isEmpty) return;
@@ -163,13 +161,16 @@ class _WordHistoryScreenState extends State<WordHistoryScreen> {
     sorted.sort((a, b) {
       if (a.starred != b.starred) return a.starred ? -1 : 1;
       final comparison = switch (_sort) {
-        WordHistorySort.generationCount =>
-          a.generationCount.compareTo(b.generationCount),
+        WordHistorySort.generationCount => a.generationCount.compareTo(
+          b.generationCount,
+        ),
         WordHistorySort.initialLetter => a.word.compareTo(b.word),
-        WordHistorySort.generatedTime =>
-          a.lastGeneratedAt.compareTo(b.lastGeneratedAt),
-        WordHistorySort.difficulty => _difficultyScore(a.difficulty)
-            .compareTo(_difficultyScore(b.difficulty)),
+        WordHistorySort.generatedTime => a.lastGeneratedAt.compareTo(
+          b.lastGeneratedAt,
+        ),
+        WordHistorySort.difficulty => _difficultyScore(
+          a.difficulty,
+        ).compareTo(_difficultyScore(b.difficulty)),
       };
       return _ascending ? comparison : -comparison;
     });
@@ -196,25 +197,29 @@ class _WordHistoryScreenState extends State<WordHistoryScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(children: [
-                  Expanded(
-                    child: Text(
-                      strings.history,
-                      style: theme.textTheme.headlineMedium?.copyWith(
-                        fontWeight: FontWeight.w800,
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        strings.history,
+                        style: theme.textTheme.headlineMedium?.copyWith(
+                          fontWeight: FontWeight.w800,
+                        ),
                       ),
                     ),
-                  ),
-                  TextButton.icon(
-                    onPressed: _toggleSelecting,
-                    icon: Icon(_selecting
-                        ? Icons.close_rounded
-                        : Icons.library_add_check_outlined),
-                    label: Text(_selecting
-                        ? strings.finishSelecting
-                        : strings.select),
-                  ),
-                ]),
+                    TextButton.icon(
+                      onPressed: _toggleSelecting,
+                      icon: Icon(
+                        _selecting
+                            ? Icons.close_rounded
+                            : Icons.library_add_check_outlined,
+                      ),
+                      label: Text(
+                        _selecting ? strings.finishSelecting : strings.select,
+                      ),
+                    ),
+                  ],
+                ),
                 const SizedBox(height: 4),
                 Text(
                   strings.wordHistorySubtitle,
@@ -254,10 +259,10 @@ class _WordHistoryScreenState extends State<WordHistoryScreen> {
                       },
                     );
                     final orderButton = IconButton.filledTonal(
-                      tooltip:
-                          _ascending ? strings.ascending : strings.descending,
-                      onPressed: () =>
-                          setState(() => _ascending = !_ascending),
+                      tooltip: _ascending
+                          ? strings.ascending
+                          : strings.descending,
+                      onPressed: () => setState(() => _ascending = !_ascending),
                       icon: Icon(
                         _ascending
                             ? Icons.arrow_upward_rounded
@@ -265,17 +270,24 @@ class _WordHistoryScreenState extends State<WordHistoryScreen> {
                       ),
                     );
                     if (constraints.maxWidth < 410) {
-                      return Column(children: [
-                        sortField,
-                        const SizedBox(height: 8),
-                        Align(alignment: Alignment.centerRight, child: orderButton),
-                      ]);
+                      return Column(
+                        children: [
+                          sortField,
+                          const SizedBox(height: 8),
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: orderButton,
+                          ),
+                        ],
+                      );
                     }
-                    return Row(children: [
-                      Expanded(child: sortField),
-                      const SizedBox(width: 10),
-                      orderButton,
-                    ]);
+                    return Row(
+                      children: [
+                        Expanded(child: sortField),
+                        const SizedBox(width: 10),
+                        orderButton,
+                      ],
+                    );
                   },
                 ),
                 const SizedBox(height: 16),
@@ -290,91 +302,96 @@ class _WordHistoryScreenState extends State<WordHistoryScreen> {
                       if (records.isEmpty) {
                         return Center(child: Text(strings.emptyWordHistory));
                       }
-                      return Column(children: [
-                        if (_selecting) ...[
-                          _WordBulkActionBar(
-                            selectedCount: _selectedWords.length,
-                            allSelected:
-                                _selectedWords.length == records.length,
-                            onSelectAll: () => _toggleAll(records),
-                            onRegenerate: _selectedWords.isEmpty
-                                ? null
-                                : () => _regenerateSelected(records),
-                            onDelete: _selectedWords.isEmpty
-                                ? null
-                                : _deleteSelected,
-                            strings: strings,
-                          ),
-                          const SizedBox(height: 12),
-                        ],
-                        Expanded(
-                          child: ListView.separated(
-                            itemCount: records.length,
-                            separatorBuilder: (_, __) =>
-                                const SizedBox(height: 8),
-                            itemBuilder: (context, index) {
-                              final record = records[index];
-                              final selected =
-                                  _selectedWords.contains(record.word);
-                              return Card(
-                                color: selected
-                                    ? theme.colorScheme.primaryContainer
-                                        .withValues(alpha: .55)
-                                    : null,
-                                child: ListTile(
-                                  contentPadding: const EdgeInsets.symmetric(
-                                    horizontal: 16,
-                                    vertical: 7,
-                                  ),
-                                  leading: _selecting
-                                      ? Checkbox(
-                                          value: selected,
-                                          onChanged: (_) =>
-                                              _toggleWord(record.word),
-                                        )
-                                      : CircleAvatar(
-                                          child: Text(record
-                                              .word.characters.first
-                                              .toUpperCase()),
-                                        ),
-                                  title: Text(
-                                    record.word,
-                                    style:
-                                        theme.textTheme.titleMedium?.copyWith(
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                                  ),
-                                  subtitle: Text(
-                                    '${strings.generatedTimes(record.generationCount)}  ·  '
-                                    '${record.difficulty}  ·  ${_formatDate(record.lastGeneratedAt)}',
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                  onTap: _selecting
-                                      ? () => _toggleWord(record.word)
+                      return Column(
+                        children: [
+                          if (_selecting) ...[
+                            _WordBulkActionBar(
+                              selectedCount: _selectedWords.length,
+                              allSelected:
+                                  _selectedWords.length == records.length,
+                              onSelectAll: () => _toggleAll(records),
+                              onRegenerate: _selectedWords.isEmpty
+                                  ? null
+                                  : () => _regenerateSelected(records),
+                              onDelete: _selectedWords.isEmpty
+                                  ? null
+                                  : _deleteSelected,
+                              strings: strings,
+                            ),
+                            const SizedBox(height: 12),
+                          ],
+                          Expanded(
+                            child: ListView.separated(
+                              itemCount: records.length,
+                              separatorBuilder: (_, __) =>
+                                  const SizedBox(height: 8),
+                              itemBuilder: (context, index) {
+                                final record = records[index];
+                                final selected = _selectedWords.contains(
+                                  record.word,
+                                );
+                                return Card(
+                                  color: selected
+                                      ? theme.colorScheme.primaryContainer
+                                            .withValues(alpha: .55)
                                       : null,
-                                  trailing: _selecting
-                                      ? null
-                                      : IconButton(
-                                          tooltip: record.starred
-                                              ? strings.unstarWord
-                                              : strings.starWord,
-                                          onPressed: () => _toggleStar(record),
-                                          icon: Icon(
-                                            record.starred
-                                                ? Icons.star_rounded
-                                                : Icons.star_outline_rounded,
-                                            color: record.starred
-                                                ? Colors.amber.shade700
-                                                : null,
+                                  child: ListTile(
+                                    contentPadding: const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                      vertical: 7,
+                                    ),
+                                    leading: _selecting
+                                        ? Checkbox(
+                                            value: selected,
+                                            onChanged: (_) =>
+                                                _toggleWord(record.word),
+                                          )
+                                        : CircleAvatar(
+                                            child: Text(
+                                              record.word.characters.first
+                                                  .toUpperCase(),
+                                            ),
                                           ),
-                                        ),
-                                ),
-                              );
-                            },
+                                    title: Text(
+                                      record.word,
+                                      style: theme.textTheme.titleMedium
+                                          ?.copyWith(
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                    ),
+                                    subtitle: Text(
+                                      '${strings.generatedTimes(record.generationCount)}  ·  '
+                                      '${record.difficulty}  ·  ${_formatDate(record.lastGeneratedAt)}',
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    onTap: _selecting
+                                        ? () => _toggleWord(record.word)
+                                        : null,
+                                    trailing: _selecting
+                                        ? null
+                                        : IconButton(
+                                            tooltip: record.starred
+                                                ? strings.unstarWord
+                                                : strings.starWord,
+                                            onPressed: () =>
+                                                _toggleStar(record),
+                                            icon: Icon(
+                                              record.starred
+                                                  ? Icons.star_rounded
+                                                  : Icons.star_outline_rounded,
+                                              color: record.starred
+                                                  ? Colors.amber.shade700
+                                                  : null,
+                                            ),
+                                          ),
+                                  ),
+                                );
+                              },
+                            ),
                           ),
-                        ),
-                      ]);
+                        ],
+                      );
                     },
                   ),
                 ),
@@ -412,27 +429,29 @@ class _WordBulkActionBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => DecoratedBox(
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surfaceContainerHighest,
-          borderRadius: BorderRadius.circular(14),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-          child: Row(children: [
-            Checkbox(value: allSelected, onChanged: (_) => onSelectAll()),
-            Expanded(child: Text(strings.selectedCount(selectedCount))),
-            FilledButton.tonalIcon(
-              onPressed: onRegenerate,
-              icon: const Icon(Icons.replay_rounded),
-              label: Text(strings.regenerateSelected),
-            ),
-            const SizedBox(width: 4),
-            IconButton(
-              tooltip: strings.deleteSelected,
-              onPressed: onDelete,
-              icon: const Icon(Icons.delete_outline_rounded),
-            ),
-          ]),
-        ),
-      );
+    decoration: BoxDecoration(
+      color: Theme.of(context).colorScheme.surfaceContainerHighest,
+      borderRadius: BorderRadius.circular(14),
+    ),
+    child: Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      child: Row(
+        children: [
+          Checkbox(value: allSelected, onChanged: (_) => onSelectAll()),
+          Expanded(child: Text(strings.selectedCount(selectedCount))),
+          FilledButton.tonalIcon(
+            onPressed: onRegenerate,
+            icon: const Icon(Icons.replay_rounded),
+            label: Text(strings.regenerateSelected),
+          ),
+          const SizedBox(width: 4),
+          IconButton(
+            tooltip: strings.deleteSelected,
+            onPressed: onDelete,
+            icon: const Icon(Icons.delete_outline_rounded),
+          ),
+        ],
+      ),
+    ),
+  );
 }

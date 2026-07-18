@@ -33,17 +33,14 @@ class PdfSettings {
     PdfFontSize? fontSize,
     ExampleAmount? exampleAmount,
     PdfTypography? typography,
-  }) =>
-      PdfSettings(
-        fontSize: fontSize ?? this.fontSize,
-        exampleAmount: exampleAmount ?? this.exampleAmount,
-        typography: typography ?? this.typography,
-      );
+  }) => PdfSettings(
+    fontSize: fontSize ?? this.fontSize,
+    exampleAmount: exampleAmount ?? this.exampleAmount,
+    typography: typography ?? this.typography,
+  );
 
-  PdfSettings applyPreset(PdfFontSize preset) => copyWith(
-        fontSize: preset,
-        typography: PdfTypography.fromPreset(preset),
-      );
+  PdfSettings applyPreset(PdfFontSize preset) =>
+      copyWith(fontSize: preset, typography: PdfTypography.fromPreset(preset));
 }
 
 class PdfSettingsService {
@@ -54,10 +51,10 @@ class PdfSettingsService {
   Future<PdfSettings> load() async {
     final preferences = await SharedPreferences.getInstance();
     final fontSize = _enumByName(
-        PdfFontSize.values,
-        preferences.getString(_fontSizeKey),
-        PdfFontSize.medium,
-      );
+      PdfFontSize.values,
+      preferences.getString(_fontSizeKey),
+      PdfFontSize.medium,
+    );
     final defaults = PdfTypography.fromPreset(fontSize);
     return PdfSettings(
       fontSize: fontSize,
@@ -68,11 +65,21 @@ class PdfSettingsService {
       ),
       typography: PdfTypography(
         word: preferences.getDouble('$_typographyPrefix.word') ?? defaults.word,
-        phonetic: preferences.getDouble('$_typographyPrefix.phonetic') ?? defaults.phonetic,
-        definition: preferences.getDouble('$_typographyPrefix.definition') ?? defaults.definition,
-        related: preferences.getDouble('$_typographyPrefix.related') ?? defaults.related,
-        example: preferences.getDouble('$_typographyPrefix.example') ?? defaults.example,
-        phrase: preferences.getDouble('$_typographyPrefix.phrase') ?? defaults.phrase,
+        phonetic:
+            preferences.getDouble('$_typographyPrefix.phonetic') ??
+            defaults.phonetic,
+        definition:
+            preferences.getDouble('$_typographyPrefix.definition') ??
+            defaults.definition,
+        related:
+            preferences.getDouble('$_typographyPrefix.related') ??
+            defaults.related,
+        example:
+            preferences.getDouble('$_typographyPrefix.example') ??
+            defaults.example,
+        phrase:
+            preferences.getDouble('$_typographyPrefix.phrase') ??
+            defaults.phrase,
       ),
     );
   }
@@ -80,12 +87,12 @@ class PdfSettingsService {
   Future<void> save(PdfSettings settings) async {
     final preferences = await SharedPreferences.getInstance();
     await preferences.setString(_fontSizeKey, settings.fontSize.name);
-    await preferences.setString(
-      _exampleAmountKey,
-      settings.exampleAmount.name,
-    );
+    await preferences.setString(_exampleAmountKey, settings.exampleAmount.name);
     await Future.wait([
-      preferences.setDouble('$_typographyPrefix.word', settings.typography.word),
+      preferences.setDouble(
+        '$_typographyPrefix.word',
+        settings.typography.word,
+      ),
       preferences.setDouble(
         '$_typographyPrefix.phonetic',
         settings.typography.phonetic,

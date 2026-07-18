@@ -13,9 +13,9 @@ void main() {
     debugDefaultTargetPlatformOverride = TargetPlatform.android;
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(SystemChannels.platform, (call) async {
-      if (call.method == 'HapticFeedback.vibrate') calls.add(call);
-      return null;
-    });
+          if (call.method == 'HapticFeedback.vibrate') calls.add(call);
+          return null;
+        });
   });
 
   tearDown(() {
@@ -32,16 +32,13 @@ void main() {
     await haptics.generationStarted();
     await haptics.generationCompleted();
 
-    expect(
-      calls.map((call) => call.arguments),
-      [
-        'HapticFeedbackType.selectionClick',
-        'HapticFeedbackType.lightImpact',
-        'HapticFeedbackType.mediumImpact',
-        'HapticFeedbackType.successNotification',
-        'HapticFeedbackType.selectionClick',
-      ],
-    );
+    expect(calls.map((call) => call.arguments), [
+      'HapticFeedbackType.selectionClick',
+      'HapticFeedbackType.lightImpact',
+      'HapticFeedbackType.mediumImpact',
+      'HapticFeedbackType.successNotification',
+      'HapticFeedbackType.selectionClick',
+    ]);
   });
 
   test('does not play Lexora haptics on non-Android platforms', () async {

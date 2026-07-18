@@ -33,6 +33,7 @@ Lexora 是一款面向 Android、macOS、Windows 与 Linux 的英语单词整理
 ## 核心功能
 
 - **快速收集**：搜索式主页，按回车添加单词，自动阻止重复和无效输入。
+- **文档批量导入**：从 DOC、DOCX、PDF、TXT、RTF、ODT 等文件按换行提取大量单词或短语，一次加入列表。
 - **自由整理**：长按调整顺序、向左滑动删除，支持自定义、A–Z、长度和估算难度排序。
 - **完整查词**：获取英文定义、公开语料词频信号、美式与英式音标、近义词、反义词和例句。
 - **安全模糊搜索**：完全匹配失败时，仅采用拼写高度相似且能再次取得完整词典数据的候选词；结果页会用红色标出跳过项、黄色标出相似匹配及实际采用的单词。
@@ -55,10 +56,10 @@ Lexora 是一款面向 Android、macOS、Windows 与 Linux 的英语单词整理
 
 | 平台 | 安装包 | 系统要求 | 下载 |
 | --- | --- | --- | --- |
-| Android | APK | Android 8.0+ | [官网下载](https://lexora.12323456.xyz/downloads/lexora-android-v1.1.2.apk) |
-| macOS | 拖动安装 DMG | macOS 12+ | [官网下载](https://lexora.12323456.xyz/downloads/lexora-macos-v1.1.2.dmg) |
-| Windows | 安装程序 EXE（默认安装后启动） | Windows 10 / 11 | [官网下载](https://lexora.12323456.xyz/downloads/lexora-windows-v1.1.2-setup.exe) |
-| Linux | tar.gz | 64 位 Linux | [官网下载](https://lexora.12323456.xyz/downloads/lexora-linux-v1.1.2.tar.gz) |
+| Android | APK | Android 8.0+ | [官网下载](https://lexora.12323456.xyz/downloads/lexora-android-v1.1.3.apk) |
+| macOS | 拖动安装 DMG | macOS 12+ | [官网下载](https://lexora.12323456.xyz/downloads/lexora-macos-v1.1.3.dmg) |
+| Windows | 安装程序 EXE（默认安装后启动） | Windows 10 / 11 | [官网下载](https://lexora.12323456.xyz/downloads/lexora-windows-v1.1.3-setup.exe) |
+| Linux | tar.gz | 64 位 Linux | [官网下载](https://lexora.12323456.xyz/downloads/lexora-linux-v1.1.3.tar.gz) |
 
 <details>
 <summary><strong>首次安装被系统拦截怎么办？</strong></summary>
@@ -73,11 +74,11 @@ Lexora 是一款面向 Android、macOS、Windows 与 Linux 的英语单词整理
 > [!IMPORTANT]
 > Android v0.2.0 使用了临时构建签名，旧私钥无法恢复，因此升级到采用稳定签名的 v0.3.0 时需要先卸载旧版再安装一次。自 v0.3.0 起，后续版本继续使用同一发布签名，可直接覆盖更新。请先按需导出旧版中的 PDF。
 
-所有发行文件名都包含版本号，例如 `lexora-android-v1.1.2.apk`。这样可以避免浏览器或下载目录把新旧安装包混淆。应用内更新优先使用 Cloudflare R2，并在打开安装包前校验下载完整性与 SHA-256。
+所有发行文件名都包含版本号，例如 `lexora-android-v1.1.3.apk`。这样可以避免浏览器或下载目录把新旧安装包混淆。应用内更新优先使用 Cloudflare R2，并在打开安装包前校验下载完整性与 SHA-256。
 
 ## 三步生成词汇书
 
-1. 输入一个英文单词并按回车，继续添加所需单词。
+1. 输入一个英文单词并按回车，或导入按换行整理的文档，一次添加大量单词和短语。
 2. 长按调整顺序或选择排序方式，在“设置”中选好字号与例句数量，然后点击“开始生成”。
 3. 在“生成记录”阅读、导出或分享 PDF，在“历史”查看所有生成过的单词。
 

@@ -33,6 +33,7 @@ Lexora is an English vocabulary organizer for Android, macOS, Windows, and Linux
 ## Features
 
 - **Fast capture:** focused search-style home, Enter to add, duplicate and input validation.
+- **Bulk document import:** add newline-delimited words or phrases from DOC, DOCX, PDF, TXT, RTF, ODT, and other document files.
 - **Flexible ordering:** long-press to reorder, swipe left to delete, and sort by custom order, A–Z, length, or estimated difficulty.
 - **Full lookup:** English definition, corpus frequency signal, US and UK phonetics, synonyms, antonyms, and examples.
 - **Safe fuzzy lookup:** when no exact result exists, Lexora accepts only a highly similar spelling that also returns complete dictionary data; the results dialog marks skipped terms in red and validated matches in yellow with the word actually used.
@@ -55,19 +56,19 @@ Use the [official download section](https://lexora.12323456.xyz/#download) for b
 
 | Platform | Package | Requirement | Download |
 | --- | --- | --- | --- |
-| Android | APK | Android 8.0+ | [Official mirror](https://lexora.12323456.xyz/downloads/lexora-android-v1.1.2.apk) |
-| macOS | Drag-to-install DMG | macOS 12+ | [Official mirror](https://lexora.12323456.xyz/downloads/lexora-macos-v1.1.2.dmg) |
-| Windows | Setup EXE (launch option checked by default) | Windows 10 / 11 | [Official mirror](https://lexora.12323456.xyz/downloads/lexora-windows-v1.1.2-setup.exe) |
-| Linux | tar.gz | 64-bit Linux | [Official mirror](https://lexora.12323456.xyz/downloads/lexora-linux-v1.1.2.tar.gz) |
+| Android | APK | Android 8.0+ | [Official mirror](https://lexora.12323456.xyz/downloads/lexora-android-v1.1.3.apk) |
+| macOS | Drag-to-install DMG | macOS 12+ | [Official mirror](https://lexora.12323456.xyz/downloads/lexora-macos-v1.1.3.dmg) |
+| Windows | Setup EXE (launch option checked by default) | Windows 10 / 11 | [Official mirror](https://lexora.12323456.xyz/downloads/lexora-windows-v1.1.3-setup.exe) |
+| Linux | tar.gz | 64-bit Linux | [Official mirror](https://lexora.12323456.xyz/downloads/lexora-linux-v1.1.3.tar.gz) |
 
 > [!IMPORTANT]
 > Android v0.2.0 used an ephemeral build signature whose private key cannot be recovered. Moving to the stable v0.3.0 signing key therefore requires one uninstall and reinstall. From v0.3.0 onward, future APKs use the same release key and install directly over the existing app. Export any PDFs you need before removing v0.2.0.
 
-Every release filename contains its version, such as `lexora-android-v1.1.2.apk`, so old and new installers remain easy to distinguish. In-app updates prefer Cloudflare R2 and verify download completeness plus SHA-256 before opening an installer.
+Every release filename contains its version, such as `lexora-android-v1.1.3.apk`, so old and new installers remain easy to distinguish. In-app updates prefer Cloudflare R2 and verify download completeness plus SHA-256 before opening an installer.
 
 ## Three steps to a vocabulary book
 
-1. Type an English word and press Enter; continue until the list is complete.
+1. Type an English word and press Enter, or import a newline-delimited document to add a large batch of words and phrases.
 2. Long-press to reorder or select a sort mode, choose type and examples in **Settings**, then select **Start generating**.
 3. Read, export, or share PDFs in **Generated**; browse every generated word in **History**.
 

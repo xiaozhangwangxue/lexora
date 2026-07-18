@@ -37,13 +37,13 @@ class PdfTypography {
   final double phrase;
 
   factory PdfTypography.fromPreset(PdfFontSize preset) => PdfTypography(
-        word: 18 * preset.scale,
-        phonetic: 9 * preset.bodyScale,
-        definition: 8.7 * preset.bodyScale,
-        related: 7.2 * preset.bodyScale,
-        example: 7.2 * preset.bodyScale,
-        phrase: 7.2 * preset.bodyScale,
-      );
+    word: 18 * preset.scale,
+    phonetic: 9 * preset.bodyScale,
+    definition: 8.7 * preset.bodyScale,
+    related: 7.2 * preset.bodyScale,
+    example: 7.2 * preset.bodyScale,
+    phrase: 7.2 * preset.bodyScale,
+  );
 
   PdfTypography copyWith({
     double? word,
@@ -52,15 +52,14 @@ class PdfTypography {
     double? related,
     double? example,
     double? phrase,
-  }) =>
-      PdfTypography(
-        word: word ?? this.word,
-        phonetic: phonetic ?? this.phonetic,
-        definition: definition ?? this.definition,
-        related: related ?? this.related,
-        example: example ?? this.example,
-        phrase: phrase ?? this.phrase,
-      );
+  }) => PdfTypography(
+    word: word ?? this.word,
+    phonetic: phonetic ?? this.phonetic,
+    definition: definition ?? this.definition,
+    related: related ?? this.related,
+    example: example ?? this.example,
+    phrase: phrase ?? this.phrase,
+  );
 }
 
 class PdfService {
@@ -120,8 +119,7 @@ class PdfService {
     // Noto Sans SC does not contain the complete IPA Extensions block. Keep it
     // for Chinese text, and explicitly render phonetics with Noto Sans.
     final ipa = fonts[2];
-    final resolvedTypography =
-        typography ?? PdfTypography.fromPreset(fontSize);
+    final resolvedTypography = typography ?? PdfTypography.fromPreset(fontSize);
     double size(double value) => value * fontSize.scale;
     final compactEnoughForThreeColumns =
         resolvedTypography.word <= 16.5 &&
@@ -132,8 +130,8 @@ class PdfService {
     final columnCount = fontSize == PdfFontSize.large
         ? 1
         : compactEnoughForThreeColumns
-            ? 3
-            : 2;
+        ? 3
+        : 2;
     final document = pw.Document(
       title: 'Lexora Vocabulary Book',
       author: 'Lexora',
@@ -152,23 +150,41 @@ class PdfService {
           child: pw.Row(
             mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
             children: [
-              pw.Text('LEXORA', style: pw.TextStyle(font: bold, fontSize: size(11))),
-              pw.Text('${entries.length} entries / 词条 · ${DateFormat('yyyy-MM-dd').format(date)}',
-                  style: pw.TextStyle(fontSize: size(8), color: PdfColors.grey600)),
+              pw.Text(
+                'LEXORA',
+                style: pw.TextStyle(font: bold, fontSize: size(11)),
+              ),
+              pw.Text(
+                '${entries.length} entries / 词条 · ${DateFormat('yyyy-MM-dd').format(date)}',
+                style: pw.TextStyle(
+                  fontSize: size(8),
+                  color: PdfColors.grey600,
+                ),
+              ),
             ],
           ),
         ),
         footer: (context) => pw.Align(
           alignment: pw.Alignment.centerRight,
-          child: pw.Text('${context.pageNumber} / ${context.pagesCount}',
-              style: pw.TextStyle(fontSize: size(8), color: PdfColors.grey600)),
+          child: pw.Text(
+            '${context.pageNumber} / ${context.pagesCount}',
+            style: pw.TextStyle(fontSize: size(8), color: PdfColors.grey600),
+          ),
         ),
         build: (context) => [
-          pw.Text('My vocabulary book',
-              style: pw.TextStyle(font: bold, fontSize: size(24), color: PdfColors.indigo900)),
+          pw.Text(
+            'My vocabulary book',
+            style: pw.TextStyle(
+              font: bold,
+              fontSize: size(24),
+              color: PdfColors.indigo900,
+            ),
+          ),
           pw.SizedBox(height: 2),
-          pw.Text('我的双语词汇册',
-              style: pw.TextStyle(fontSize: size(11), color: PdfColors.grey700)),
+          pw.Text(
+            '我的双语词汇册',
+            style: pw.TextStyle(fontSize: size(11), color: PdfColors.grey700),
+          ),
           pw.SizedBox(height: 8),
           ..._entryLayout(
             entries,
@@ -250,16 +266,13 @@ class PdfService {
     required bool denseHeader,
   }) {
     pw.Widget pill(String text, PdfColor color) => pw.Container(
-          padding: const pw.EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-          decoration: pw.BoxDecoration(
-            color: color,
-            borderRadius: pw.BorderRadius.circular(12),
-          ),
-          child: pw.Text(
-            text,
-            style: pw.TextStyle(fontSize: typography.related),
-          ),
-        );
+      padding: const pw.EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+      decoration: pw.BoxDecoration(
+        color: color,
+        borderRadius: pw.BorderRadius.circular(12),
+      ),
+      child: pw.Text(text, style: pw.TextStyle(fontSize: typography.related)),
+    );
 
     return pw.Container(
       padding: const pw.EdgeInsets.fromLTRB(8, 6, 8, 6),
@@ -268,111 +281,213 @@ class PdfService {
         borderRadius: pw.BorderRadius.circular(8),
         border: pw.Border.all(color: PdfColors.grey300, width: .5),
       ),
-      child: pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
-        pw.Row(crossAxisAlignment: pw.CrossAxisAlignment.end, children: [
-          pw.Text('$number', style: pw.TextStyle(fontSize: typography.related, color: PdfColors.grey600)),
-          pw.SizedBox(width: 7),
-          pw.Expanded(child: pw.Text(entry.word, style: pw.TextStyle(font: bold, fontSize: typography.word))),
-          if (!denseHeader) ...[
-            pill(entry.difficulty, PdfColors.indigo100),
-            pw.SizedBox(width: 5),
-            pill('freq ${entry.frequency.toStringAsFixed(1)}', PdfColors.teal100),
-          ],
-        ]),
-        if (denseHeader) ...[
-          pw.SizedBox(height: 2),
-          pw.Wrap(
-            spacing: 4,
+      child: pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          pw.Row(
+            crossAxisAlignment: pw.CrossAxisAlignment.end,
             children: [
-              pill(entry.difficulty, PdfColors.indigo100),
-              pill('freq ${entry.frequency.toStringAsFixed(1)}', PdfColors.teal100),
+              pw.Text(
+                '$number',
+                style: pw.TextStyle(
+                  fontSize: typography.related,
+                  color: PdfColors.grey600,
+                ),
+              ),
+              pw.SizedBox(width: 7),
+              pw.Expanded(
+                child: pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  children: [
+                    pw.Text(
+                      entry.word,
+                      style: pw.TextStyle(
+                        font: bold,
+                        fontSize: typography.word,
+                      ),
+                    ),
+                    if (entry.isFuzzyMatch) ...[
+                      pw.SizedBox(height: 1),
+                      pw.Text(
+                        '(${entry.originalTerm})',
+                        style: pw.TextStyle(
+                          fontSize: typography.related,
+                          color: PdfColors.grey600,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              if (!denseHeader) ...[
+                pill(entry.difficulty, PdfColors.indigo100),
+                pw.SizedBox(width: 5),
+                pill(
+                  'freq ${entry.frequency.toStringAsFixed(1)}',
+                  PdfColors.teal100,
+                ),
+              ],
             ],
           ),
-        ],
-        pw.SizedBox(height: 3),
-        pw.Wrap(crossAxisAlignment: pw.WrapCrossAlignment.center, children: [
-          pw.Text('US 美式  ', style: pw.TextStyle(fontSize: typography.phonetic - 1, color: PdfColors.grey700)),
-          pw.Text(entry.usPhonetic,
-              style: pw.TextStyle(font: ipa, fontSize: typography.phonetic, color: PdfColors.grey700)),
-          pw.SizedBox(width: 10),
-          pw.Text('UK 英式  ', style: pw.TextStyle(fontSize: typography.phonetic - 1, color: PdfColors.grey700)),
-          pw.Text(entry.ukPhonetic,
-              style: pw.TextStyle(font: ipa, fontSize: typography.phonetic, color: PdfColors.grey700)),
-        ]),
-        pw.SizedBox(height: 3),
-        pw.Text(entry.definition, style: pw.TextStyle(fontSize: typography.definition)),
-        pw.SizedBox(height: 2),
-        pw.Text(entry.definitionZh,
-            style: pw.TextStyle(font: bold, fontSize: typography.definition, color: PdfColors.indigo900)),
-        if (entry.synonyms.isNotEmpty || entry.antonyms.isNotEmpty) ...[
-          pw.SizedBox(height: 3),
-          if (entry.synonyms.isNotEmpty) ...[
-            pw.Text('Synonyms / 近义词  ${entry.synonyms.join(' · ')}',
-                style: pw.TextStyle(fontSize: typography.related)),
-            if (entry.synonymsZh.isNotEmpty && entry.synonymsZh != '—')
-              pw.Text(entry.synonymsZh,
-                  style: pw.TextStyle(fontSize: typography.related, color: PdfColors.indigo700)),
-          ],
-          if (entry.antonyms.isNotEmpty) ...[
-            if (entry.synonyms.isNotEmpty) pw.SizedBox(height: 2),
-            pw.Text('Antonyms / 反义词  ${entry.antonyms.join(' · ')}',
-                style: pw.TextStyle(fontSize: typography.related)),
-            if (entry.antonymsZh.isNotEmpty && entry.antonymsZh != '—')
-              pw.Text(entry.antonymsZh,
-                  style: pw.TextStyle(fontSize: typography.related, color: PdfColors.indigo700)),
-          ],
-        ],
-        if (entry.examples.isNotEmpty) ...[
-          pw.SizedBox(height: 3),
-          pw.Container(
-            padding: const pw.EdgeInsets.only(left: 6),
-            decoration: const pw.BoxDecoration(
-              border: pw.Border(left: pw.BorderSide(color: PdfColors.teal400, width: 2)),
-            ),
-            child: pw.Column(
-              crossAxisAlignment: pw.CrossAxisAlignment.start,
+          if (denseHeader) ...[
+            pw.SizedBox(height: 2),
+            pw.Wrap(
+              spacing: 4,
               children: [
-                for (var i = 0; i < entry.examples.length; i++) ...[
-                  if (i > 0) pw.SizedBox(height: 4),
-                  pw.Text(entry.examples[i], style: pw.TextStyle(font: bold, fontSize: typography.example)),
-                  pw.SizedBox(height: 1),
-                  pw.Text(entry.examplesZh[i], style: pw.TextStyle(fontSize: typography.example)),
-                ],
+                pill(entry.difficulty, PdfColors.indigo100),
+                pill(
+                  'freq ${entry.frequency.toStringAsFixed(1)}',
+                  PdfColors.teal100,
+                ),
               ],
             ),
+          ],
+          pw.SizedBox(height: 3),
+          pw.Wrap(
+            crossAxisAlignment: pw.WrapCrossAlignment.center,
+            children: [
+              pw.Text(
+                'US 美式  ',
+                style: pw.TextStyle(
+                  fontSize: typography.phonetic - 1,
+                  color: PdfColors.grey700,
+                ),
+              ),
+              pw.Text(
+                entry.usPhonetic,
+                style: pw.TextStyle(
+                  font: ipa,
+                  fontSize: typography.phonetic,
+                  color: PdfColors.grey700,
+                ),
+              ),
+              pw.SizedBox(width: 10),
+              pw.Text(
+                'UK 英式  ',
+                style: pw.TextStyle(
+                  fontSize: typography.phonetic - 1,
+                  color: PdfColors.grey700,
+                ),
+              ),
+              pw.Text(
+                entry.ukPhonetic,
+                style: pw.TextStyle(
+                  font: ipa,
+                  fontSize: typography.phonetic,
+                  color: PdfColors.grey700,
+                ),
+              ),
+            ],
           ),
-        ],
-        if (entry.phrases.isNotEmpty) ...[
           pw.SizedBox(height: 3),
           pw.Text(
-            'Phrases / 常用短语',
+            entry.definition,
+            style: pw.TextStyle(fontSize: typography.definition),
+          ),
+          pw.SizedBox(height: 2),
+          pw.Text(
+            entry.definitionZh,
             style: pw.TextStyle(
               font: bold,
-              fontSize: typography.phrase + .2,
+              fontSize: typography.definition,
               color: PdfColors.indigo900,
             ),
           ),
-          pw.SizedBox(height: 2),
-          for (var i = 0; i < entry.phrases.length; i++) ...[
-            if (i > 0) pw.SizedBox(height: 3),
-            pw.Text(
-              entry.phrases[i].phrase,
-              style: pw.TextStyle(font: bold, fontSize: typography.phrase),
-            ),
-            pw.Text(
-              entry.phrases[i].meaning,
-              style: pw.TextStyle(fontSize: typography.phrase),
-            ),
-            pw.Text(
-              entry.phrases[i].meaningZh,
-              style: pw.TextStyle(
-                fontSize: typography.phrase,
-                color: PdfColors.indigo700,
+          if (entry.synonyms.isNotEmpty || entry.antonyms.isNotEmpty) ...[
+            pw.SizedBox(height: 3),
+            if (entry.synonyms.isNotEmpty) ...[
+              pw.Text(
+                'Synonyms / 近义词  ${entry.synonyms.join(' · ')}',
+                style: pw.TextStyle(fontSize: typography.related),
+              ),
+              if (entry.synonymsZh.isNotEmpty && entry.synonymsZh != '—')
+                pw.Text(
+                  entry.synonymsZh,
+                  style: pw.TextStyle(
+                    fontSize: typography.related,
+                    color: PdfColors.indigo700,
+                  ),
+                ),
+            ],
+            if (entry.antonyms.isNotEmpty) ...[
+              if (entry.synonyms.isNotEmpty) pw.SizedBox(height: 2),
+              pw.Text(
+                'Antonyms / 反义词  ${entry.antonyms.join(' · ')}',
+                style: pw.TextStyle(fontSize: typography.related),
+              ),
+              if (entry.antonymsZh.isNotEmpty && entry.antonymsZh != '—')
+                pw.Text(
+                  entry.antonymsZh,
+                  style: pw.TextStyle(
+                    fontSize: typography.related,
+                    color: PdfColors.indigo700,
+                  ),
+                ),
+            ],
+          ],
+          if (entry.examples.isNotEmpty) ...[
+            pw.SizedBox(height: 3),
+            pw.Container(
+              padding: const pw.EdgeInsets.only(left: 6),
+              decoration: const pw.BoxDecoration(
+                border: pw.Border(
+                  left: pw.BorderSide(color: PdfColors.teal400, width: 2),
+                ),
+              ),
+              child: pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  for (var i = 0; i < entry.examples.length; i++) ...[
+                    if (i > 0) pw.SizedBox(height: 4),
+                    pw.Text(
+                      entry.examples[i],
+                      style: pw.TextStyle(
+                        font: bold,
+                        fontSize: typography.example,
+                      ),
+                    ),
+                    pw.SizedBox(height: 1),
+                    pw.Text(
+                      entry.examplesZh[i],
+                      style: pw.TextStyle(fontSize: typography.example),
+                    ),
+                  ],
+                ],
               ),
             ),
           ],
+          if (entry.phrases.isNotEmpty) ...[
+            pw.SizedBox(height: 3),
+            pw.Text(
+              'Phrases / 常用短语',
+              style: pw.TextStyle(
+                font: bold,
+                fontSize: typography.phrase + .2,
+                color: PdfColors.indigo900,
+              ),
+            ),
+            pw.SizedBox(height: 2),
+            for (var i = 0; i < entry.phrases.length; i++) ...[
+              if (i > 0) pw.SizedBox(height: 3),
+              pw.Text(
+                entry.phrases[i].phrase,
+                style: pw.TextStyle(font: bold, fontSize: typography.phrase),
+              ),
+              pw.Text(
+                entry.phrases[i].meaning,
+                style: pw.TextStyle(fontSize: typography.phrase),
+              ),
+              pw.Text(
+                entry.phrases[i].meaningZh,
+                style: pw.TextStyle(
+                  fontSize: typography.phrase,
+                  color: PdfColors.indigo700,
+                ),
+              ),
+            ],
+          ],
         ],
-      ]),
+      ),
     );
   }
 }

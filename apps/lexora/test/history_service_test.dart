@@ -14,17 +14,18 @@ void main() {
     final firstTime = DateTime.utc(2026, 7, 13, 8);
     final secondTime = firstTime.add(const Duration(hours: 1));
 
-    await service.recordWords(
-      [_entry('lucid', 'B1–B2'), _entry('serendipity', 'C1–C2')],
-      firstTime,
-    );
+    await service.recordWords([
+      _entry('lucid', 'B1–B2'),
+      _entry('serendipity', 'C1–C2'),
+    ], firstTime);
     await service.recordWords([_entry('lucid', 'B2–C1')], secondTime);
     await service.setWordStarred('lucid', true);
 
     final records = await service.loadWords();
     final lucid = records.singleWhere((record) => record.word == 'lucid');
-    final serendipity =
-        records.singleWhere((record) => record.word == 'serendipity');
+    final serendipity = records.singleWhere(
+      (record) => record.word == 'serendipity',
+    );
 
     expect(lucid.generationCount, 2);
     expect(lucid.firstGeneratedAt, firstTime);
@@ -70,10 +71,10 @@ void main() {
       ],
     });
     final service = HistoryService();
-    await service.recordWords(
-      [_entry('alpha', 'A1–A2'), _entry('bravo', 'B1–B2')],
-      createdAt,
-    );
+    await service.recordWords([
+      _entry('alpha', 'A1–A2'),
+      _entry('bravo', 'B1–B2'),
+    ], createdAt);
 
     await service.removeMany({'one', 'three'});
     await service.removeWords({'alpha'});
@@ -84,17 +85,17 @@ void main() {
 }
 
 WordEntry _entry(String word, String difficulty) => WordEntry(
-      word: word,
-      difficulty: difficulty,
-      frequency: 4.2,
-      usPhonetic: '/test/',
-      ukPhonetic: '/test/',
-      definition: 'definition',
-      definitionZh: '释义',
-      synonyms: const [],
-      synonymsZh: '',
-      antonyms: const [],
-      antonymsZh: '',
-      examples: const [],
-      examplesZh: const [],
-    );
+  word: word,
+  difficulty: difficulty,
+  frequency: 4.2,
+  usPhonetic: '/test/',
+  ukPhonetic: '/test/',
+  definition: 'definition',
+  definitionZh: '释义',
+  synonyms: const [],
+  synonymsZh: '',
+  antonyms: const [],
+  antonymsZh: '',
+  examples: const [],
+  examplesZh: const [],
+);

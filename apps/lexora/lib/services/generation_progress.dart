@@ -20,15 +20,13 @@ class GenerationProgress extends ChangeNotifier {
   bool get isVisible => _stage != GenerationStage.idle;
 
   double get value => switch (_stage) {
-        GenerationStage.idle => 0,
-        GenerationStage.lookingUp =>
-          _total == 0
-              ? 0
-              : (_completed / _total * .88).clamp(0, .88).toDouble(),
-        GenerationStage.typesetting => .94,
-        GenerationStage.completed => 1,
-        GenerationStage.failed => 1,
-      };
+    GenerationStage.idle => 0,
+    GenerationStage.lookingUp =>
+      _total == 0 ? 0 : (_completed / _total * .88).clamp(0, .88).toDouble(),
+    GenerationStage.typesetting => .94,
+    GenerationStage.completed => 1,
+    GenerationStage.failed => 1,
+  };
 
   void start(int total) {
     _stage = GenerationStage.lookingUp;

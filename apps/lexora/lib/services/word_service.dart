@@ -43,7 +43,9 @@ class WordService {
   WordService({http.Client? client}) : _client = client ?? http.Client();
 
   final http.Client _client;
-  static const _cachePrefix = 'lexora.word.v4';
+  // Bump the cache when provider/fallback semantics change so incomplete
+  // results from older releases do not keep causing exact words to fail.
+  static const _cachePrefix = 'lexora.word.v5';
   static const _cacheLifetime = Duration(days: 14);
 
   /// Looks up several words concurrently while preserving their input order.
@@ -83,10 +85,11 @@ class WordService {
             exampleCount: exampleCount,
           );
           if (fuzzyResult != null) {
-            results[index] = fuzzyResult.entry;
+            final matchedEntry = fuzzyResult.entry.withOriginalTerm(term);
+            results[index] = matchedEntry;
             fuzzyMatches[index] = FuzzyMatch(
               term: term,
-              matchedTerm: fuzzyResult.entry.word,
+              matchedTerm: matchedEntry.word,
             );
           } else {
             failures[index] = LookupFailure(
@@ -128,16 +131,23 @@ class WordService {
         's': term,
         'max': '12',
       });
-      final response = await _client
-          .get(suggestionUri)
-          .timeout(const Duration(seconds: 10));
-      final suggestions = _decodeDatamuse(response)
-          .map((item) => _normalizeTerm(item['word'] as String? ?? ''))
-          .where((candidate) => _isSafeFuzzyMatch(term, candidate))
-          .toSet()
-          .toList()
-        ..sort((left, right) => _editDistance(term, left)
-            .compareTo(_editDistance(term, right)));
+      final response = await _getWithRetry(
+        suggestionUri,
+        timeout: const Duration(seconds: 10),
+      );
+      if (response == null) return null;
+      final suggestions =
+          _decodeDatamuse(response)
+              .map((item) => _normalizeTerm(item['word'] as String? ?? ''))
+              .where((candidate) => _isSafeFuzzyMatch(term, candidate))
+              .toSet()
+              .toList()
+            ..sort(
+              (left, right) => _editDistance(
+                term,
+                left,
+              ).compareTo(_editDistance(term, right)),
+            );
 
       for (final candidate in suggestions.take(3)) {
         try {
@@ -169,8 +179,9 @@ class WordService {
       final current = List<int>.filled(right.length + 1, 0);
       current[0] = leftIndex;
       for (var rightIndex = 1; rightIndex <= right.length; rightIndex++) {
-        final substitutionCost =
-            left[leftIndex - 1] == right[rightIndex - 1] ? 0 : 1;
+        final substitutionCost = left[leftIndex - 1] == right[rightIndex - 1]
+            ? 0
+            : 1;
         current[rightIndex] = min(
           min(current[rightIndex - 1] + 1, previous[rightIndex] + 1),
           previous[rightIndex - 1] + substitutionCost,
@@ -201,22 +212,40 @@ class WordService {
     });
     final exactUri = Uri.https('api.datamuse.com', '/words', {
       'sp': word,
-      'qe': 'sp',
-      'md': 'dfr',
+      'md': 'dfrp',
       'ipa': '1',
       'max': '8',
     });
+    final synonymsUri = Uri.https('api.datamuse.com', '/words', {
+      'rel_syn': word,
+      'md': 'f',
+      'max': '12',
+    });
+    final antonymsUri = Uri.https('api.datamuse.com', '/words', {
+      'rel_ant': word,
+      'max': '12',
+    });
 
+    // Every provider is isolated. Previously one timeout in the optional
+    // related-word request made Future.wait discard a perfectly valid exact
+    // dictionary response (even for common words such as "word").
     final responses = await Future.wait([
-      _client.get(dictionaryUri).timeout(const Duration(seconds: 15)),
-      _client.get(relatedUri).timeout(const Duration(seconds: 15)),
-      _client.get(exactUri).timeout(const Duration(seconds: 15)),
+      _getWithRetry(dictionaryUri),
+      _getWithRetry(relatedUri),
+      _getWithRetry(exactUri),
+      _getWithRetry(synonymsUri),
+      _getWithRetry(antonymsUri),
     ]);
+    final dictionaryResponse = responses[0];
+    final relatedResponse = responses[1];
+    final exactResponse = responses[2];
+    final synonymsResponse = responses[3];
+    final antonymsResponse = responses[4];
 
     Map<String, dynamic>? dictionary;
-    if (responses.first.statusCode == 200) {
+    if (dictionaryResponse?.statusCode == 200) {
       try {
-        final decoded = _decodeJson(responses.first) as List;
+        final decoded = _decodeJson(dictionaryResponse!) as List;
         if (decoded.isNotEmpty) {
           dictionary = decoded.first as Map<String, dynamic>;
         }
@@ -227,15 +256,20 @@ class WordService {
 
     final meanings = (dictionary?['meanings'] as List? ?? const [])
         .cast<Map<String, dynamic>>();
-    final definitions = meanings.isEmpty
-        ? <Map<String, dynamic>>[]
-        : (meanings.first['definitions'] as List? ?? const [])
-            .cast<Map<String, dynamic>>();
-    final primary = definitions.isEmpty
-        ? <String, dynamic>{}
-        : definitions.first;
-    final related = _decodeDatamuse(responses[1]);
-    final exactResults = _decodeDatamuse(responses[2]);
+    final definitions = meanings
+        .expand(
+          (meaning) => (meaning['definitions'] as List? ?? const [])
+              .cast<Map<String, dynamic>>(),
+        )
+        .toList();
+    final primary = definitions.firstWhere(
+      (item) => (item['definition'] as String? ?? '').trim().isNotEmpty,
+      orElse: () => <String, dynamic>{},
+    );
+    final related = _decodeDatamuseNullable(relatedResponse);
+    final exactResults = _decodeDatamuseNullable(exactResponse);
+    final datamuseSynonyms = _decodeDatamuseNullable(synonymsResponse);
+    final datamuseAntonyms = _decodeDatamuseNullable(antonymsResponse);
     final exact = _exactDatamuseItem(exactResults, word);
     final dictionaryDefinition = primary['definition'] as String? ?? '';
     final datamuseDefinition = _definitionFromDatamuse(exact);
@@ -251,8 +285,7 @@ class WordService {
         .cast<Map<String, dynamic>>();
     final phonetic = dictionary?['phonetic'] as String? ?? '';
     final datamusePhonetic = _metadataTag(exact, 'pron:');
-    final fallbackPhonetic =
-        phonetic.isEmpty ? datamusePhonetic : phonetic;
+    final fallbackPhonetic = phonetic.isEmpty ? datamusePhonetic : phonetic;
     final usPhonetic = _phoneticFor(phonetics, '-us') ?? fallbackPhonetic;
     final ukPhonetic = _phoneticFor(phonetics, '-uk') ?? fallbackPhonetic;
 
@@ -266,6 +299,16 @@ class WordService {
         .map((item) => item.toString())
         .where((item) => item.isNotEmpty)
         .toList();
+    sameMeaning.addAll(
+      datamuseSynonyms
+          .map((item) => _normalizeTerm(item['word'] as String? ?? ''))
+          .where((item) => item.isNotEmpty && item != word),
+    );
+    opposites.addAll(
+      datamuseAntonyms
+          .map((item) => _normalizeTerm(item['word'] as String? ?? ''))
+          .where((item) => item.isNotEmpty && item != word),
+    );
 
     var frequency = _frequencyFromDatamuse(exact);
     final phraseDrafts = <MapEntry<String, String>>[];
@@ -275,8 +318,6 @@ class WordService {
       if (relatedWord.isEmpty) continue;
       if (relatedWord == word && frequency == 0) {
         frequency = _frequencyFromDatamuse(item);
-      } else if (!relatedWord.contains(' ') && sameMeaning.length < 6) {
-        sameMeaning.add(relatedWord);
       }
       if (relatedWord != word &&
           relatedWord.contains(' ') &&
@@ -300,7 +341,8 @@ class WordService {
     var translationIndex = 0;
     final definitionZh = translations[translationIndex++];
     final examplesZh = [
-      for (var i = 0; i < examples.length; i++) translations[translationIndex++],
+      for (var i = 0; i < examples.length; i++)
+        translations[translationIndex++],
     ];
     final synonymsZh = synonyms.isEmpty ? '' : translations[translationIndex++];
     final antonymsZh = antonyms.isEmpty ? '' : translations[translationIndex++];
@@ -329,17 +371,18 @@ class WordService {
       examplesZh: examplesZh,
       phrases: phrases,
     );
-    await preferences.setString(cacheKey, jsonEncode({
-      'cachedAt': DateTime.now().toUtc().toIso8601String(),
-      'entry': entry.toJson(),
-    }));
+    await preferences.setString(
+      cacheKey,
+      jsonEncode({
+        'cachedAt': DateTime.now().toUtc().toIso8601String(),
+        'entry': entry.toJson(),
+      }),
+    );
     return entry;
   }
 
-  String _normalizeTerm(String value) => value
-      .trim()
-      .toLowerCase()
-      .replaceAll(RegExp(r'\s+'), ' ');
+  String _normalizeTerm(String value) =>
+      value.trim().toLowerCase().replaceAll(RegExp(r'\s+'), ' ');
 
   List<Map<String, dynamic>> _decodeDatamuse(http.Response response) {
     if (response.statusCode != 200) return const [];
@@ -348,6 +391,28 @@ class WordService {
     } catch (_) {
       return const [];
     }
+  }
+
+  List<Map<String, dynamic>> _decodeDatamuseNullable(http.Response? response) =>
+      response == null ? const [] : _decodeDatamuse(response);
+
+  Future<http.Response?> _getWithRetry(
+    Uri uri, {
+    Duration timeout = const Duration(seconds: 15),
+    int attempts = 2,
+  }) async {
+    for (var attempt = 0; attempt < attempts; attempt++) {
+      try {
+        final response = await _client.get(uri).timeout(timeout);
+        if (response.statusCode < 500 || attempt == attempts - 1) {
+          return response;
+        }
+      } catch (_) {
+        if (attempt == attempts - 1) return null;
+      }
+      await Future<void>.delayed(Duration(milliseconds: 180 * (attempt + 1)));
+    }
+    return null;
   }
 
   Map<String, dynamic>? _exactDatamuseItem(
@@ -371,8 +436,9 @@ class WordService {
   }
 
   String _metadataTag(Map<String, dynamic>? item, String prefix) {
-    final tags = (item?['tags'] as List? ?? const [])
-        .map((value) => value.toString());
+    final tags = (item?['tags'] as List? ?? const []).map(
+      (value) => value.toString(),
+    );
     for (final tag in tags) {
       if (tag.startsWith(prefix)) return tag.substring(prefix.length).trim();
     }
@@ -410,7 +476,9 @@ class WordService {
     for (final meaning in meanings) {
       for (final item in (meaning['definitions'] as List? ?? const [])) {
         final example = (item as Map<String, dynamic>)['example'] as String?;
-        if (example != null && example.isNotEmpty && !examples.contains(example)) {
+        if (example != null &&
+            example.isNotEmpty &&
+            !examples.contains(example)) {
           examples.add(example);
         }
       }
@@ -424,7 +492,9 @@ class WordService {
         'q': text,
         'langpair': 'en|zh-CN',
       });
-      final response = await _client.get(uri).timeout(const Duration(seconds: 15));
+      final response = await _client
+          .get(uri)
+          .timeout(const Duration(seconds: 15));
       if (response.statusCode != 200) return '翻译暂不可用';
       final data = _decodeJson(response) as Map<String, dynamic>;
       return ((data['responseData'] as Map<String, dynamic>)['translatedText']

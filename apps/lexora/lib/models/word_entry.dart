@@ -10,16 +10,16 @@ class PhraseEntry {
   final String meaningZh;
 
   Map<String, dynamic> toJson() => {
-        'phrase': phrase,
-        'meaning': meaning,
-        'meaningZh': meaningZh,
-      };
+    'phrase': phrase,
+    'meaning': meaning,
+    'meaningZh': meaningZh,
+  };
 
   factory PhraseEntry.fromJson(Map<String, dynamic> json) => PhraseEntry(
-        phrase: json['phrase'] as String,
-        meaning: json['meaning'] as String,
-        meaningZh: json['meaningZh'] as String,
-      );
+    phrase: json['phrase'] as String,
+    meaning: json['meaning'] as String,
+    meaningZh: json['meaningZh'] as String,
+  );
 }
 
 class WordEntry {
@@ -38,6 +38,7 @@ class WordEntry {
     required this.examples,
     required this.examplesZh,
     this.phrases = const [],
+    this.originalTerm,
   });
 
   final String word;
@@ -55,41 +56,69 @@ class WordEntry {
   final List<String> examplesZh;
   final List<PhraseEntry> phrases;
 
+  /// The term supplied by the user when [word] is a validated fuzzy match.
+  /// It stays null for exact matches and for records saved by older versions.
+  final String? originalTerm;
+
+  bool get isFuzzyMatch =>
+      originalTerm != null &&
+      originalTerm!.trim().toLowerCase() != word.trim().toLowerCase();
+
+  WordEntry withOriginalTerm(String value) => WordEntry(
+    word: word,
+    difficulty: difficulty,
+    frequency: frequency,
+    usPhonetic: usPhonetic,
+    ukPhonetic: ukPhonetic,
+    definition: definition,
+    definitionZh: definitionZh,
+    synonyms: synonyms,
+    synonymsZh: synonymsZh,
+    antonyms: antonyms,
+    antonymsZh: antonymsZh,
+    examples: examples,
+    examplesZh: examplesZh,
+    phrases: phrases,
+    originalTerm: value,
+  );
+
   Map<String, dynamic> toJson() => {
-        'word': word,
-        'difficulty': difficulty,
-        'frequency': frequency,
-        'usPhonetic': usPhonetic,
-        'ukPhonetic': ukPhonetic,
-        'definition': definition,
-        'definitionZh': definitionZh,
-        'synonyms': synonyms,
-        'synonymsZh': synonymsZh,
-        'antonyms': antonyms,
-        'antonymsZh': antonymsZh,
-        'examples': examples,
-        'examplesZh': examplesZh,
-        'phrases': phrases.map((item) => item.toJson()).toList(),
-      };
+    'word': word,
+    'difficulty': difficulty,
+    'frequency': frequency,
+    'usPhonetic': usPhonetic,
+    'ukPhonetic': ukPhonetic,
+    'definition': definition,
+    'definitionZh': definitionZh,
+    'synonyms': synonyms,
+    'synonymsZh': synonymsZh,
+    'antonyms': antonyms,
+    'antonymsZh': antonymsZh,
+    'examples': examples,
+    'examplesZh': examplesZh,
+    'phrases': phrases.map((item) => item.toJson()).toList(),
+    if (originalTerm != null) 'originalTerm': originalTerm,
+  };
 
   factory WordEntry.fromJson(Map<String, dynamic> json) => WordEntry(
-        word: json['word'] as String,
-        difficulty: json['difficulty'] as String,
-        frequency: (json['frequency'] as num).toDouble(),
-        usPhonetic: json['usPhonetic'] as String,
-        ukPhonetic: json['ukPhonetic'] as String,
-        definition: json['definition'] as String,
-        definitionZh: json['definitionZh'] as String,
-        synonyms: (json['synonyms'] as List).cast<String>(),
-        synonymsZh: json['synonymsZh'] as String,
-        antonyms: (json['antonyms'] as List).cast<String>(),
-        antonymsZh: json['antonymsZh'] as String,
-        examples: (json['examples'] as List).cast<String>(),
-        examplesZh: (json['examplesZh'] as List).cast<String>(),
-        phrases: (json['phrases'] as List? ?? const [])
-            .map((item) => PhraseEntry.fromJson(item as Map<String, dynamic>))
-            .toList(),
-      );
+    word: json['word'] as String,
+    difficulty: json['difficulty'] as String,
+    frequency: (json['frequency'] as num).toDouble(),
+    usPhonetic: json['usPhonetic'] as String,
+    ukPhonetic: json['ukPhonetic'] as String,
+    definition: json['definition'] as String,
+    definitionZh: json['definitionZh'] as String,
+    synonyms: (json['synonyms'] as List).cast<String>(),
+    synonymsZh: json['synonymsZh'] as String,
+    antonyms: (json['antonyms'] as List).cast<String>(),
+    antonymsZh: json['antonymsZh'] as String,
+    examples: (json['examples'] as List).cast<String>(),
+    examplesZh: (json['examplesZh'] as List).cast<String>(),
+    phrases: (json['phrases'] as List? ?? const [])
+        .map((item) => PhraseEntry.fromJson(item as Map<String, dynamic>))
+        .toList(),
+    originalTerm: json['originalTerm'] as String?,
+  );
 }
 
 class GeneratedBook {
@@ -110,24 +139,24 @@ class GeneratedBook {
   final List<String> previewWords;
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'title': title,
-        'path': path,
-        'createdAt': createdAt.toIso8601String(),
-        'wordCount': wordCount,
-        'previewWords': previewWords,
-      };
+    'id': id,
+    'title': title,
+    'path': path,
+    'createdAt': createdAt.toIso8601String(),
+    'wordCount': wordCount,
+    'previewWords': previewWords,
+  };
 
   factory GeneratedBook.fromJson(Map<String, dynamic> json) => GeneratedBook(
-        id: json['id'] as String,
-        title: json['title'] as String,
-        path: json['path'] as String,
-        createdAt: DateTime.parse(json['createdAt'] as String),
-        wordCount: (json['wordCount'] as num).toInt(),
-        previewWords: (json['previewWords'] as List? ?? const [])
-            .map((item) => item.toString())
-            .toList(),
-      );
+    id: json['id'] as String,
+    title: json['title'] as String,
+    path: json['path'] as String,
+    createdAt: DateTime.parse(json['createdAt'] as String),
+    wordCount: (json['wordCount'] as num).toInt(),
+    previewWords: (json['previewWords'] as List? ?? const [])
+        .map((item) => item.toString())
+        .toList(),
+  );
 }
 
 class GeneratedWordRecord {
@@ -153,24 +182,23 @@ class GeneratedWordRecord {
     DateTime? lastGeneratedAt,
     String? difficulty,
     bool? starred,
-  }) =>
-      GeneratedWordRecord(
-        word: word,
-        generationCount: generationCount ?? this.generationCount,
-        firstGeneratedAt: firstGeneratedAt ?? this.firstGeneratedAt,
-        lastGeneratedAt: lastGeneratedAt ?? this.lastGeneratedAt,
-        difficulty: difficulty ?? this.difficulty,
-        starred: starred ?? this.starred,
-      );
+  }) => GeneratedWordRecord(
+    word: word,
+    generationCount: generationCount ?? this.generationCount,
+    firstGeneratedAt: firstGeneratedAt ?? this.firstGeneratedAt,
+    lastGeneratedAt: lastGeneratedAt ?? this.lastGeneratedAt,
+    difficulty: difficulty ?? this.difficulty,
+    starred: starred ?? this.starred,
+  );
 
   Map<String, dynamic> toJson() => {
-        'word': word,
-        'generationCount': generationCount,
-        'firstGeneratedAt': firstGeneratedAt.toIso8601String(),
-        'lastGeneratedAt': lastGeneratedAt.toIso8601String(),
-        'difficulty': difficulty,
-        'starred': starred,
-      };
+    'word': word,
+    'generationCount': generationCount,
+    'firstGeneratedAt': firstGeneratedAt.toIso8601String(),
+    'lastGeneratedAt': lastGeneratedAt.toIso8601String(),
+    'difficulty': difficulty,
+    'starred': starred,
+  };
 
   factory GeneratedWordRecord.fromJson(Map<String, dynamic> json) =>
       GeneratedWordRecord(

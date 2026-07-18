@@ -3,14 +3,18 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:file_selector/file_selector.dart';
 
 import '../l10n/app_localizations.dart';
+import '../services/document_import_service.dart';
 import '../services/haptic_service.dart';
 import '../services/pdf_service.dart';
 import '../services/pdf_settings_service.dart';
 import '../widgets/lexora_wordmark.dart';
 
 enum WordSort { custom, alphabetical, length, difficulty }
+
+typedef ImportFilePicker = Future<List<XFile>> Function();
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({
@@ -19,12 +23,16 @@ class HomeScreen extends StatefulWidget {
     required this.generationRunning,
     required this.onStartGeneration,
     required this.onCustomizePdf,
+    this.importService = const DocumentImportService(),
+    this.importFilePicker,
   });
 
   final PdfSettings settings;
   final bool generationRunning;
   final ValueChanged<List<String>> onStartGeneration;
   final VoidCallback onCustomizePdf;
+  final DocumentImportService importService;
+  final ImportFilePicker? importFilePicker;
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -36,6 +44,7 @@ class _HomeScreenState extends State<HomeScreen> {
   final _words = <String>[];
   final _haptics = const HapticService();
   WordSort _sort = WordSort.custom;
+  bool _importing = false;
 
   @override
   void dispose() {
@@ -86,6 +95,83 @@ class _HomeScreenState extends State<HomeScreen> {
           break;
       }
     });
+  }
+
+  Future<List<XFile>> _pickImportFiles() => openFiles(
+    acceptedTypeGroups: const [
+      XTypeGroup(
+        label: 'Word lists and documents',
+        extensions: [
+          'txt',
+          'text',
+          'md',
+          'markdown',
+          'csv',
+          'tsv',
+          'rtf',
+          'doc',
+          'docx',
+          'odt',
+          'pdf',
+        ],
+      ),
+    ],
+  );
+
+  Future<void> _importFiles() async {
+    if (_importing) return;
+    final strings = AppLocalizations.of(context);
+    List<XFile> files;
+    try {
+      files = await (widget.importFilePicker ?? _pickImportFiles)();
+    } catch (error) {
+      if (mounted) _message(strings.importFailed(error.toString()));
+      return;
+    }
+    if (files.isEmpty || !mounted) return;
+
+    setState(() => _importing = true);
+    final imported = <String>[];
+    final known = _words.toSet();
+    var duplicates = 0;
+    var invalid = 0;
+    final errors = <String>[];
+    try {
+      for (final file in files) {
+        try {
+          final result = await widget.importService.extractBytes(
+            fileName: file.name.isEmpty ? file.path : file.name,
+            bytes: await file.readAsBytes(),
+          );
+          invalid += result.invalidLineCount;
+          duplicates += result.duplicateLineCount;
+          for (final term in result.terms) {
+            if (known.add(term)) {
+              imported.add(term);
+            } else {
+              duplicates++;
+            }
+          }
+        } catch (error) {
+          errors.add('${file.name}: $error');
+        }
+      }
+    } finally {
+      if (mounted) setState(() => _importing = false);
+    }
+    if (!mounted) return;
+
+    if (imported.isNotEmpty) {
+      setState(() {
+        _words.addAll(imported);
+        _sort = WordSort.custom;
+      });
+      _message(strings.importSummary(imported.length, duplicates, invalid));
+    } else if (errors.isNotEmpty) {
+      _message(strings.importFailed(errors.first));
+    } else {
+      _message(strings.noImportableEntries);
+    }
   }
 
   int _estimatedDifficulty(String word) =>
@@ -184,6 +270,40 @@ class _HomeScreenState extends State<HomeScreen> {
                       onPressed: _addWord,
                       icon: const Icon(Icons.keyboard_return_rounded),
                     ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Wrap(
+                    spacing: 10,
+                    runSpacing: 4,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      OutlinedButton.icon(
+                        onPressed: _importing ? null : _importFiles,
+                        icon: _importing
+                            ? const SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : const Icon(Icons.upload_file_rounded),
+                        label: Text(
+                          _importing
+                              ? strings.importingFile
+                              : strings.importFile,
+                        ),
+                      ),
+                      Text(
+                        strings.importFileHint,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
                 const SizedBox(height: 14),
