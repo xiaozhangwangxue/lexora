@@ -26,7 +26,9 @@
         "/updates/lexora-android-v1.1.4.apk",
         "https://lexora-official.xiaozhangwangxue.workers.dev/updates/lexora-android-v1.1.4.apk",
         "https://github.com/xiaozhangwangxue/lexora/releases/download/v1.1.4/lexora-android-v1.1.4.apk"
-      ]
+      ],
+      "sha256": "e0135b64f36f81b246842118dc84528d6ac10f27c206543d2d999e97de1129f6",
+      "size": 97103687
     },
     "macos": {
       "filename": "lexora-macos-v1.1.4.dmg",
@@ -35,7 +37,9 @@
         "/updates/lexora-macos-v1.1.4.dmg",
         "https://lexora-official.xiaozhangwangxue.workers.dev/updates/lexora-macos-v1.1.4.dmg",
         "https://github.com/xiaozhangwangxue/lexora/releases/download/v1.1.4/lexora-macos-v1.1.4.dmg"
-      ]
+      ],
+      "sha256": "fbbfffa796bac5f4179c60b3147e1db752ac948de8ce3c0f1ae44473dc38e017",
+      "size": 46288123
     },
     "windows": {
       "filename": "lexora-windows-v1.1.4-setup.exe",
@@ -44,7 +48,9 @@
         "/updates/lexora-windows-v1.1.4-setup.exe",
         "https://lexora-official.xiaozhangwangxue.workers.dev/updates/lexora-windows-v1.1.4-setup.exe",
         "https://github.com/xiaozhangwangxue/lexora/releases/download/v1.1.4/lexora-windows-v1.1.4-setup.exe"
-      ]
+      ],
+      "sha256": "3c10745f60819c5df727898f570479ab07c69becdf3f3bf4f0f47f889cc096fb",
+      "size": 27033634
     },
     "linux": {
       "filename": "lexora-linux-v1.1.4.tar.gz",
@@ -53,7 +59,9 @@
         "/updates/lexora-linux-v1.1.4.tar.gz",
         "https://lexora-official.xiaozhangwangxue.workers.dev/updates/lexora-linux-v1.1.4.tar.gz",
         "https://github.com/xiaozhangwangxue/lexora/releases/download/v1.1.4/lexora-linux-v1.1.4.tar.gz"
-      ]
+      ],
+      "sha256": "a26b94d481952a279133ed223fcadcc0408be5068bef68e97abd1efef77e1a67",
+      "size": 31129563
     }
   }
 }
