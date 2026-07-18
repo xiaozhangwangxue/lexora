@@ -25,6 +25,7 @@
       "filename": "lexora-android-v1.1.3.apk",
       "url": "/updates/lexora-android-v1.1.3.apk",
       "sources": [
+        "https://lexora-official.xiaozhangwangxue.workers.dev/updates/lexora-android-v1.1.3.apk",
         "/updates/lexora-android-v1.1.3.apk",
         "https://github.com/xiaozhangwangxue/lexora/releases/download/v1.1.3/lexora-android-v1.1.3.apk"
       ]
@@ -33,6 +34,7 @@
       "filename": "lexora-macos-v1.1.3.dmg",
       "url": "/updates/lexora-macos-v1.1.3.dmg",
       "sources": [
+        "https://lexora-official.xiaozhangwangxue.workers.dev/updates/lexora-macos-v1.1.3.dmg",
         "/updates/lexora-macos-v1.1.3.dmg",
         "https://github.com/xiaozhangwangxue/lexora/releases/download/v1.1.3/lexora-macos-v1.1.3.dmg"
       ]
@@ -41,6 +43,7 @@
       "filename": "lexora-windows-v1.1.3-setup.exe",
       "url": "/updates/lexora-windows-v1.1.3-setup.exe",
       "sources": [
+        "https://lexora-official.xiaozhangwangxue.workers.dev/updates/lexora-windows-v1.1.3-setup.exe",
         "/updates/lexora-windows-v1.1.3-setup.exe",
         "https://github.com/xiaozhangwangxue/lexora/releases/download/v1.1.3/lexora-windows-v1.1.3-setup.exe"
       ]
@@ -49,6 +52,7 @@
       "filename": "lexora-linux-v1.1.3.tar.gz",
       "url": "/updates/lexora-linux-v1.1.3.tar.gz",
       "sources": [
+        "https://lexora-official.xiaozhangwangxue.workers.dev/updates/lexora-linux-v1.1.3.tar.gz",
         "/updates/lexora-linux-v1.1.3.tar.gz",
         "https://github.com/xiaozhangwangxue/lexora/releases/download/v1.1.3/lexora-linux-v1.1.3.tar.gz"
       ]

@@ -2,6 +2,7 @@
   "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "lexora-official",
   "main": "dist/server/index.js",
+  "workers_dev": true,
   "compatibility_date": "2026-07-12",
   "compatibility_flags": ["nodejs_compat"],
   "assets": {
