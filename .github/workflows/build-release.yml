@@ -59,6 +59,10 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev
       - name: Generate platform shells
         run: flutter create --project-name lexora --platforms=android,linux,macos,windows .
+      - name: Enable current MSVC compatibility for Windows plugins
+        if: matrix.platform == 'windows'
+        shell: pwsh
+        run: Add-Content windows/CMakeLists.txt "`nadd_compile_definitions(_SILENCE_EXPERIMENTAL_COROUTINE_DEPRECATION_WARNINGS)"
       - name: Allow Android network and installer access
         if: matrix.platform == 'android'
         run: |
