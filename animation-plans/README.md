@@ -6,5 +6,7 @@ Audit baseline: commit `0a6327a` (2026-07-19).
 | --- | --- | --- |
 | [001](001-desktop-sidebar.md) | Desktop sidebar resize and toggle | DONE |
 | [002](002-navigation-and-dialogs.md) | Android navigation and PDF customization dialog | DONE |
+| [003](003-website-motion-and-story.md) | Website motion hierarchy and product story | DONE |
+| [004](004-document-customization-performance.md) | Native glass and cross-platform dialog performance | DONE |
 
 These plans intentionally avoid springy or decorative motion. Lexora's motion should clarify hierarchy, preserve focus, and remain fast enough for repeated navigation.

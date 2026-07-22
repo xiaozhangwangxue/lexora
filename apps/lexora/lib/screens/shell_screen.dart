@@ -16,6 +16,7 @@ import '../services/document_export_service.dart';
 import '../services/haptic_service.dart';
 import '../services/history_service.dart';
 import '../services/notification_service.dart';
+import '../services/pdf_service.dart';
 import '../services/pdf_settings_service.dart';
 import '../services/word_service.dart';
 import '../widgets/github_button.dart';
@@ -39,6 +40,7 @@ class ShellScreen extends StatefulWidget {
 class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
   static const _onboardingKey = 'lexora.onboarding.completed.v1';
   static const _releaseNotesKey = 'lexora.release-notes.seen.$appVersion';
+  static const _nativeNavigation = MethodChannel('lexora/native-navigation');
   final _settingsService = PdfSettingsService();
   final _pageController = PageController();
   final _generationProgress = GenerationProgress();
@@ -56,26 +58,57 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
   bool _releaseNotesPending = false;
   bool _releaseNotesShowing = false;
   bool? _desktopSidebarExpandedPreference;
+  bool? _nativeMacShellAvailable;
   Completer<void>? _resumeCompleter;
 
   bool get _isAndroid =>
       Platform.isAndroid ||
       debugDefaultTargetPlatformOverride == TargetPlatform.android;
+  bool get _isWidgetTest => Platform.environment['FLUTTER_TEST'] == 'true';
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    if (Platform.isMacOS && !_isWidgetTest) {
+      _nativeNavigation.setMethodCallHandler(_handleNativeNavigation);
+      unawaited(_detectNativeMacShell());
+    } else {
+      _nativeMacShellAvailable = false;
+    }
     _loadInitialState();
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    if (Platform.isMacOS && !_isWidgetTest) {
+      _nativeNavigation.setMethodCallHandler(null);
+    }
     _pageController.dispose();
     _generationProgress.dispose();
     if (_resumeCompleter?.isCompleted == false) _resumeCompleter!.complete();
     super.dispose();
+  }
+
+  Future<void> _detectNativeMacShell() async {
+    var available = false;
+    try {
+      available =
+          await _nativeNavigation.invokeMethod<bool>('isAvailable') ?? false;
+    } on MissingPluginException {
+      available = false;
+    } on PlatformException {
+      available = false;
+    }
+    if (mounted) setState(() => _nativeMacShellAvailable = available);
+  }
+
+  Future<void> _handleNativeNavigation(MethodCall call) async {
+    if (call.method != 'selectPage') return;
+    final page = call.arguments as int?;
+    if (page == null || page < 0 || page > 3 || !mounted) return;
+    _selectPage(page, animate: false);
   }
 
   @override
@@ -224,6 +257,9 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
         _pageController.jumpToPage(value);
       }
     }
+    if (_nativeMacShellAvailable == true) {
+      unawaited(_nativeNavigation.invokeMethod<void>('pageChanged', value));
+    }
   }
 
   void _dismissAndroidHomeKeyboard(int destination) {
@@ -238,8 +274,86 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
   }
 
   Future<void> _showPdfCustomizer() async {
-    final updated = await showPdfCustomizationDialog(context, _settings!);
+    FocusManager.instance.primaryFocus?.unfocus(
+      disposition: UnfocusDisposition.scope,
+    );
+    await SystemChannels.textInput.invokeMethod<void>('TextInput.hide');
+    if (!mounted) return;
+    PdfSettings? updated;
+    if (Platform.isMacOS && _nativeMacShellAvailable == true) {
+      try {
+        final result = await _nativeNavigation.invokeMapMethod<String, dynamic>(
+          'showCustomization',
+          _nativeCustomizationArguments(_settings!),
+        );
+        if (result != null) {
+          updated = _settingsFromNativeCustomization(result, _settings!);
+        }
+      } on MissingPluginException {
+        if (!mounted) return;
+        updated = await showPdfCustomizationDialog(context, _settings!);
+      } on PlatformException {
+        if (!mounted) return;
+        updated = await showPdfCustomizationDialog(context, _settings!);
+      }
+    } else {
+      updated = await showPdfCustomizationDialog(context, _settings!);
+    }
     if (updated != null && mounted) _updateSettings(updated);
+    FocusManager.instance.primaryFocus?.unfocus(
+      disposition: UnfocusDisposition.scope,
+    );
+    await SystemChannels.textInput.invokeMethod<void>('TextInput.hide');
+  }
+
+  Map<String, Object> _nativeCustomizationArguments(PdfSettings settings) => {
+    'format': settings.format.name,
+    'pageSize': settings.pageSize.name,
+    'preset': settings.fontSize.name,
+    'exampleAmount': settings.exampleAmount.name,
+    'smartReorder': settings.smartReorder,
+    'word': settings.typography.word,
+    'phonetic': settings.typography.phonetic,
+    'definition': settings.typography.definition,
+    'related': settings.typography.related,
+    'example': settings.typography.example,
+    'phrase': settings.typography.phrase,
+  };
+
+  PdfSettings _settingsFromNativeCustomization(
+    Map<String, dynamic> values,
+    PdfSettings fallback,
+  ) {
+    T named<T extends Enum>(List<T> options, String key, T defaultValue) {
+      final name = values[key];
+      for (final option in options) {
+        if (option.name == name) return option;
+      }
+      return defaultValue;
+    }
+
+    double number(String key, double defaultValue) =>
+        (values[key] as num?)?.toDouble() ?? defaultValue;
+
+    return PdfSettings(
+      format: named(BookFormat.values, 'format', fallback.format),
+      pageSize: named(BookPageSize.values, 'pageSize', fallback.pageSize),
+      fontSize: named(PdfFontSize.values, 'preset', fallback.fontSize),
+      exampleAmount: named(
+        ExampleAmount.values,
+        'exampleAmount',
+        fallback.exampleAmount,
+      ),
+      smartReorder: values['smartReorder'] as bool? ?? fallback.smartReorder,
+      typography: PdfTypography(
+        word: number('word', fallback.typography.word),
+        phonetic: number('phonetic', fallback.typography.phonetic),
+        definition: number('definition', fallback.typography.definition),
+        related: number('related', fallback.typography.related),
+        example: number('example', fallback.typography.example),
+        phrase: number('phrase', fallback.typography.phrase),
+      ),
+    );
   }
 
   void _startGeneration(List<String> terms) {
@@ -281,6 +395,7 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
         fontSize: settings.fontSize,
         typography: settings.typography,
         pageSize: settings.pageSize,
+        smartReorder: settings.smartReorder,
       );
       await _historyService.save(book);
       await _historyService.recordWords(result.entries, book.createdAt);
@@ -322,7 +437,8 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
   Future<void> _shareBook(GeneratedBook book) async {
     final strings = AppLocalizations.of(context);
     await Share.shareXFiles([
-      XFile(book.path, mimeType: book.format.mimeType),
+      for (final path in book.allPaths)
+        XFile(path, mimeType: book.format.mimeType),
     ], subject: strings.vocabularyBook);
   }
 
@@ -545,6 +661,12 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
     }
 
     final strings = AppLocalizations.of(context);
+    if (Platform.isMacOS && _nativeMacShellAvailable == null) {
+      return const Scaffold(
+        backgroundColor: Colors.transparent,
+        body: SizedBox.expand(),
+      );
+    }
     final windowWidth = MediaQuery.sizeOf(context).width;
     final wide = _isAndroid ? windowWidth >= 680 : windowWidth >= 520;
     final autoExpandedNavigation = windowWidth >= 820;
@@ -655,6 +777,14 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
         label: Text(strings.settings),
       ),
     ];
+
+    if (Platform.isMacOS && _nativeMacShellAvailable == true) {
+      return Scaffold(
+        backgroundColor: Colors.transparent,
+        resizeToAvoidBottomInset: true,
+        body: body,
+      );
+    }
 
     if (wide) {
       return Scaffold(

@@ -19,7 +19,7 @@ const donationCodes = {
   alipay: "https://photo.12323456.xyz/api/rfile/%E6%94%AF%E4%BB%98%E5%AE%9D.jpg",
 };
 
-const currentVersion = "v1.2.0";
+const currentVersion = "v3.0.0";
 const platforms: Array<{ key: PlatformKey; name: string; noteZh: string; noteEn: string; Icon: IconType; file: string }> = [
   { key: "macos", name: "macOS", noteZh: "macOS 12+ · 拖动安装 DMG", noteEn: "macOS 12+ · Drag-to-install DMG", Icon: FaApple, file: `lexora-macos-${currentVersion}.dmg` },
   { key: "windows", name: "Windows", noteZh: "Windows 10 / 11 · 安装程序", noteEn: "Windows 10 / 11 · Installer", Icon: FaWindows, file: `lexora-windows-${currentVersion}-setup.exe` },
@@ -53,8 +53,8 @@ const installGuides: Record<PlatformKey, { zh: string[]; en: string[] }> = {
     en: ["Extract the tar.gz archive.", "If needed, allow the lexora file to run as a program or use chmod +x.", "Launch the lexora executable."],
   },
   android: {
-    zh: ["从 v0.3.0 或更高版本可直接覆盖安装 v1.2.0；只有 v0.2.0 需先卸载一次。", "下载 APK，系统询问时允许浏览器安装未知来源应用。", "确认文件来自本官网后，选择“仍要安装”；安装后可关闭该权限。"],
-    en: ["v0.3.0 and newer can update directly to v1.2.0. Only v0.2.0 requires one uninstall first.", "Download the APK and allow your browser to install unknown apps when Android asks.", "After verifying this official site, choose Install anyway. You can revoke that permission afterward."],
+    zh: ["从 v0.3.0 或更高版本可直接覆盖安装 v3.0.0；只有 v0.2.0 需先卸载一次。", "下载 APK，系统询问时允许浏览器安装未知来源应用。", "确认文件来自本官网后，选择“仍要安装”；安装后可关闭该权限。"],
+    en: ["v0.3.0 and newer can update directly to v3.0.0. Only v0.2.0 requires one uninstall first.", "Download the APK and allow your browser to install unknown apps when Android asks.", "After verifying this official site, choose Install anyway. You can revoke that permission afterward."],
   },
 };
 
@@ -89,6 +89,32 @@ export default function Home() {
       setDetectedPlatform(detectPlatform());
     });
     return () => window.cancelAnimationFrame(frame);
+  }, []);
+
+  useEffect(() => {
+    const root = document.documentElement;
+    const items = Array.from(document.querySelectorAll<HTMLElement>("[data-reveal]"));
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    root.classList.add("motionEnabled");
+    if (reduced || !("IntersectionObserver" in window)) {
+      items.forEach((item) => item.classList.add("isRevealed"));
+      return () => root.classList.remove("motionEnabled");
+    }
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (!entry.isIntersecting) return;
+          (entry.target as HTMLElement).classList.add("isRevealed");
+          observer.unobserve(entry.target);
+        });
+      },
+      { rootMargin: "0px 0px -8%", threshold: 0.12 },
+    );
+    items.forEach((item) => observer.observe(item));
+    return () => {
+      observer.disconnect();
+      root.classList.remove("motionEnabled");
+    };
   }, []);
 
   const visibleWords = useMemo(() => {
@@ -224,8 +250,8 @@ export default function Home() {
         <h1>{zh ? <><span className="heroLine">把零散单词，变成</span><br /><em className="heroLine">真正想读的词汇书。</em></> : <>Turn loose words into a<br /><em>book worth reading.</em></>}</h1>
         <p className="heroCopy">
           {zh
-            ? "输入单词，Lexora 自动补全难度、词频、英美音标、近反义词、例句与完整中文翻译，并生成紧凑精美的 PDF、EPUB 或可编辑 DOCX。"
-            : "Type your words. Lexora adds difficulty, frequency, US & UK phonetics, related words, examples, and complete Chinese translations—then typesets a beautiful PDF, EPUB, or editable DOCX."}
+            ? "输入或批量导入单词，Lexora 自动补全难度、词频、英美音标、近反义词、例句与中文翻译，再生成紧凑的 PDF、EPUB、可编辑 DOCX、分页图片或长图。"
+            : "Type or import a word list. Lexora adds difficulty, frequency, US & UK phonetics, related words, examples, and Chinese translations—then creates PDF, EPUB, editable DOCX, page images, or one long image."}
         </p>
         <div className="heroActions">
           <a className="primaryButton" href="#download">{zh ? "免费下载" : "Download free"} <span>↓</span></a>
@@ -343,16 +369,16 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="statement" id="how">
+      <section className="statement" id="how" data-reveal>
         <div className="wrap statementGrid">
           <p className="sectionLabel">{zh ? "从列表到词汇书" : "From list to lexicon"}</p>
           <h2>{zh ? "查词应该是过程，阅读才是结果。" : "Lookup is the process. Reading is the point."}</h2>
-          <p>{zh ? "Lexora 从可靠的在线词典与语料数据中整理每个单词，再用为学习设计的双语版式生成 PDF、EPUB 或可编辑 DOCX。信息足够完整，页面仍然轻盈。" : "Lexora gathers each word from trusted dictionary and corpus sources, then creates a bilingual PDF, EPUB, or editable DOCX designed for study—rich in context, light on clutter."}</p>
+          <p>{zh ? "从 TXT、PDF、DOC 或 DOCX 批量导入后，Lexora 会整理可靠的词典与语料数据；智能排版还能重新安排长短词条，让纸张空间被真正利用起来。" : "Import from TXT, PDF, DOC, or DOCX, then let Lexora organize trusted dictionary and corpus data. Smart layout balances long and short entries so the page is genuinely used."}</p>
         </div>
       </section>
 
       <section className="features wrap">
-        <article className="feature featureLarge">
+        <article className="feature featureLarge" data-reveal>
           <span className="featureNumber">01</span>
           <div>
             <p className="sectionLabel">{zh ? "快速整理" : "Fast capture"}</p>
@@ -361,21 +387,21 @@ export default function Home() {
           </div>
           <div className="stackVisual"><span>serendipity</span><span>resilient</span><span>lucid</span></div>
         </article>
-        <article className="feature">
+        <article className="feature" data-reveal>
           <span className="featureNumber">02</span>
           <div className="soundVisual"><i /><i /><i /><i /><i /><i /><i /></div>
           <h3>{zh ? "一个单词，完整语境。" : "One word. Full context."}</h3>
           <p>{zh ? "难度、词频、英美音标、近反义词与双语例句一次补全。" : "Difficulty, frequency, phonetics, related words, and bilingual examples in one pass."}</p>
         </article>
-        <article className="feature darkFeature">
+        <article className="feature darkFeature" data-reveal>
           <span className="featureNumber">03</span>
           <div className="pdfMini"><b>LEXORA</b><strong>lucid</strong><small>/ˈluːsɪd/ · B2</small><p>expressed clearly; easy to understand</p><em>清晰的；易懂的</em></div>
-          <h3>{zh ? "不只是导出，而是三种成品。" : "Three formats. One finished book."}</h3>
-          <p>{zh ? "PDF 适合打印，EPUB 适合电子阅读，可编辑 DOCX 方便继续整理；三种格式都可在 Lexora 内阅读、缩放和分享。" : "Print the PDF, read the EPUB, or keep editing the DOCX. Every format opens, zooms, and shares inside Lexora."}</p>
+          <h3>{zh ? "五种成品，适合每一种阅读方式。" : "Five outputs for every way you read."}</h3>
+          <p>{zh ? "PDF 适合打印，EPUB 可流式阅读，DOCX 方便编辑；分页图片会保存到相册，长图适合在手机上连续阅读。所有格式都能在生成记录中打开和分享。" : "Print PDF, read reflowable EPUB, edit DOCX, save every page to Photos, or scroll one long image. Every result opens and shares from Generated."}</p>
         </article>
       </section>
 
-      <section className="download wrap" id="download">
+      <section className="download wrap" id="download" data-reveal>
         <div>
           <p className="sectionLabel">{zh ? "所有设备" : "Every device"}</p>
           <h2>{zh ? "词汇跟着你走。" : "Your words go with you."}</h2>
@@ -453,19 +479,7 @@ export default function Home() {
         </div>
       )}
 
-      <section className="support">
-        <div className="wrap supportInner">
-          <div className="supportMark">♥</div>
-          <div>
-            <p className="sectionLabel">{zh ? "支持独立开发" : "Support independent work"}</p>
-            <h2>{zh ? "让 Lexora 继续变得更好。" : "Help Lexora keep getting better."}</h2>
-            <p>{zh ? "Lexora 免费使用。你的自愿支持会用于词典数据、跨平台测试、签名与长期维护。" : "Lexora is free to use. Voluntary support helps cover dictionary data, cross-platform testing, signing, and long-term maintenance."}</p>
-          </div>
-          <Link className="supportButton" href="/donate">{zh ? "打开捐款页面" : "Open donation page"} <span>↗</span></Link>
-        </div>
-      </section>
-
-      <section className="homeDonateChannels wrap" aria-labelledby="donation-channels-title">
+      <section className="homeDonateChannels wrap" aria-labelledby="donation-channels-title" data-reveal>
         <div className="homeDonateIntro">
           <p className="sectionLabel">{zh ? "捐款渠道" : "Donation channels"}</p>
           <h2 id="donation-channels-title">{zh ? "谢谢你支持 Lexora。" : "Thank you for supporting Lexora."}</h2>

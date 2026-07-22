@@ -57,10 +57,10 @@ Lexora 是一款面向 Android、macOS、Windows 与 Linux 的英语单词整理
 
 | 平台 | 安装包 | 系统要求 | 下载 |
 | --- | --- | --- | --- |
-| Android | APK | Android 8.0+ | [官网下载](https://lexora.12323456.xyz/downloads/lexora-android-v1.2.0.apk) |
-| macOS | 拖动安装 DMG | macOS 12+ | [官网下载](https://lexora.12323456.xyz/downloads/lexora-macos-v1.2.0.dmg) |
-| Windows | 安装程序 EXE（默认安装后启动） | Windows 10 / 11 | [官网下载](https://lexora.12323456.xyz/downloads/lexora-windows-v1.2.0-setup.exe) |
-| Linux | tar.gz | 64 位 Linux | [官网下载](https://lexora.12323456.xyz/downloads/lexora-linux-v1.2.0.tar.gz) |
+| Android | APK | Android 8.0+ | [官网下载](https://lexora.12323456.xyz/downloads/lexora-android-v3.0.0.apk) |
+| macOS | 拖动安装 DMG | macOS 12+ | [官网下载](https://lexora.12323456.xyz/downloads/lexora-macos-v3.0.0.dmg) |
+| Windows | 安装程序 EXE（默认安装后启动） | Windows 10 / 11 | [官网下载](https://lexora.12323456.xyz/downloads/lexora-windows-v3.0.0-setup.exe) |
+| Linux | tar.gz | 64 位 Linux | [官网下载](https://lexora.12323456.xyz/downloads/lexora-linux-v3.0.0.tar.gz) |
 
 <details>
 <summary><strong>首次安装被系统拦截怎么办？</strong></summary>
@@ -75,13 +75,13 @@ Lexora 是一款面向 Android、macOS、Windows 与 Linux 的英语单词整理
 > [!IMPORTANT]
 > Android v0.2.0 使用了临时构建签名，旧私钥无法恢复，因此升级到采用稳定签名的 v0.3.0 时需要先卸载旧版再安装一次。自 v0.3.0 起，后续版本继续使用同一发布签名，可直接覆盖更新。请先按需导出旧版中的 PDF。
 
-所有发行文件名都包含版本号，例如 `lexora-android-v1.2.0.apk`。这样可以避免浏览器或下载目录把新旧安装包混淆。应用内更新优先使用 Cloudflare R2，并在打开安装包前校验下载完整性与 SHA-256。
+所有发行文件名都包含版本号，例如 `lexora-android-v3.0.0.apk`。这样可以避免浏览器或下载目录把新旧安装包混淆。应用内更新优先使用 Cloudflare R2，并在打开安装包前校验下载完整性与 SHA-256。
 
 ## 三步生成词汇书
 
 1. 输入一个英文单词并按回车，或导入按换行整理的文档，一次添加大量单词和短语。
 2. 长按调整顺序或选择排序方式，在“设置”中选好字号与例句数量，然后点击“开始生成”。
-3. 选择 PDF、EPUB 或 DOCX，在“生成记录”阅读、导出或分享，在“历史”查看所有生成过的单词。
+3. 选择 PDF、EPUB、DOCX、分页图片或长图，在“生成记录”阅读、导出或分享，在“历史”查看所有生成过的单词。
 
 ```text
 word list → dictionary + corpus + translation → bilingual layout → PDF / EPUB / DOCX → history / export / share

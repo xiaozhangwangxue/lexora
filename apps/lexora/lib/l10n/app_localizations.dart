@@ -109,6 +109,13 @@ class AppLocalizations {
   String get customize => isZh ? '自定义文档' : 'Customize document';
   String get pdfSettings => isZh ? '文档自定义' : 'Document customization';
   String get exportFormat => isZh ? '导出格式' : 'Export format';
+  String get pageImages => isZh ? '分页图片' : 'Page images';
+  String get longImage => isZh ? '长图' : 'Long image';
+  String get smartReorder => isZh ? '智能调整顺序' : 'Smart reorder';
+  String get smartReorderHint => isZh
+      ? '只改变词条顺序，不修改任何内容。Lexora 会根据每个词条的长度智能分配位置，让长短内容互相补位，减少页面留白并节约纸张。'
+      : 'Only the entry order changes; no content is edited. Lexora balances longer and shorter entries to reduce empty space and use less paper.';
+  String get smartReorderHelp => isZh ? '了解智能排版' : 'About smart layout';
   String get paperSize => isZh ? '纸张尺寸' : 'Paper size';
   String get paperSizeHint => isZh
       ? 'Lexora 会根据纸张和字号自动选择一栏、两栏或三栏。'
@@ -117,8 +124,8 @@ class AppLocalizations {
       ? '把零散单词，变成真正想读的词汇书。'
       : 'Turn loose words into a book worth reading.';
   String get settingsIntroBody => isZh
-      ? 'Lexora 会联网补全难度、词频、英美音标、近反义词、双语例句与中文翻译，再排版成 PDF、EPUB 或可编辑 DOCX。'
-      : 'Lexora completes difficulty, frequency, phonetics, related words, bilingual examples, and Chinese translations, then typesets PDF, EPUB, or editable DOCX.';
+      ? 'Lexora 会联网补全难度、词频、英美音标、近反义词、双语例句与中文翻译，再排版成 PDF、EPUB、可编辑 DOCX、分页图片或长图。'
+      : 'Lexora completes difficulty, frequency, phonetics, related words, bilingual examples, and Chinese translations, then typesets PDF, EPUB, editable DOCX, page images, or a long image.';
   String get pdfFontSize => isZh ? '文档字号' : 'Document font size';
   String get fontPreset => isZh ? '字号预设' : 'Font preset';
   String get fineTuneTypography => isZh ? '精细调整字体' : 'Fine-tune typography';

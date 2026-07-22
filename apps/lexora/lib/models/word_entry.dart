@@ -127,7 +127,9 @@ enum BookFormat {
   docx(
     'docx',
     'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-  );
+  ),
+  images('png', 'image/png'),
+  longImage('png', 'image/png');
 
   const BookFormat(this.extension, this.mimeType);
 
@@ -145,6 +147,7 @@ class GeneratedBook {
     this.previewWords = const [],
     this.format = BookFormat.pdf,
     this.contentPath,
+    this.paths = const [],
   });
 
   final String id;
@@ -160,16 +163,24 @@ class GeneratedBook {
   /// preserve the same cards, translations and zoom behavior on every device.
   final String? contentPath;
 
-  GeneratedBook copyWith({String? contentPath}) => GeneratedBook(
-    id: id,
-    title: title,
-    path: path,
-    createdAt: createdAt,
-    wordCount: wordCount,
-    previewWords: previewWords,
-    format: format,
-    contentPath: contentPath ?? this.contentPath,
-  );
+  /// All files produced by one export. Older records only contain [path], so
+  /// [allPaths] transparently falls back to that single file.
+  final List<String> paths;
+
+  List<String> get allPaths => paths.isEmpty ? [path] : paths;
+
+  GeneratedBook copyWith({String? contentPath, List<String>? paths}) =>
+      GeneratedBook(
+        id: id,
+        title: title,
+        path: path,
+        createdAt: createdAt,
+        wordCount: wordCount,
+        previewWords: previewWords,
+        format: format,
+        contentPath: contentPath ?? this.contentPath,
+        paths: paths ?? this.paths,
+      );
 
   Map<String, dynamic> toJson() => {
     'id': id,
@@ -180,6 +191,7 @@ class GeneratedBook {
     'previewWords': previewWords,
     'format': format.name,
     if (contentPath != null) 'contentPath': contentPath,
+    if (paths.isNotEmpty) 'paths': paths,
   };
 
   factory GeneratedBook.fromJson(Map<String, dynamic> json) => GeneratedBook(
@@ -196,6 +208,9 @@ class GeneratedBook {
       orElse: () => BookFormat.pdf,
     ),
     contentPath: json['contentPath'] as String?,
+    paths: (json['paths'] as List? ?? const [])
+        .map((item) => item.toString())
+        .toList(),
   );
 }
 

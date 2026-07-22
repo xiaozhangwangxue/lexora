@@ -343,29 +343,25 @@ class SettingsScreen extends StatelessWidget {
                               style: theme.textTheme.labelLarge,
                             ),
                             const SizedBox(height: 10),
-                            SizedBox(
-                              width: double.infinity,
-                              child: SegmentedButton<BookFormat>(
-                                showSelectedIcon: false,
-                                segments: const [
-                                  ButtonSegment(
-                                    value: BookFormat.pdf,
-                                    label: Text('PDF'),
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: [
+                                for (final choice in [
+                                  (BookFormat.pdf, 'PDF'),
+                                  (BookFormat.epub, 'EPUB'),
+                                  (BookFormat.docx, 'DOCX'),
+                                  (BookFormat.images, strings.pageImages),
+                                  (BookFormat.longImage, strings.longImage),
+                                ])
+                                  ChoiceChip(
+                                    selected: settings.format == choice.$1,
+                                    label: Text(choice.$2),
+                                    onSelected: (_) => onChanged(
+                                      settings.copyWith(format: choice.$1),
+                                    ),
                                   ),
-                                  ButtonSegment(
-                                    value: BookFormat.epub,
-                                    label: Text('EPUB'),
-                                  ),
-                                  ButtonSegment(
-                                    value: BookFormat.docx,
-                                    label: Text('DOCX'),
-                                  ),
-                                ],
-                                selected: {settings.format},
-                                onSelectionChanged: (value) => onChanged(
-                                  settings.copyWith(format: value.first),
-                                ),
-                              ),
+                              ],
                             ),
                             const SizedBox(height: 18),
                             Text(

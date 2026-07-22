@@ -38,6 +38,15 @@ class _HistoryScreenState extends State<HistoryScreen> {
   }
 
   Future<void> _export(GeneratedBook book) async {
+    if (book.format == BookFormat.images) {
+      final directory = await getDirectoryPath();
+      if (directory == null) return;
+      for (final sourcePath in book.allPaths) {
+        final name = Uri.file(sourcePath).pathSegments.last;
+        await File(sourcePath).copy('$directory/$name');
+      }
+      return;
+    }
     final type = XTypeGroup(
       label: book.format.name.toUpperCase(),
       extensions: [book.format.extension],
@@ -54,14 +63,17 @@ class _HistoryScreenState extends State<HistoryScreen> {
   Future<void> _share(GeneratedBook book) async {
     final strings = AppLocalizations.of(context);
     await Share.shareXFiles([
-      XFile(book.path, mimeType: book.format.mimeType),
+      for (final path in book.allPaths)
+        XFile(path, mimeType: book.format.mimeType),
     ], subject: strings.vocabularyBook);
   }
 
   Future<void> _delete(GeneratedBook book) async {
     await _service.remove(book.id);
-    final file = File(book.path);
-    if (await file.exists()) await file.delete();
+    for (final path in book.allPaths) {
+      final file = File(path);
+      if (await file.exists()) await file.delete();
+    }
     final contentPath = book.contentPath;
     if (contentPath != null) {
       final content = File(contentPath);
@@ -99,8 +111,10 @@ class _HistoryScreenState extends State<HistoryScreen> {
     final strings = AppLocalizations.of(context);
     final files = <XFile>[];
     for (final book in books.where((book) => _selectedIds.contains(book.id))) {
-      if (await File(book.path).exists()) {
-        files.add(XFile(book.path, mimeType: book.format.mimeType));
+      for (final path in book.allPaths) {
+        if (await File(path).exists()) {
+          files.add(XFile(path, mimeType: book.format.mimeType));
+        }
       }
     }
     if (!mounted) return;
@@ -138,8 +152,10 @@ class _HistoryScreenState extends State<HistoryScreen> {
     final selected = Set<String>.of(_selectedIds);
     await _service.removeMany(selected);
     for (final book in books.where((book) => selected.contains(book.id))) {
-      final file = File(book.path);
-      if (await file.exists()) await file.delete();
+      for (final path in book.allPaths) {
+        final file = File(path);
+        if (await file.exists()) await file.delete();
+      }
       final contentPath = book.contentPath;
       if (contentPath != null) {
         final content = File(contentPath);
@@ -273,17 +289,18 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                               borderRadius:
                                                   BorderRadius.circular(8),
                                             ),
-                                            child: Icon(
-                                              switch (book.format) {
-                                                BookFormat.pdf =>
-                                                  Icons.picture_as_pdf_rounded,
-                                                BookFormat.epub =>
-                                                  Icons.menu_book_rounded,
-                                                BookFormat.docx =>
-                                                  Icons.description_rounded,
-                                              },
-                                              color: theme.colorScheme.primary,
-                                            ),
+                                            child: Icon(switch (book.format) {
+                                              BookFormat.pdf =>
+                                                Icons.picture_as_pdf_rounded,
+                                              BookFormat.epub =>
+                                                Icons.menu_book_rounded,
+                                              BookFormat.docx =>
+                                                Icons.description_rounded,
+                                              BookFormat.images =>
+                                                Icons.photo_library_rounded,
+                                              BookFormat.longImage =>
+                                                Icons.panorama_vertical_rounded,
+                                            }, color: theme.colorScheme.primary),
                                           ),
                                     title: Text(
                                       book.title,

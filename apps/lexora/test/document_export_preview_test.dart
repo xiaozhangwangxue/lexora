@@ -25,7 +25,7 @@ void main() {
       pageSize: BookPageSize.a4,
       generatedAt: DateTime.utc(2026, 7, 19),
     );
-    final epub = service.buildEpubBytes(
+    final epub = await service.buildEpubBytes(
       entries,
       generatedAt: DateTime.utc(2026, 7, 19),
     );
@@ -50,10 +50,17 @@ void main() {
       'application/epub+zip',
     );
     expect(epubArchive.findFile('EPUB/book.xhtml'), isNotNull);
+    expect(epubArchive.findFile('EPUB/fonts/NotoSans-Regular.ttf'), isNotNull);
+    expect(
+      epubArchive.findFile('EPUB/fonts/NotoSansSC-Regular.ttf'),
+      isNotNull,
+    );
     final bookXhtml = utf8.decode(
       epubArchive.findFile('EPUB/book.xhtml')!.content,
     );
     expect(bookXhtml, isNot(contains('&nbsp;')));
+    expect(bookXhtml, isNot(contains('<header>')));
+    expect(bookXhtml, contains('class="meta"'));
     expect(() => XmlDocument.parse(bookXhtml), returnsNormally);
     expect(
       () => XmlDocument.parse(

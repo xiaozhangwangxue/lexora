@@ -127,6 +127,11 @@ void main() {
     expect(find.text('take off'), findsOneWidget);
     expect(find.textContaining('短语'), findsWidgets);
 
+    final homeInput = tester.widget<TextField>(find.byType(TextField));
+    await tester.tap(find.byType(TextField));
+    await tester.pump();
+    expect(homeInput.focusNode?.hasFocus, isTrue);
+
     await tester.tap(find.textContaining('文档自定义').first);
     await pumpUi(tester);
     expect(find.text('精细调整字体'), findsOneWidget);
@@ -142,6 +147,7 @@ void main() {
     await tester.tap(find.text('取消'));
     await pumpUi(tester);
     expect(find.text('take off'), findsOneWidget);
+    expect(homeInput.focusNode?.hasFocus, isFalse);
 
     await tester.tap(find.byIcon(Icons.receipt_long_outlined));
     await pumpUi(tester);

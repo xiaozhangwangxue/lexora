@@ -28,6 +28,7 @@ void main() {
     final customized = const PdfSettings().copyWith(
       format: BookFormat.docx,
       pageSize: BookPageSize.b5,
+      smartReorder: true,
       typography: const PdfTypography(
         word: 24,
         phonetic: 13,
@@ -47,5 +48,6 @@ void main() {
     expect(loaded.typography.example, 11);
     expect(loaded.format, BookFormat.docx);
     expect(loaded.pageSize, BookPageSize.b5);
+    expect(loaded.smartReorder, isTrue);
   });
 }

@@ -156,7 +156,7 @@ class PdfService {
     );
     final directory = await getApplicationDocumentsDirectory();
     final id = const Uuid().v4();
-    final filename = 'lexora-${DateFormat('yyyyMMdd-HHmm').format(now)}.pdf';
+    final filename = 'lexora-${DateFormat('yyyyMMdd-HHmmss').format(now)}.pdf';
     final file = File('${directory.path}/$filename');
     await file.writeAsBytes(bytes, flush: true);
     return GeneratedBook(
@@ -177,6 +177,8 @@ class PdfService {
     PdfFontSize fontSize = PdfFontSize.medium,
     PdfTypography? typography,
     BookPageSize pageSize = BookPageSize.a4,
+    bool smartReorder = false,
+    bool showPageFurniture = true,
     DateTime? generatedAt,
   }) async {
     final date = generatedAt ?? DateTime.now();
@@ -202,34 +204,41 @@ class PdfService {
         // spanning Wrap, so a page can continue with the next card instead
         // of leaving a large unused block at the bottom of a page.
         margin: pageSize == BookPageSize.a5
-            ? const pw.EdgeInsets.fromLTRB(18, 16, 18, 16)
-            : const pw.EdgeInsets.fromLTRB(22, 18, 22, 18),
-        header: (context) => pw.Padding(
-          padding: const pw.EdgeInsets.only(bottom: 4),
-          child: pw.Row(
-            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-            children: [
-              pw.Text(
-                'LEXORA',
-                style: pw.TextStyle(font: bold, fontSize: size(11)),
-              ),
-              pw.Text(
-                '${entries.length} entries / 词条 · ${DateFormat('yyyy-MM-dd').format(date)}',
-                style: pw.TextStyle(
-                  fontSize: size(8),
-                  color: PdfColors.grey600,
+            ? const pw.EdgeInsets.fromLTRB(15, 13, 15, 13)
+            : const pw.EdgeInsets.fromLTRB(18, 14, 18, 14),
+        header: showPageFurniture
+            ? (context) => pw.Padding(
+                padding: const pw.EdgeInsets.only(bottom: 4),
+                child: pw.Row(
+                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                  children: [
+                    pw.Text(
+                      'LEXORA',
+                      style: pw.TextStyle(font: bold, fontSize: size(11)),
+                    ),
+                    pw.Text(
+                      '${entries.length} entries / 词条 · ${DateFormat('yyyy-MM-dd').format(date)}',
+                      style: pw.TextStyle(
+                        fontSize: size(8),
+                        color: PdfColors.grey600,
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-            ],
-          ),
-        ),
-        footer: (context) => pw.Align(
-          alignment: pw.Alignment.centerRight,
-          child: pw.Text(
-            '${context.pageNumber} / ${context.pagesCount}',
-            style: pw.TextStyle(fontSize: size(8), color: PdfColors.grey600),
-          ),
-        ),
+              )
+            : null,
+        footer: showPageFurniture
+            ? (context) => pw.Align(
+                alignment: pw.Alignment.centerRight,
+                child: pw.Text(
+                  '${context.pageNumber} / ${context.pagesCount}',
+                  style: pw.TextStyle(
+                    fontSize: size(8),
+                    color: PdfColors.grey600,
+                  ),
+                ),
+              )
+            : null,
         build: (context) => [
           pw.Text(
             'My vocabulary book',
@@ -244,13 +253,14 @@ class PdfService {
             '我的双语词汇册',
             style: pw.TextStyle(fontSize: size(11), color: PdfColors.grey700),
           ),
-          pw.SizedBox(height: 8),
+          pw.SizedBox(height: 5),
           ..._entryLayout(
             entries,
             bold,
             ipa,
             resolvedTypography,
             columnCount: columnCount,
+            smartReorder: smartReorder,
           ),
         ],
       ),
@@ -265,32 +275,42 @@ class PdfService {
     pw.Font ipa,
     PdfTypography typography, {
     required int columnCount,
+    required bool smartReorder,
   }) {
+    final orderedEntries = smartReorder
+        ? (entries.toList()
+            ..sort((a, b) => _entryWeight(b).compareTo(_entryWeight(a))))
+        : entries;
     if (columnCount == 1) {
       return [
-        for (var index = 0; index < entries.length; index++) ...[
+        for (var index = 0; index < orderedEntries.length; index++) ...[
           _entry(
             index + 1,
-            entries[index],
+            orderedEntries[index],
             bold,
             ipa,
             typography,
             denseHeader: false,
           ),
-          if (index != entries.length - 1) pw.SizedBox(height: 7),
+          if (index != orderedEntries.length - 1) pw.SizedBox(height: 4),
         ],
       ];
     }
 
     final columns = List.generate(columnCount, (_) => <pw.Widget>[]);
-    for (var index = 0; index < entries.length; index++) {
-      final column = columns[index % columnCount];
+    final columnWeights = List<double>.filled(columnCount, 0);
+    for (var index = 0; index < orderedEntries.length; index++) {
+      final columnIndex = smartReorder
+          ? columnWeights.indexOf(columnWeights.reduce((a, b) => a < b ? a : b))
+          : index % columnCount;
+      final column = columns[columnIndex];
+      final entry = orderedEntries[index];
       column.add(
         pw.Padding(
           padding: const pw.EdgeInsets.symmetric(horizontal: 3),
           child: _entry(
             index + 1,
-            entries[index],
+            entry,
             bold,
             ipa,
             typography,
@@ -298,9 +318,8 @@ class PdfService {
           ),
         ),
       );
-      if (index + columnCount < entries.length) {
-        column.add(pw.SizedBox(height: 5));
-      }
+      column.add(pw.SizedBox(height: 3));
+      columnWeights[columnIndex] += _entryWeight(entry);
     }
 
     // Each partition flows independently across pages. Unlike a row-based
@@ -314,6 +333,22 @@ class PdfService {
         ],
       ),
     ];
+  }
+
+  static double _entryWeight(WordEntry entry) {
+    var weight = (90 + entry.word.length * 3 + entry.definition.length)
+        .toDouble();
+    weight += entry.definitionZh.length * 1.15;
+    weight += (entry.synonyms.length + entry.antonyms.length) * 14;
+    weight += entry.examples.fold<int>(0, (sum, value) => sum + value.length);
+    weight += entry.examplesZh.fold<int>(0, (sum, value) => sum + value.length);
+    for (final phrase in entry.phrases) {
+      weight +=
+          phrase.phrase.length * 2 +
+          phrase.meaning.length +
+          phrase.meaningZh.length;
+    }
+    return weight.toDouble();
   }
 
   pw.Widget _entry(
@@ -334,7 +369,7 @@ class PdfService {
     );
 
     return pw.Container(
-      padding: const pw.EdgeInsets.fromLTRB(8, 6, 8, 6),
+      padding: const pw.EdgeInsets.fromLTRB(7, 5, 7, 5),
       decoration: pw.BoxDecoration(
         color: PdfColors.grey100,
         borderRadius: pw.BorderRadius.circular(8),

@@ -21,7 +21,77 @@ class PdfReaderScreen extends StatelessWidget {
   Widget build(BuildContext context) => switch (book.format) {
     BookFormat.pdf => _PdfBookReader(book: book),
     BookFormat.epub || BookFormat.docx => _EditableBookReader(book: book),
+    BookFormat.images || BookFormat.longImage => _ImageBookReader(book: book),
   };
+}
+
+class _ImageBookReader extends StatefulWidget {
+  const _ImageBookReader({required this.book});
+
+  final GeneratedBook book;
+
+  @override
+  State<_ImageBookReader> createState() => _ImageBookReaderState();
+}
+
+class _ImageBookReaderState extends State<_ImageBookReader> {
+  final _pageController = PageController();
+  int _page = 0;
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final paths = widget.book.allPaths;
+    final strings = AppLocalizations.of(context);
+    final surface = Theme.of(context).colorScheme.surface;
+    final isLong = widget.book.format == BookFormat.longImage;
+    Widget zoomable(String path) => InteractiveViewer(
+      minScale: .6,
+      maxScale: 6,
+      boundaryMargin: const EdgeInsets.all(80),
+      child: Image.file(File(path), fit: BoxFit.contain),
+    );
+    return Scaffold(
+      backgroundColor: surface,
+      appBar: AppBar(
+        title: Text(
+          isLong || paths.length <= 1
+              ? widget.book.title
+              : '${widget.book.title}  ${_page + 1}/${paths.length}',
+        ),
+        backgroundColor: surface,
+        surfaceTintColor: Colors.transparent,
+        actions: [
+          IconButton(
+            tooltip: strings.share,
+            onPressed: () => Share.shareXFiles([
+              for (final path in paths) XFile(path, mimeType: 'image/png'),
+            ], subject: strings.vocabularyBook),
+            icon: const Icon(Icons.share_outlined),
+          ),
+        ],
+      ),
+      body: isLong
+          ? SingleChildScrollView(
+              padding: const EdgeInsets.all(12),
+              child: zoomable(paths.first),
+            )
+          : PageView.builder(
+              controller: _pageController,
+              itemCount: paths.length,
+              onPageChanged: (value) => setState(() => _page = value),
+              itemBuilder: (context, index) => Padding(
+                padding: const EdgeInsets.all(12),
+                child: zoomable(paths[index]),
+              ),
+            ),
+    );
+  }
 }
 
 class _PdfBookReader extends StatelessWidget {
