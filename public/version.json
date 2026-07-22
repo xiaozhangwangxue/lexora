@@ -32,7 +32,9 @@
         "/updates/lexora-android-v3.1.0.apk",
         "https://lexora-official.xiaozhangwangxue.workers.dev/updates/lexora-android-v3.1.0.apk",
         "https://github.com/xiaozhangwangxue/lexora/releases/download/v3.1.0/lexora-android-v3.1.0.apk"
-      ]
+      ],
+      "sha256": "c9de7c84b1b1c1f8dbf36d089c72781c86278d299c3328e4b2049386d8c507f7",
+      "size": 98404699
     },
     "macos": {
       "filename": "lexora-macos-v3.1.0.dmg",
@@ -41,7 +43,9 @@
         "/updates/lexora-macos-v3.1.0.dmg",
         "https://lexora-official.xiaozhangwangxue.workers.dev/updates/lexora-macos-v3.1.0.dmg",
         "https://github.com/xiaozhangwangxue/lexora/releases/download/v3.1.0/lexora-macos-v3.1.0.dmg"
-      ]
+      ],
+      "sha256": "ce8c1f631a94c40490c6e915754e01c66f5cb257d675977d8566c88fd5289c75",
+      "size": 46863594
     },
     "windows": {
       "filename": "lexora-windows-v3.1.0-setup.exe",
@@ -50,7 +54,9 @@
         "/updates/lexora-windows-v3.1.0-setup.exe",
         "https://lexora-official.xiaozhangwangxue.workers.dev/updates/lexora-windows-v3.1.0-setup.exe",
         "https://github.com/xiaozhangwangxue/lexora/releases/download/v3.1.0/lexora-windows-v3.1.0-setup.exe"
-      ]
+      ],
+      "sha256": "7a24f73f054a05e237ae0144acc590249cf7312ffabfd09d4a4a78644a4721d4",
+      "size": 27205803
     },
     "linux": {
       "filename": "lexora-linux-v3.1.0.tar.gz",
@@ -59,7 +65,9 @@
         "/updates/lexora-linux-v3.1.0.tar.gz",
         "https://lexora-official.xiaozhangwangxue.workers.dev/updates/lexora-linux-v3.1.0.tar.gz",
         "https://github.com/xiaozhangwangxue/lexora/releases/download/v3.1.0/lexora-linux-v3.1.0.tar.gz"
-      ]
+      ],
+      "sha256": "07309ae32a9551fd203d567455f16e104ee371d95c8a1e12a84d1c2fc608754d",
+      "size": 31329768
     }
   }
 }
