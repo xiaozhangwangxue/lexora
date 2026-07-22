@@ -17,6 +17,7 @@ class PdfSettings {
     this.fontSize = PdfFontSize.medium,
     this.exampleAmount = ExampleAmount.one,
     this.format = BookFormat.pdf,
+    this.pageSize = BookPageSize.a4,
     this.typography = const PdfTypography(
       word: 18,
       phonetic: 9,
@@ -30,17 +31,20 @@ class PdfSettings {
   final PdfFontSize fontSize;
   final ExampleAmount exampleAmount;
   final BookFormat format;
+  final BookPageSize pageSize;
   final PdfTypography typography;
 
   PdfSettings copyWith({
     PdfFontSize? fontSize,
     ExampleAmount? exampleAmount,
     BookFormat? format,
+    BookPageSize? pageSize,
     PdfTypography? typography,
   }) => PdfSettings(
     fontSize: fontSize ?? this.fontSize,
     exampleAmount: exampleAmount ?? this.exampleAmount,
     format: format ?? this.format,
+    pageSize: pageSize ?? this.pageSize,
     typography: typography ?? this.typography,
   );
 
@@ -52,6 +56,7 @@ class PdfSettingsService {
   static const _fontSizeKey = 'lexora.pdf.font-size.v1';
   static const _exampleAmountKey = 'lexora.pdf.example-amount.v1';
   static const _formatKey = 'lexora.document.format.v1';
+  static const _pageSizeKey = 'lexora.document.page-size.v1';
   static const _typographyPrefix = 'lexora.pdf.typography.v1';
 
   Future<PdfSettings> load() async {
@@ -73,6 +78,11 @@ class PdfSettingsService {
         BookFormat.values,
         preferences.getString(_formatKey),
         BookFormat.pdf,
+      ),
+      pageSize: _enumByName(
+        BookPageSize.values,
+        preferences.getString(_pageSizeKey),
+        BookPageSize.a4,
       ),
       typography: PdfTypography(
         word: preferences.getDouble('$_typographyPrefix.word') ?? defaults.word,
@@ -100,6 +110,7 @@ class PdfSettingsService {
     await preferences.setString(_fontSizeKey, settings.fontSize.name);
     await preferences.setString(_exampleAmountKey, settings.exampleAmount.name);
     await preferences.setString(_formatKey, settings.format.name);
+    await preferences.setString(_pageSizeKey, settings.pageSize.name);
     await Future.wait([
       preferences.setDouble(
         '$_typographyPrefix.word',

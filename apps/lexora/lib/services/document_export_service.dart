@@ -21,6 +21,7 @@ class DocumentExportService {
     required BookFormat format,
     required PdfFontSize fontSize,
     required PdfTypography typography,
+    required BookPageSize pageSize,
   }) async {
     final now = DateTime.now();
     final id = const Uuid().v4();
@@ -33,18 +34,21 @@ class DocumentExportService {
         entries,
         fontSize: fontSize,
         typography: typography,
+        pageSize: pageSize,
         generatedAt: now,
       ),
       BookFormat.docx => await buildDocxBytes(
         entries,
         fontSize: fontSize,
         typography: typography,
+        pageSize: pageSize,
         generatedAt: now,
       ),
       BookFormat.epub => buildEpubBytes(
         entries,
         fontSize: fontSize,
         typography: typography,
+        pageSize: pageSize,
         generatedAt: now,
       ),
     };
@@ -75,6 +79,7 @@ class DocumentExportService {
     List<WordEntry> entries, {
     PdfFontSize fontSize = PdfFontSize.medium,
     PdfTypography? typography,
+    BookPageSize pageSize = BookPageSize.a4,
     DateTime? generatedAt,
   }) async {
     final date = generatedAt ?? DateTime.now();
@@ -91,7 +96,7 @@ class DocumentExportService {
     add('word/_rels/fontTable.xml.rels', _docxFontRelationships);
     add('word/fontTable.xml', _docxFontTable);
     add('word/styles.xml', _docxStyles(type));
-    add('word/document.xml', _docxDocument(entries, date, type, fontSize));
+    add('word/document.xml', _docxDocument(entries, date, type, pageSize));
     final latinFont = await rootBundle.load(
       'assets/fonts/NotoSans-Regular.ttf',
     );
@@ -142,6 +147,7 @@ class DocumentExportService {
     List<WordEntry> entries, {
     PdfFontSize fontSize = PdfFontSize.medium,
     PdfTypography? typography,
+    BookPageSize pageSize = BookPageSize.a4,
     DateTime? generatedAt,
   }) {
     final date = generatedAt ?? DateTime.now();
@@ -163,7 +169,9 @@ class DocumentExportService {
           _epubDocument(entries, date, type),
         ),
       )
-      ..addFile(ArchiveFile.string('EPUB/style.css', _epubStyles(type)));
+      ..addFile(
+        ArchiveFile.string('EPUB/style.css', _epubStyles(type, pageSize)),
+      );
     return Uint8List.fromList(ZipEncoder().encode(archive, level: 6));
   }
 
@@ -239,9 +247,12 @@ class DocumentExportService {
     List<WordEntry> entries,
     DateTime date,
     PdfTypography type,
-    PdfFontSize fontSize,
+    BookPageSize pageSize,
   ) {
-    final columns = fontSize == PdfFontSize.large ? 1 : 2;
+    final columns = exportColumnCount(pageSize, type);
+    final margin = pageSize.marginTwips;
+    final usableWidth = pageSize.widthTwips - margin * 2;
+    final cellWidth = usableWidth ~/ columns;
     final rows = StringBuffer();
     for (var index = 0; index < entries.length; index += columns) {
       rows.write('<w:tr><w:trPr><w:cantSplit/></w:trPr>');
@@ -249,36 +260,29 @@ class DocumentExportService {
         final entryIndex = index + column;
         if (entryIndex < entries.length) {
           rows.write(
-            _entryCell(
-              entries[entryIndex],
-              entryIndex + 1,
-              type,
-              columns == 1 ? 9120 : 4560,
-            ),
+            _entryCell(entries[entryIndex], entryIndex + 1, type, cellWidth),
           );
         } else {
           rows.write(
-            '<w:tc><w:tcPr><w:tcW w:w="4560" w:type="dxa"/></w:tcPr><w:p/></w:tc>',
+            '<w:tc><w:tcPr><w:tcW w:w="$cellWidth" w:type="dxa"/></w:tcPr><w:p/></w:tc>',
           );
         }
       }
       rows.write('</w:tr>');
     }
-    final grid = columns == 1
-        ? '<w:gridCol w:w="9120"/>'
-        : '<w:gridCol w:w="4560"/><w:gridCol w:w="4560"/>';
+    final grid = List.filled(columns, '<w:gridCol w:w="$cellWidth"/>').join();
     return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
         '<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">'
         '<w:body>${_paragraph('LEXORA', style: 'Brand', bold: true, size: 11)}'
         '${_paragraph('My vocabulary book', style: 'Title', bold: true, color: '243A8F', size: 24)}'
         '${_paragraph('我的双语词汇册  ·  ${entries.length} entries / 词条  ·  ${DateFormat('yyyy-MM-dd').format(date)}', style: 'Subtitle', color: '737780', size: 10)}'
-        '<w:tbl><w:tblPr><w:tblW w:w="9120" w:type="dxa"/><w:tblLayout w:type="fixed"/>'
+        '<w:tbl><w:tblPr><w:tblW w:w="$usableWidth" w:type="dxa"/><w:tblLayout w:type="fixed"/>'
         '<w:tblCellMar><w:top w:w="60" w:type="dxa"/><w:left w:w="60" w:type="dxa"/>'
         '<w:bottom w:w="60" w:type="dxa"/><w:right w:w="60" w:type="dxa"/></w:tblCellMar>'
         '<w:tblBorders><w:top w:val="nil"/><w:left w:val="nil"/><w:bottom w:val="nil"/>'
         '<w:right w:val="nil"/><w:insideH w:val="nil"/><w:insideV w:val="nil"/></w:tblBorders>'
         '</w:tblPr><w:tblGrid>$grid</w:tblGrid>$rows</w:tbl>'
-        '<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="560" w:right="560" w:bottom="560" w:left="560" w:header="280" w:footer="280" w:gutter="0"/></w:sectPr>'
+        '<w:sectPr><w:pgSz w:w="${pageSize.widthTwips}" w:h="${pageSize.heightTwips}"/><w:pgMar w:top="$margin" w:right="$margin" w:bottom="$margin" w:left="$margin" w:header="280" w:footer="280" w:gutter="0"/></w:sectPr>'
         '</w:body></w:document>';
   }
 
@@ -316,17 +320,17 @@ class DocumentExportService {
         '<article class="entry"><header><span class="number">${index + 1}</span><div><h2>${_xml(entry.word)}</h2>'
         '${entry.isFuzzyMatch ? '<p class="original">(${_xml(entry.originalTerm!)})</p>' : ''}</div>'
         '<span class="pill">${_xml(entry.difficulty)}</span><span class="pill frequency">freq ${entry.frequency.toStringAsFixed(1)}</span></header>'
-        '<p class="phonetic">US 美式&nbsp; ${_xml(entry.usPhonetic)} &nbsp;&nbsp; UK 英式&nbsp; ${_xml(entry.ukPhonetic)}</p>'
+        '<p class="phonetic">US 美式&#160; ${_xml(entry.usPhonetic)} &#160;&#160; UK 英式&#160; ${_xml(entry.ukPhonetic)}</p>'
         '<p>${_xml(entry.definition)}</p><p class="zh strong">${_xml(entry.definitionZh)}</p>',
       );
       if (entry.synonyms.isNotEmpty) {
         cards.write(
-          '<p class="compact"><strong>Synonyms / 近义词</strong>&nbsp; ${_xml(entry.synonyms.join(' · '))}<br/><span class="zh">${_xml(entry.synonymsZh)}</span></p>',
+          '<p class="compact"><strong>Synonyms / 近义词</strong>&#160; ${_xml(entry.synonyms.join(' · '))}<br/><span class="zh">${_xml(entry.synonymsZh)}</span></p>',
         );
       }
       if (entry.antonyms.isNotEmpty) {
         cards.write(
-          '<p class="compact"><strong>Antonyms / 反义词</strong>&nbsp; ${_xml(entry.antonyms.join(' · '))}<br/><span class="zh">${_xml(entry.antonymsZh)}</span></p>',
+          '<p class="compact"><strong>Antonyms / 反义词</strong>&#160; ${_xml(entry.antonyms.join(' · '))}<br/><span class="zh">${_xml(entry.antonymsZh)}</span></p>',
         );
       }
       if (entry.examples.isNotEmpty) {
@@ -350,7 +354,7 @@ class DocumentExportService {
       cards.write('</article>');
     }
     return '<?xml version="1.0" encoding="utf-8"?>'
-        '<!DOCTYPE html><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head>'
+        '<!DOCTYPE html><html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>'
         '<meta charset="utf-8"/><meta name="viewport" content="width=device-width"/>'
         '<title>Lexora vocabulary book</title><link rel="stylesheet" href="style.css"/></head>'
         '<body><main><div class="brand">LEXORA</div><h1>My vocabulary book</h1>'
@@ -358,19 +362,22 @@ class DocumentExportService {
         '<section class="grid">$cards</section></main></body></html>';
   }
 
-  static String _epubStyles(PdfTypography type) =>
-      '''
+  static String _epubStyles(PdfTypography type, BookPageSize pageSize) {
+    final columns = exportColumnCount(pageSize, type);
+    return '''
 @charset "utf-8";
+@page { size: ${pageSize.cssName}; margin: 10mm; }
 :root { color: #17181c; background: #fff; font-family: system-ui, -apple-system, "Noto Sans CJK SC", sans-serif; }
 body { margin: 0; } main { max-width: 1080px; margin: 0 auto; padding: 1.2rem; }
 .brand { font-size: .78rem; font-weight: 800; letter-spacing: .08em; } h1 { color: #243a8f; margin: .18rem 0; font-size: 2rem; }
-.subtitle { color: #737780; margin: 0 0 1rem; }.grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: .55rem; align-items: start; }
+.subtitle { color: #737780; margin: 0 0 1rem; }.grid { display: grid; grid-template-columns: repeat($columns,minmax(0,1fr)); gap: .55rem; align-items: start; }
 .entry { break-inside: avoid; background: #f6f7f9; border: 1px solid #d9dce2; border-radius: .7rem; padding: .72rem; }
 .entry header { display: flex; align-items: flex-start; gap: .45rem; }.entry h2 { font-size: ${type.word}px; line-height: 1.05; margin: 0; }.number,.original,.phonetic,.subtitle { color:#737780; }
 .original { font-size: ${type.related}px; margin:.1rem 0 0; }.pill { margin-left:auto; border-radius: 999px; background:#dfe3ff; color:#303c75; padding:.22rem .46rem; font-size:${type.related}px; white-space:nowrap; }.pill + .pill { margin-left:0; }.frequency{background:#d8f4ed;color:#1b6458;}
 p { font-size:${type.definition}px; line-height:1.34; margin:.28rem 0; }.phonetic { font-size:${type.phonetic}px; }.zh { color:#3450a4; }.strong{font-weight:700;}.compact,.compact *,.phrases,.phrases p { font-size:${type.related}px; }.examples { border-left:3px solid #34bfa3; padding-left:.48rem; }.examples,.examples * { font-size:${type.example}px; }
 @media (max-width: 680px) { .grid { grid-template-columns: 1fr; } main { padding:.8rem; } }
 ''';
+  }
 
   static String _epubPackage(DateTime date) =>
       '''<?xml version="1.0" encoding="utf-8"?>

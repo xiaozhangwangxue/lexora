@@ -14,17 +14,19 @@ class HistoryScreen extends StatefulWidget {
     super.key,
     required this.progress,
     required this.onOpenBook,
+    this.historyService,
   });
 
   final GenerationProgress progress;
   final ValueChanged<GeneratedBook> onOpenBook;
+  final HistoryService? historyService;
 
   @override
   State<HistoryScreen> createState() => _HistoryScreenState();
 }
 
 class _HistoryScreenState extends State<HistoryScreen> {
-  final _service = HistoryService();
+  late final _service = widget.historyService ?? HistoryService();
   late Future<List<GeneratedBook>> _books;
   final _selectedIds = <String>{};
   bool _selecting = false;
@@ -501,13 +503,15 @@ class _GenerationProgressCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                if (failed || completed)
+                if (failed)
                   IconButton(
                     tooltip: strings.dismissProgress,
                     visualDensity: VisualDensity.compact,
                     onPressed: onDismiss,
                     icon: Icon(Icons.close_rounded, color: color),
                   )
+                else if (completed)
+                  Icon(Icons.check_circle_rounded, color: color)
                 else
                   Icon(Icons.auto_awesome_rounded, color: color),
                 const SizedBox(width: 10),
@@ -519,7 +523,19 @@ class _GenerationProgressCard extends StatelessWidget {
                     ),
                   ),
                 ),
-                Text('${(progress.value * 100).round()}%'),
+                if (completed)
+                  IconButton(
+                    key: const Key('dismiss-completed-generation'),
+                    tooltip: strings.dismissProgress,
+                    visualDensity: VisualDensity.compact,
+                    onPressed: onDismiss,
+                    icon: Icon(
+                      Icons.close_rounded,
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  )
+                else
+                  Text('${(progress.value * 100).round()}%'),
               ],
             ),
             const SizedBox(height: 10),

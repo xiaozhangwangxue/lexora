@@ -5,6 +5,8 @@ import 'package:archive/archive.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lexora/models/word_entry.dart';
 import 'package:lexora/services/document_export_service.dart';
+import 'package:lexora/services/pdf_service.dart';
+import 'package:xml/xml.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -19,6 +21,8 @@ void main() {
     final service = DocumentExportService();
     final docx = await service.buildDocxBytes(
       entries,
+      fontSize: PdfFontSize.small,
+      pageSize: BookPageSize.a4,
       generatedAt: DateTime.utc(2026, 7, 19),
     );
     final epub = service.buildEpubBytes(
@@ -37,13 +41,45 @@ void main() {
     expect(documentXml, contains('serendipity'));
     expect(documentXml, contains('意外发现美好事物的运气'));
     expect(documentXml, contains('<w:tbl'));
+    expect('<w:gridCol '.allMatches(documentXml), hasLength(3));
 
     final epubArchive = ZipDecoder().decodeBytes(epub, verify: true);
+    expect(epubArchive.first.name, 'mimetype');
     expect(
       utf8.decode(epubArchive.findFile('mimetype')!.content),
       'application/epub+zip',
     );
     expect(epubArchive.findFile('EPUB/book.xhtml'), isNotNull);
+    final bookXhtml = utf8.decode(
+      epubArchive.findFile('EPUB/book.xhtml')!.content,
+    );
+    expect(bookXhtml, isNot(contains('&nbsp;')));
+    expect(() => XmlDocument.parse(bookXhtml), returnsNormally);
+    expect(
+      () => XmlDocument.parse(
+        utf8.decode(epubArchive.findFile('EPUB/nav.xhtml')!.content),
+      ),
+      returnsNormally,
+    );
+    expect(
+      () => XmlDocument.parse(
+        utf8.decode(epubArchive.findFile('EPUB/package.opf')!.content),
+      ),
+      returnsNormally,
+    );
+  });
+
+  test('automatic columns adapt to paper and typography', () {
+    final small = PdfTypography.fromPreset(PdfFontSize.small);
+    final medium = PdfTypography.fromPreset(PdfFontSize.medium);
+    final large = PdfTypography.fromPreset(PdfFontSize.large);
+
+    expect(small.word, 12);
+    expect(exportColumnCount(BookPageSize.a4, small), 3);
+    expect(exportColumnCount(BookPageSize.b5, small), 3);
+    expect(exportColumnCount(BookPageSize.a5, small), 2);
+    expect(exportColumnCount(BookPageSize.a4, medium), 2);
+    expect(exportColumnCount(BookPageSize.a4, large), 1);
   });
 }
 

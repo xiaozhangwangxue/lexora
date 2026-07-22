@@ -19,6 +19,52 @@ enum PdfFontSize {
   final double bodyScale;
 }
 
+enum BookPageSize { a4, a5, b5 }
+
+extension BookPageSizeLayout on BookPageSize {
+  PdfPageFormat get pdfFormat => switch (this) {
+    BookPageSize.a4 => PdfPageFormat.a4,
+    BookPageSize.a5 => PdfPageFormat.a5,
+    BookPageSize.b5 => PdfPageFormat(
+      176 * PdfPageFormat.mm,
+      250 * PdfPageFormat.mm,
+    ),
+  };
+
+  int get widthTwips => switch (this) {
+    BookPageSize.a4 => 11906,
+    BookPageSize.a5 => 8391,
+    BookPageSize.b5 => 9978,
+  };
+
+  int get heightTwips => switch (this) {
+    BookPageSize.a4 => 16838,
+    BookPageSize.a5 => 11906,
+    BookPageSize.b5 => 14173,
+  };
+
+  int get marginTwips => this == BookPageSize.a5 ? 420 : 500;
+
+  String get cssName => name.toUpperCase();
+}
+
+int exportColumnCount(BookPageSize pageSize, PdfTypography typography) {
+  final availableWidth =
+      pageSize.pdfFormat.width - (pageSize == BookPageSize.a5 ? 32 : 40);
+  final compact =
+      typography.word <= 12.5 &&
+      typography.definition <= 8.2 &&
+      typography.related <= 7.2 &&
+      typography.example <= 7.2 &&
+      typography.phrase <= 7.2;
+  if (compact && availableWidth / 3 >= 148) return 3;
+  final readableInTwoColumns =
+      typography.word <= 20 &&
+      typography.definition <= 11.5 &&
+      availableWidth / 2 >= 178;
+  return readableInTwoColumns ? 2 : 1;
+}
+
 class PdfTypography {
   const PdfTypography({
     required this.word,
@@ -36,14 +82,32 @@ class PdfTypography {
   final double example;
   final double phrase;
 
-  factory PdfTypography.fromPreset(PdfFontSize preset) => PdfTypography(
-    word: 18 * preset.scale,
-    phonetic: 9 * preset.bodyScale,
-    definition: 8.7 * preset.bodyScale,
-    related: 7.2 * preset.bodyScale,
-    example: 7.2 * preset.bodyScale,
-    phrase: 7.2 * preset.bodyScale,
-  );
+  factory PdfTypography.fromPreset(PdfFontSize preset) => switch (preset) {
+    PdfFontSize.small => const PdfTypography(
+      word: 12,
+      phonetic: 7.4,
+      definition: 7.4,
+      related: 6.4,
+      example: 6.4,
+      phrase: 6.4,
+    ),
+    PdfFontSize.medium => const PdfTypography(
+      word: 18,
+      phonetic: 9,
+      definition: 8.7,
+      related: 7.2,
+      example: 7.2,
+      phrase: 7.2,
+    ),
+    PdfFontSize.large => const PdfTypography(
+      word: 21.24,
+      phonetic: 12.78,
+      definition: 12.354,
+      related: 10.224,
+      example: 10.224,
+      phrase: 10.224,
+    ),
+  };
 
   PdfTypography copyWith({
     double? word,
@@ -80,12 +144,14 @@ class PdfService {
     List<WordEntry> entries, {
     PdfFontSize fontSize = PdfFontSize.medium,
     PdfTypography? typography,
+    BookPageSize pageSize = BookPageSize.a4,
   }) async {
     final now = DateTime.now();
     final bytes = await buildBytes(
       entries,
       fontSize: fontSize,
       typography: typography,
+      pageSize: pageSize,
       generatedAt: now,
     );
     final directory = await getApplicationDocumentsDirectory();
@@ -110,6 +176,7 @@ class PdfService {
     List<WordEntry> entries, {
     PdfFontSize fontSize = PdfFontSize.medium,
     PdfTypography? typography,
+    BookPageSize pageSize = BookPageSize.a4,
     DateTime? generatedAt,
   }) async {
     final date = generatedAt ?? DateTime.now();
@@ -121,17 +188,7 @@ class PdfService {
     final ipa = fonts[2];
     final resolvedTypography = typography ?? PdfTypography.fromPreset(fontSize);
     double size(double value) => value * fontSize.scale;
-    final compactEnoughForThreeColumns =
-        resolvedTypography.word <= 16.5 &&
-        resolvedTypography.definition <= 8.2 &&
-        resolvedTypography.related <= 7.0 &&
-        resolvedTypography.example <= 7.0 &&
-        resolvedTypography.phrase <= 7.0;
-    final columnCount = fontSize == PdfFontSize.large
-        ? 1
-        : compactEnoughForThreeColumns
-        ? 3
-        : 2;
+    final columnCount = exportColumnCount(pageSize, resolvedTypography);
     final document = pw.Document(
       title: 'Lexora Vocabulary Book',
       author: 'Lexora',
@@ -140,11 +197,13 @@ class PdfService {
 
     document.addPage(
       pw.MultiPage(
-        pageFormat: PdfPageFormat.a4,
+        pageFormat: pageSize.pdfFormat,
         // Keep the printable margins compact.  The entry flow below is a
         // spanning Wrap, so a page can continue with the next card instead
         // of leaving a large unused block at the bottom of a page.
-        margin: const pw.EdgeInsets.fromLTRB(24, 20, 24, 20),
+        margin: pageSize == BookPageSize.a5
+            ? const pw.EdgeInsets.fromLTRB(18, 16, 18, 16)
+            : const pw.EdgeInsets.fromLTRB(22, 18, 22, 18),
         header: (context) => pw.Padding(
           padding: const pw.EdgeInsets.only(bottom: 4),
           child: pw.Row(

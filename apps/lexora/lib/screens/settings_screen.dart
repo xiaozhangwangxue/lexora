@@ -369,6 +369,43 @@ class SettingsScreen extends StatelessWidget {
                             ),
                             const SizedBox(height: 18),
                             Text(
+                              strings.paperSize,
+                              style: theme.textTheme.labelLarge,
+                            ),
+                            const SizedBox(height: 10),
+                            SizedBox(
+                              width: double.infinity,
+                              child: SegmentedButton<BookPageSize>(
+                                showSelectedIcon: false,
+                                segments: const [
+                                  ButtonSegment(
+                                    value: BookPageSize.a4,
+                                    label: Text('A4'),
+                                  ),
+                                  ButtonSegment(
+                                    value: BookPageSize.a5,
+                                    label: Text('A5'),
+                                  ),
+                                  ButtonSegment(
+                                    value: BookPageSize.b5,
+                                    label: Text('B5'),
+                                  ),
+                                ],
+                                selected: {settings.pageSize},
+                                onSelectionChanged: (value) => onChanged(
+                                  settings.copyWith(pageSize: value.first),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 5),
+                            Text(
+                              strings.paperSizeHint,
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: theme.colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                            const SizedBox(height: 18),
+                            Text(
                               strings.pdfFontSize,
                               style: theme.textTheme.labelLarge,
                             ),

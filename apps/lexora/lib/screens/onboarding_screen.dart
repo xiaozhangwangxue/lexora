@@ -30,14 +30,19 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         strings.onboardingOneBody,
       ),
       (
-        Icons.tune_rounded,
+        Icons.spellcheck_rounded,
         strings.onboardingTwoTitle,
         strings.onboardingTwoBody,
       ),
       (
-        Icons.picture_as_pdf_rounded,
+        Icons.auto_stories_rounded,
         strings.onboardingThreeTitle,
         strings.onboardingThreeBody,
+      ),
+      (
+        Icons.history_rounded,
+        strings.onboardingFourTitle,
+        strings.onboardingFourBody,
       ),
     ];
     final theme = Theme.of(context);

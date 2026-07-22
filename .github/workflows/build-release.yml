@@ -140,7 +140,7 @@ jobs:
           ditto -c -k --sequesterRsrc --keepParent "${{ matrix.source }}" "lexora-macos-${RELEASE_VERSION}.zip"
           bash tool/create_macos_dmg.sh \
             "${{ matrix.source }}" \
-            packaging/macos/dmg-background-final.png \
+            packaging/macos/dmg-background-v1.3-beta.png \
             "lexora-macos-${RELEASE_VERSION}.dmg"
           hdiutil verify "lexora-macos-${RELEASE_VERSION}.dmg"
       - name: Package Windows build
@@ -188,16 +188,23 @@ jobs:
           cache: npm
       - run: npm ci
       - name: Prepare bilingual release notes
-        run: node tool/generate_release_notes.mjs
+        run: |
+          if [[ "$RELEASE_VERSION" == *-beta* ]]; then
+            cp release-notes/v1.3.0-beta.md release-notes.md
+          else
+            node tool/generate_release_notes.mjs
+          fi
       - uses: actions/download-artifact@v4
         with:
           merge-multiple: true
       - uses: softprops/action-gh-release@v2
         with:
           generate_release_notes: true
+          prerelease: ${{ contains(github.ref_name, '-beta') }}
           body_path: release-notes.md
           files: lexora-*
       - name: Mirror downloads to Cloudflare R2
+        if: ${{ !contains(github.ref_name, '-beta') }}
         env:
           DOWNLOAD_UPLOAD_TOKEN: ${{ secrets.DOWNLOAD_UPLOAD_TOKEN }}
         run: |

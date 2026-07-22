@@ -19,6 +19,7 @@ typedef ImportFilePicker = Future<List<XFile>> Function();
 class HomeScreen extends StatefulWidget {
   const HomeScreen({
     super.key,
+    this.active = true,
     required this.settings,
     required this.generationRunning,
     required this.onStartGeneration,
@@ -28,6 +29,7 @@ class HomeScreen extends StatefulWidget {
   });
 
   final PdfSettings settings;
+  final bool active;
   final bool generationRunning;
   final ValueChanged<List<String>> onStartGeneration;
   final VoidCallback onCustomizePdf;
@@ -45,6 +47,19 @@ class _HomeScreenState extends State<HomeScreen> {
   final _haptics = const HapticService();
   WordSort _sort = WordSort.custom;
   bool _importing = false;
+
+  @override
+  void didUpdateWidget(covariant HomeScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.active && !widget.active) {
+      _focusNode.unfocus();
+      if (Platform.isAndroid) {
+        unawaited(
+          SystemChannels.textInput.invokeMethod<void>('TextInput.hide'),
+        );
+      }
+    }
+  }
 
   @override
   void dispose() {
@@ -259,7 +274,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 TextField(
                   controller: _controller,
                   focusNode: _focusNode,
-                  autofocus: true,
+                  autofocus: widget.active,
                   textInputAction: TextInputAction.done,
                   onSubmitted: _addWord,
                   decoration: InputDecoration(

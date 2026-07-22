@@ -10,7 +10,9 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:lexora/app_version.dart';
 import 'package:lexora/l10n/app_localizations.dart';
 import 'package:lexora/main.dart';
+import 'package:lexora/screens/history_screen.dart';
 import 'package:lexora/screens/word_history_screen.dart';
+import 'package:lexora/services/generation_progress.dart';
 import 'package:lexora/services/history_service.dart';
 import 'package:lexora/widgets/lexora_wordmark.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -25,7 +27,7 @@ void main() {
     SharedPreferences.setMockInitialValues({});
     await tester.pumpWidget(const LexoraApp());
     await pumpUi(tester);
-    expect(find.text('Collect words and phrases'), findsOneWidget);
+    expect(find.text('Type, or import a whole word list'), findsOneWidget);
     expect(find.text('Skip'), findsOneWidget);
   });
 
@@ -67,6 +69,7 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 600));
     expect(tester.getSize(find.byKey(const Key('desktop-sidebar'))).width, 76);
+    expect(find.byKey(const Key('desktop-sidebar-toggle')), findsNothing);
 
     FocusManager.instance.primaryFocus?.unfocus();
     await tester.pumpWidget(const SizedBox.shrink());
@@ -91,7 +94,7 @@ void main() {
       ),
     );
     await pumpUi(tester);
-    expect(find.text('Collect words and phrases'), findsOneWidget);
+    expect(find.text('Type, or import a whole word list'), findsOneWidget);
 
     await tester.runAsync(() async {
       final boundary = tester.renderObject<RenderRepaintBoundary>(
@@ -205,6 +208,11 @@ void main() {
       expect(rootScaffold.resizeToAvoidBottomInset, isFalse);
       expect(tester.getBottomRight(find.byType(NavigationBar)).dy, 1280);
 
+      await tester.tap(find.text('生成记录').last);
+      await pumpUi(tester);
+      expect(find.text('阅读、导出或分享已生成的词汇书。'), findsOneWidget);
+      expect(input.focusNode?.hasFocus, isFalse);
+
       await tester.runAsync(() async {
         final boundary = tester.renderObject<RenderRepaintBoundary>(
           find.byKey(const Key('android-resume-capture')),
@@ -273,5 +281,51 @@ void main() {
     await tester.tap(find.widgetWithText(FilledButton, '重新生成'));
     await pumpUi(tester);
     expect(find.text('精细调整字体'), findsOneWidget);
+  });
+
+  testWidgets('生成完成后用灰色叉替代百分比并可移除进度', (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    final progress = GenerationProgress()
+      ..start(4)
+      ..complete();
+    final directory = Directory.systemTemp.createTempSync(
+      'lexora-completed-progress-',
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('zh', 'CN'),
+        supportedLocales: const [Locale('zh', 'CN')],
+        localizationsDelegates: const [
+          AppLocalizationsDelegate(),
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        home: HistoryScreen(
+          progress: progress,
+          onOpenBook: (_) {},
+          historyService: HistoryService(
+            documentsDirectory: () async => directory,
+          ),
+        ),
+      ),
+    );
+    await pumpUi(tester);
+
+    expect(find.text('100%'), findsNothing);
+    final close = find.byKey(const Key('dismiss-completed-generation'));
+    expect(close, findsOneWidget);
+    final icon = tester.widget<Icon>(
+      find.descendant(of: close, matching: find.byIcon(Icons.close_rounded)),
+    );
+    expect(
+      icon.color,
+      Theme.of(tester.element(close)).colorScheme.onSurfaceVariant,
+    );
+
+    await tester.tap(close);
+    await tester.pump();
+    expect(find.text('词汇书已完成'), findsNothing);
   });
 }

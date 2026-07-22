@@ -17,23 +17,25 @@ Future<PdfSettings?> showPdfCustomizationDialog(
   barrierDismissible: true,
   barrierLabel: MaterialLocalizations.of(context).modalBarrierDismissLabel,
   barrierColor: Colors.black.withValues(alpha: .24),
-  transitionDuration: const Duration(milliseconds: 520),
+  transitionDuration: MediaQuery.disableAnimationsOf(context)
+      ? Duration.zero
+      : const Duration(milliseconds: 260),
   pageBuilder: (_, __, ___) => _PdfCustomizationDialog(initial: settings),
   transitionBuilder: (context, animation, secondaryAnimation, child) {
     final curved = CurvedAnimation(
       parent: animation,
-      curve: Curves.easeOutBack,
-      reverseCurve: Curves.easeInCubic,
+      curve: const Cubic(.23, 1, .32, 1),
+      reverseCurve: const Cubic(.77, 0, .175, 1),
     );
     return FadeTransition(
       opacity: CurvedAnimation(parent: animation, curve: Curves.easeOut),
       child: SlideTransition(
         position: Tween<Offset>(
-          begin: const Offset(0, .055),
+          begin: const Offset(0, .025),
           end: Offset.zero,
         ).animate(curved),
         child: ScaleTransition(
-          scale: Tween<double>(begin: .92, end: 1).animate(curved),
+          scale: Tween<double>(begin: .97, end: 1).animate(curved),
           child: child,
         ),
       ),
@@ -248,6 +250,40 @@ class _PdfCustomizationDialogState extends State<_PdfCustomizationDialog> {
                                         ),
                                       ),
                                       const SizedBox(height: 20),
+                                      Text(
+                                        strings.paperSize,
+                                        style: theme.textTheme.labelLarge,
+                                      ),
+                                      const SizedBox(height: 10),
+                                      SizedBox(
+                                        width: double.infinity,
+                                        child: SegmentedButton<BookPageSize>(
+                                          showSelectedIcon: false,
+                                          segments: const [
+                                            ButtonSegment(
+                                              value: BookPageSize.a4,
+                                              label: Text('A4'),
+                                            ),
+                                            ButtonSegment(
+                                              value: BookPageSize.a5,
+                                              label: Text('A5'),
+                                            ),
+                                            ButtonSegment(
+                                              value: BookPageSize.b5,
+                                              label: Text('B5'),
+                                            ),
+                                          ],
+                                          selected: {_settings.pageSize},
+                                          onSelectionChanged: (value) =>
+                                              setState(
+                                                () => _settings = _settings
+                                                    .copyWith(
+                                                      pageSize: value.first,
+                                                    ),
+                                              ),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 20),
                                       Row(
                                         children: [
                                           Expanded(
@@ -319,7 +355,7 @@ class _PdfCustomizationDialogState extends State<_PdfCustomizationDialog> {
                                       _FontSlider(
                                         label: strings.wordTitleFont,
                                         value: _settings.typography.word,
-                                        min: 14,
+                                        min: 6,
                                         max: 30,
                                         onChanged: (value) => _updateTypography(
                                           _settings.typography.copyWith(
@@ -330,7 +366,7 @@ class _PdfCustomizationDialogState extends State<_PdfCustomizationDialog> {
                                       _FontSlider(
                                         label: strings.phoneticFont,
                                         value: _settings.typography.phonetic,
-                                        min: 8,
+                                        min: 6,
                                         max: 18,
                                         onChanged: (value) => _updateTypography(
                                           _settings.typography.copyWith(
@@ -341,7 +377,7 @@ class _PdfCustomizationDialogState extends State<_PdfCustomizationDialog> {
                                       _FontSlider(
                                         label: strings.definitionFont,
                                         value: _settings.typography.definition,
-                                        min: 8,
+                                        min: 6,
                                         max: 18,
                                         onChanged: (value) => _updateTypography(
                                           _settings.typography.copyWith(
@@ -352,7 +388,7 @@ class _PdfCustomizationDialogState extends State<_PdfCustomizationDialog> {
                                       _FontSlider(
                                         label: strings.relatedFont,
                                         value: _settings.typography.related,
-                                        min: 7,
+                                        min: 6,
                                         max: 16,
                                         onChanged: (value) => _updateTypography(
                                           _settings.typography.copyWith(
@@ -363,7 +399,7 @@ class _PdfCustomizationDialogState extends State<_PdfCustomizationDialog> {
                                       _FontSlider(
                                         label: strings.exampleFont,
                                         value: _settings.typography.example,
-                                        min: 7,
+                                        min: 6,
                                         max: 16,
                                         onChanged: (value) => _updateTypography(
                                           _settings.typography.copyWith(
@@ -374,7 +410,7 @@ class _PdfCustomizationDialogState extends State<_PdfCustomizationDialog> {
                                       _FontSlider(
                                         label: strings.phraseFont,
                                         value: _settings.typography.phrase,
-                                        min: 7,
+                                        min: 6,
                                         max: 16,
                                         onChanged: (value) => _updateTypography(
                                           _settings.typography.copyWith(

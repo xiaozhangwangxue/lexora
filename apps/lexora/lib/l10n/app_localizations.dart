@@ -109,6 +109,10 @@ class AppLocalizations {
   String get customize => isZh ? '自定义文档' : 'Customize document';
   String get pdfSettings => isZh ? '文档自定义' : 'Document customization';
   String get exportFormat => isZh ? '导出格式' : 'Export format';
+  String get paperSize => isZh ? '纸张尺寸' : 'Paper size';
+  String get paperSizeHint => isZh
+      ? 'Lexora 会根据纸张和字号自动选择一栏、两栏或三栏。'
+      : 'Lexora automatically chooses one, two, or three columns for the paper and font sizes.';
   String get settingsIntroTitle => isZh
       ? '把零散单词，变成真正想读的词汇书。'
       : 'Turn loose words into a book worth reading.';
@@ -246,19 +250,25 @@ class AppLocalizations {
   String get onboardingNext => isZh ? '下一步' : 'Next';
   String get onboardingStart => isZh ? '开始使用' : 'Get started';
   String get onboardingOneTitle =>
-      isZh ? '先收集单词和短语' : 'Collect words and phrases';
+      isZh ? '输入，或一次导入整份词表' : 'Type, or import a whole word list';
   String get onboardingOneBody => isZh
-      ? '输入英文单词或短语后按回车。长按可调整顺序，向左滑可删除。'
-      : 'Type a word or phrase and press Enter. Long-press to reorder it, or swipe left to delete it.';
-  String get onboardingTwoTitle => isZh ? '按你喜欢的方式生成' : 'Make the PDF yours';
+      ? '输入单词或短语后按回车，也可以从 TXT、PDF、DOC、DOCX 等文件按行批量导入。长按排序，左滑删除。'
+      : 'Press Enter after a word or phrase, or import line-separated entries from TXT, PDF, DOC, DOCX, and more. Long-press to reorder and swipe to delete.';
+  String get onboardingTwoTitle =>
+      isZh ? '准确补全，也能识别相近拼写' : 'Accurate lookup with careful fuzzy matching';
   String get onboardingTwoBody => isZh
-      ? '在“设置”中选择字号和例句数量，Lexora 会自动补全音标、词频、难度、常用短语和中文翻译。'
-      : 'Choose font size and example count in Settings. Lexora adds phonetics, frequency, difficulty, useful phrases, and Chinese translations.';
+      ? 'Lexora 会补全音标、词频、难度、例句、常用短语和中文翻译。拼写接近时会标明原词与匹配结果，不会悄悄替换。'
+      : 'Lexora adds phonetics, frequency, difficulty, examples, phrases, and Chinese translations. Similar spellings are clearly marked instead of silently replaced.';
   String get onboardingThreeTitle =>
-      isZh ? '随时阅读与分享' : 'Read and share anytime';
+      isZh ? '让每本词汇书适合它的用途' : 'Shape every book for its purpose';
   String get onboardingThreeBody => isZh
-      ? '完成后可在“生成记录”中阅读 PDF，也可导出或调用系统分享。'
-      : 'Open finished PDFs from Generated, export them, or use your device’s share sheet.';
+      ? '选择 PDF、EPUB 或可编辑 DOCX，再选择 A4、A5 或 B5。Lexora 会根据纸张和字号自动排成一至三栏。'
+      : 'Choose PDF, EPUB, or editable DOCX, then A4, A5, or B5. Lexora automatically uses one to three columns for the paper and typography.';
+  String get onboardingFourTitle =>
+      isZh ? '在生成记录中阅读，在历史中重用' : 'Read in Generated, reuse from History';
+  String get onboardingFourBody => isZh
+      ? '生成完成后可在应用内缩放阅读、分享或导出；历史会保存生成过的词条，方便星标、排序和再次生成。'
+      : 'When ready, read with zoom, share, or export in the app. History keeps generated entries for starring, sorting, and generating again.';
 }
 
 class AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

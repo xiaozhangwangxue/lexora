@@ -213,8 +213,10 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
       setState(() => _index = value);
       _pageController.animateToPage(
         value,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeInOutCubicEmphasized,
+        duration: MediaQuery.disableAnimationsOf(context)
+            ? Duration.zero
+            : const Duration(milliseconds: 240),
+        curve: const Cubic(.32, .72, 0, 1),
       );
     } else {
       setState(() => _index = value);
@@ -225,7 +227,7 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
   }
 
   void _dismissAndroidHomeKeyboard(int destination) {
-    if (!_isAndroid || _index != 0 || destination == 0) return;
+    if (!_isAndroid || destination == 0) return;
     FocusManager.instance.primaryFocus?.unfocus();
     unawaited(SystemChannels.textInput.invokeMethod<void>('TextInput.hide'));
   }
@@ -278,6 +280,7 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
         format: settings.format,
         fontSize: settings.fontSize,
         typography: settings.typography,
+        pageSize: settings.pageSize,
       );
       await _historyService.save(book);
       await _historyService.recordWords(result.entries, book.createdAt);
@@ -550,6 +553,7 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
     final showGitHub = _index == 0;
     final pages = [
       HomeScreen(
+        active: _index == 0,
         settings: _settings!,
         generationRunning: _generationProgress.isRunning,
         onStartGeneration: _startGeneration,
@@ -665,8 +669,10 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
           children: [
             AnimatedContainer(
               key: const Key('desktop-sidebar'),
-              duration: const Duration(milliseconds: 460),
-              curve: Curves.easeInOutCubicEmphasized,
+              duration: MediaQuery.disableAnimationsOf(context)
+                  ? Duration.zero
+                  : const Duration(milliseconds: 260),
+              curve: const Cubic(.77, 0, .175, 1),
               width: expandedNavigation ? 220 : 76,
               clipBehavior: Clip.hardEdge,
               decoration: const BoxDecoration(),
@@ -675,6 +681,7 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
                 destinations: destinations,
                 onSelected: _selectPage,
                 expanded: expandedNavigation,
+                canToggle: autoExpandedNavigation,
                 isMacOS: Platform.isMacOS,
                 onToggle: () => setState(() {
                   _desktopSidebarExpandedPreference = !expandedNavigation;
@@ -758,6 +765,7 @@ class _DesktopSidebar extends StatelessWidget {
     required this.destinations,
     required this.onSelected,
     required this.expanded,
+    required this.canToggle,
     required this.isMacOS,
     required this.onToggle,
   });
@@ -766,6 +774,7 @@ class _DesktopSidebar extends StatelessWidget {
   final List<NavigationRailDestination> destinations;
   final ValueChanged<int> onSelected;
   final bool expanded;
+  final bool canToggle;
   final bool isMacOS;
   final VoidCallback onToggle;
 
@@ -827,19 +836,15 @@ class _DesktopSidebar extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(horizontal: 2),
                   child: Row(
                     children: [
-                      IconButton(
-                        key: const Key('desktop-sidebar-toggle'),
-                        tooltip: expanded
-                            ? 'Collapse sidebar'
-                            : 'Expand sidebar',
-                        onPressed: onToggle,
-                        icon: AnimatedRotation(
-                          turns: expanded ? 0 : .5,
-                          duration: const Duration(milliseconds: 460),
-                          curve: Curves.easeInOutCubicEmphasized,
-                          child: const Icon(Icons.menu_rounded),
+                      if (canToggle)
+                        IconButton(
+                          key: const Key('desktop-sidebar-toggle'),
+                          tooltip: expanded
+                              ? 'Collapse sidebar'
+                              : 'Expand sidebar',
+                          onPressed: onToggle,
+                          icon: const Icon(Icons.menu_rounded),
                         ),
-                      ),
                       if (showLabels)
                         Expanded(
                           child: Text(
