@@ -62,7 +62,14 @@ jobs:
       - name: Enable current MSVC compatibility for Windows plugins
         if: matrix.platform == 'windows'
         shell: pwsh
-        run: Add-Content windows/CMakeLists.txt "`nadd_compile_definitions(_SILENCE_EXPERIMENTAL_COROUTINE_DEPRECATION_WARNINGS)"
+        run: |
+          $path = 'windows/CMakeLists.txt'
+          $content = Get-Content $path -Raw
+          $content = $content.Replace(
+            'project(lexora LANGUAGES CXX)',
+            "project(lexora LANGUAGES CXX)`r`nadd_compile_definitions(_SILENCE_EXPERIMENTAL_COROUTINE_DEPRECATION_WARNINGS)"
+          )
+          Set-Content $path $content -NoNewline
       - name: Allow Android network and installer access
         if: matrix.platform == 'android'
         run: |
