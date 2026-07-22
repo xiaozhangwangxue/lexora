@@ -1,20 +1,20 @@
-const appVersion = '3.0.1';
-const appBuildNumber = 16;
+const appVersion = '3.1.0';
+const appBuildNumber = 18;
 
 const releaseNotesZh = <String>[
-  '修复 macOS 应用内更新在安装包下载完成后无法准备和打开 DMG 的问题。',
-  '分页图片与长图阅读器改用专用多点手势引擎，恢复双指缩放并避免缩放时误翻页。',
-  '优化图片、EPUB 和 DOCX 阅读器的后台解析与返回过渡，快速返回不再拖慢动画或造成卡顿。',
-  '智能调整顺序升级为按页面和栏位最佳填充，短词条会补入当前页剩余空间，进一步减少留白。',
-  '设置中新增低开销开发者模式，可导出或删除包含完整错误堆栈的详细诊断日志。',
-  'Android 设置标题旁新增当前版本号，便于确认安装版本。',
+  '恢复经过验证的稳定智能排版逻辑，避免新版自动排序导致栏位更加凌乱。',
+  '优化 PDF 阅读器的缓存、阴影绘制和打开动画，滚动与缩放更加流畅。',
+  '减少 Android 页面切换时的实时模糊和相邻页面预渲染，降低闪烁与掉帧。',
+  '优化单词拖拽、桌面侧栏动画和大批量生成日志，长列表操作更轻快。',
+  '修复 macOS 应用内更新因沙盒无法改写 DMG 隔离属性而中断的问题。',
+  'macOS 收起侧栏时应用图标改为严格居中，并放大为原来的两倍。',
 ];
 
 const releaseNotesEn = <String>[
-  'Fixed macOS in-app updates failing to prepare and open the DMG after a successful download.',
-  'Moved page-image and long-image reading to a dedicated multi-touch engine, restoring pinch zoom without accidental page changes.',
-  'Moved reader parsing off the UI thread and shortened reverse transitions so quickly closing images, EPUB, or DOCX stays smooth.',
-  'Upgraded Smart reorder with page-and-column best-fit packing so short entries fill remaining page space.',
-  'Added an opt-in low-overhead Developer mode with full diagnostic log export and deletion.',
-  'Added the installed version beside the Android Settings title.',
+  'Restored the proven stable Smart reorder layout to avoid the uneven results introduced by the newer packing algorithm.',
+  'Optimized PDF cache, page painting, and opening transitions for smoother scrolling and zooming.',
+  'Reduced live blur and adjacent-page prerendering during Android navigation to prevent flashes and dropped frames.',
+  'Optimized word dragging, desktop sidebar motion, and large-batch diagnostic logging.',
+  'Fixed macOS in-app updates stopping when the sandbox cannot rewrite the DMG quarantine attribute.',
+  'Centered the macOS app icon in the collapsed sidebar and doubled its size.',
 ];

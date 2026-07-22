@@ -382,8 +382,8 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
     DeveloperLogService.instance.log(
       'generation.started',
       data: {
-        'terms': terms,
         'count': terms.length,
+        'termSample': terms.take(20).toList(growable: false),
         'format': settings.format.name,
         'pageSize': settings.pageSize.name,
         'fontSize': settings.fontSize.name,
@@ -464,7 +464,10 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
         'generation.failed',
         error: error,
         stackTrace: stack,
-        data: {'terms': terms},
+        data: {
+          'count': terms.length,
+          'termSample': terms.take(20).toList(growable: false),
+        },
       );
       _generationProgress.fail(error.toString());
       if (mounted) {
@@ -491,20 +494,31 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
     );
     const recordsPage = 1;
     _selectPage(recordsPage, animate: false);
+    final isPdf = book.format == BookFormat.pdf;
     await Navigator.of(context).push(
       PageRouteBuilder<void>(
-        allowSnapshotting: true,
-        transitionDuration: const Duration(milliseconds: 170),
-        reverseTransitionDuration: const Duration(milliseconds: 110),
+        // Rasterizing the first PDF pages and animating the entire route at
+        // the same time competes for the UI/GPU frame budget. PDF reading is a
+        // frequent action, so open it immediately; lighter readers keep the
+        // short interruptible fade.
+        allowSnapshotting: !isPdf,
+        transitionDuration: isPdf
+            ? Duration.zero
+            : const Duration(milliseconds: 170),
+        reverseTransitionDuration: isPdf
+            ? Duration.zero
+            : const Duration(milliseconds: 110),
         pageBuilder: (_, __, ___) => PdfReaderScreen(book: book),
-        transitionsBuilder: (_, animation, __, child) => FadeTransition(
-          opacity: CurvedAnimation(
-            parent: animation,
-            curve: const Cubic(.23, 1, .32, 1),
-            reverseCurve: Curves.easeOut,
-          ),
-          child: child,
-        ),
+        transitionsBuilder: (_, animation, __, child) => isPdf
+            ? child
+            : FadeTransition(
+                opacity: CurvedAnimation(
+                  parent: animation,
+                  curve: const Cubic(.23, 1, .32, 1),
+                  reverseCurve: Curves.easeOut,
+                ),
+                child: child,
+              ),
       ),
     );
     if (mounted) _selectPage(recordsPage, animate: false);
@@ -770,7 +784,7 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
                 parent: ClampingScrollPhysics(),
               ),
               clipBehavior: Clip.hardEdge,
-              allowImplicitScrolling: true,
+              allowImplicitScrolling: false,
               onPageChanged: (value) {
                 _dismissAndroidHomeKeyboard(value);
                 if (_index != value) setState(() => _index = value);
@@ -797,13 +811,17 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
             right: 0,
             height: MediaQuery.paddingOf(context).top + 14,
             child: IgnorePointer(
-              child: ClipRect(
-                child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-                  child: ColoredBox(
-                    color: Theme.of(
-                      context,
-                    ).colorScheme.surface.withValues(alpha: .58),
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Theme.of(context).colorScheme.surface,
+                      Theme.of(
+                        context,
+                      ).colorScheme.surface.withValues(alpha: .88),
+                    ],
                   ),
                 ),
               ),
@@ -864,8 +882,8 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
               key: const Key('desktop-sidebar'),
               duration: MediaQuery.disableAnimationsOf(context)
                   ? Duration.zero
-                  : const Duration(milliseconds: 260),
-              curve: const Cubic(.77, 0, .175, 1),
+                  : const Duration(milliseconds: 220),
+              curve: const Cubic(.23, 1, .32, 1),
               width: expandedNavigation ? 220 : 76,
               clipBehavior: Clip.hardEdge,
               decoration: const BoxDecoration(),
@@ -901,39 +919,44 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
       resizeToAvoidBottomInset: !_isAndroid,
       body: body,
       extendBody: _isAndroid,
-      bottomNavigationBar: ClipRect(
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 22, sigmaY: 22),
-          child: NavigationBar(
-            backgroundColor: Theme.of(
-              context,
-            ).colorScheme.surface.withValues(alpha: _isAndroid ? .76 : 1),
-            shadowColor: Colors.transparent,
-            selectedIndex: _index,
-            onDestinationSelected: _selectPage,
-            destinations: [
-              NavigationDestination(
-                icon: destinations[0].icon,
-                selectedIcon: destinations[0].selectedIcon,
-                label: strings.words,
-              ),
-              NavigationDestination(
-                icon: destinations[1].icon,
-                selectedIcon: destinations[1].selectedIcon,
-                label: strings.generationRecords,
-              ),
-              NavigationDestination(
-                icon: destinations[2].icon,
-                selectedIcon: destinations[2].selectedIcon,
-                label: strings.history,
-              ),
-              NavigationDestination(
-                icon: destinations[3].icon,
-                selectedIcon: destinations[3].selectedIcon,
-                label: strings.settings,
-              ),
-            ],
+      bottomNavigationBar: DecoratedBox(
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface.withValues(alpha: .96),
+          border: Border(
+            top: BorderSide(
+              color: Theme.of(
+                context,
+              ).colorScheme.outlineVariant.withValues(alpha: .3),
+            ),
           ),
+        ),
+        child: NavigationBar(
+          backgroundColor: Colors.transparent,
+          shadowColor: Colors.transparent,
+          selectedIndex: _index,
+          onDestinationSelected: _selectPage,
+          destinations: [
+            NavigationDestination(
+              icon: destinations[0].icon,
+              selectedIcon: destinations[0].selectedIcon,
+              label: strings.words,
+            ),
+            NavigationDestination(
+              icon: destinations[1].icon,
+              selectedIcon: destinations[1].selectedIcon,
+              label: strings.generationRecords,
+            ),
+            NavigationDestination(
+              icon: destinations[2].icon,
+              selectedIcon: destinations[2].selectedIcon,
+              label: strings.history,
+            ),
+            NavigationDestination(
+              icon: destinations[3].icon,
+              selectedIcon: destinations[3].selectedIcon,
+              label: strings.settings,
+            ),
+          ],
         ),
       ),
     );

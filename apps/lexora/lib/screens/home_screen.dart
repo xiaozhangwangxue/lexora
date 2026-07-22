@@ -412,36 +412,35 @@ class _HomeScreenState extends State<HomeScreen> {
                           proxyDecorator: (child, index, animation) =>
                               AnimatedBuilder(
                                 animation: animation,
-                                builder: (context, _) => Transform.scale(
-                                  scale: 1 + animation.value * .015,
-                                  child: Material(
-                                    color: Colors.transparent,
-                                    elevation: 0,
-                                    child: ClipRRect(
-                                      borderRadius: BorderRadius.circular(
-                                        itemRadius,
-                                      ),
-                                      child: DecoratedBox(
-                                        decoration: BoxDecoration(
-                                          borderRadius: BorderRadius.circular(
-                                            itemRadius,
-                                          ),
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color: theme.shadowColor
-                                                  .withValues(
-                                                    alpha:
-                                                        .18 * animation.value,
-                                                  ),
-                                              blurRadius: 22,
-                                              offset: const Offset(0, 8),
-                                            ),
-                                          ],
+                                child: Material(
+                                  color: Colors.transparent,
+                                  elevation: 0,
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(
+                                      itemRadius,
+                                    ),
+                                    child: DecoratedBox(
+                                      decoration: BoxDecoration(
+                                        borderRadius: BorderRadius.circular(
+                                          itemRadius,
                                         ),
-                                        child: child,
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: theme.shadowColor.withValues(
+                                              alpha: .16,
+                                            ),
+                                            blurRadius: 18,
+                                            offset: const Offset(0, 7),
+                                          ),
+                                        ],
                                       ),
+                                      child: child,
                                     ),
                                   ),
+                                ),
+                                builder: (context, proxy) => Transform.scale(
+                                  scale: 1 + animation.value * .015,
+                                  child: proxy,
                                 ),
                               ),
                           itemCount: _words.length,

@@ -1,7 +1,7 @@
 name: lexora
 description: Lexora — turn a word list into a compact bilingual vocabulary book.
 publish_to: none
-version: 3.0.1+16
+version: 3.1.0+18
 
 environment:
   sdk: ">=3.10.0 <4.0.0"

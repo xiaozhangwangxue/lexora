@@ -40,64 +40,10 @@ void main() {
     final compactOutput = File('build/qa/qa-pdf-preview-small.pdf');
     await compactOutput.writeAsBytes(compactBytes, flush: true);
 
-    final smartEntries = <WordEntry>[
-      for (final item in const [
-        ('word', 8),
-        ('hell on earth', 34),
-        ('fuck', 25),
-        ('so', 38),
-        ('begin', 28),
-        ('hard', 18),
-        ('cedar', 22),
-        ('and', 12),
-        ('genin', 24),
-        ('right', 20),
-        ('snag', 14),
-        ('hello', 10),
-        ('sounds', 17),
-        ('congratulations', 7),
-        ('birthday', 9),
-      ])
-        _entry(item.$1, '/ˈwɜːd/', List.filled(item.$2, '内容').join()),
-    ];
-    final smartBytes = await PdfService().buildBytes(
-      smartEntries,
-      fontSize: PdfFontSize.small,
-      smartReorder: true,
-      showPageFurniture: false,
-      generatedAt: DateTime(2026, 7, 23),
-    );
-    await File(
-      'build/qa/qa-pdf-smart-layout.pdf',
-    ).writeAsBytes(smartBytes, flush: true);
-
     expect(bytes, isNotEmpty);
     expect(await output.length(), greaterThan(15000));
     expect(compactBytes, isNotEmpty);
     expect(await compactOutput.length(), greaterThan(15000));
-    expect(smartBytes, isNotEmpty);
-  });
-
-  test('smart layout packs every entry into page-aware columns', () {
-    final entries = [
-      _entry('very-long', '/lɒŋ/', List.filled(52, '较长内容').join()),
-      _entry('long', '/lɒŋ/', List.filled(39, '内容').join()),
-      _entry('medium', '/miːdiəm/', List.filled(24, '内容').join()),
-      _entry('short', '/ʃɔːt/', '短'),
-      _entry('tiny', '/taɪni/', '小'),
-    ];
-    final columns = smartColumnLayout(
-      entries,
-      columnCount: 3,
-      pageSize: BookPageSize.a4,
-      typography: PdfTypography.fromPreset(PdfFontSize.small),
-      showPageFurniture: false,
-    );
-
-    expect(columns, hasLength(3));
-    expect(columns.expand((column) => column).toSet(), entries.toSet());
-    expect(columns.every((column) => column.isNotEmpty), isTrue);
-    expect(columns.any((column) => column.length > 1), isTrue);
   });
 }
 

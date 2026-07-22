@@ -151,16 +151,29 @@ class _PdfBookReader extends StatelessWidget {
           ),
         ],
       ),
-      body: ColoredBox(
-        color: surface,
-        child: PdfViewer.file(
-          book.path,
-          params: PdfViewerParams(
-            backgroundColor: surface,
-            sizeDelegateProvider: PdfViewerSizeDelegateProviderLegacy(
-              calculateInitialZoom: (_, __, fitZoom, ___) => fitZoom,
+      body: RepaintBoundary(
+        child: ColoredBox(
+          color: surface,
+          child: PdfViewer.file(
+            book.path,
+            params: PdfViewerParams(
+              backgroundColor: surface,
+              // A blurred shadow is repainted around every visible page while
+              // scrolling and zooming. The surrounding surface already
+              // separates pages, so removing it materially lowers GPU work.
+              pageDropShadow: null,
+              limitRenderingCache: true,
+              onePassRenderingSizeThreshold: 1440,
+              maxImageBytesCachedOnMemory: 64 * 1024 * 1024,
+              horizontalCacheExtent: .35,
+              verticalCacheExtent: .75,
+              scrollPhysics: const ClampingScrollPhysics(),
+              scaleByPointerScale: .82,
+              sizeDelegateProvider: PdfViewerSizeDelegateProviderLegacy(
+                calculateInitialZoom: (_, __, fitZoom, ___) => fitZoom,
+              ),
+              scrollByMouseWheel: .24,
             ),
-            scrollByMouseWheel: .24,
           ),
         ),
       ),

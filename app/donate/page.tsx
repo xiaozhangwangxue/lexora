@@ -16,7 +16,7 @@ export default function DonatePage() {
     <main className="donatePage">
       <nav className="nav wrap" aria-label={zh ? "捐款页面导航" : "Donation navigation"}>
         <Link className="brand" href="/">
-          <img src="/lexora-icon-192.png" alt="" width="36" height="36" />
+          <Image src="/lexora-icon-192.png" alt="" width={36} height={36} priority unoptimized />
           <LexoraWordmark />
         </Link>
         <div className="donateNavActions">

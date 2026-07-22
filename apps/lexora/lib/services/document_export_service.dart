@@ -253,9 +253,7 @@ class DocumentExportService {
     add('word/_rels/fontTable.xml.rels', _docxFontRelationships);
     add('word/fontTable.xml', _docxFontTable);
     add('word/styles.xml', _docxStyles(type));
-    final orderedEntries = smartReorder
-        ? _smartOrder(entries, type, pageSize)
-        : entries;
+    final orderedEntries = smartReorder ? _smartOrder(entries) : entries;
     add(
       'word/document.xml',
       _docxDocument(orderedEntries, date, type, pageSize),
@@ -316,9 +314,7 @@ class DocumentExportService {
   }) async {
     final date = generatedAt ?? DateTime.now();
     final type = typography ?? PdfTypography.fromPreset(fontSize);
-    final orderedEntries = smartReorder
-        ? _smartOrder(entries, type, pageSize)
-        : entries;
+    final orderedEntries = smartReorder ? _smartOrder(entries) : entries;
     final latinFont = await rootBundle.load(
       'assets/fonts/NotoSans-Regular.ttf',
     );
@@ -366,26 +362,24 @@ class DocumentExportService {
     return Uint8List.fromList(ZipEncoder().encode(archive, level: 6));
   }
 
-  static List<WordEntry> _smartOrder(
-    List<WordEntry> entries,
-    PdfTypography type,
-    BookPageSize pageSize,
-  ) {
-    final columns = smartColumnLayout(
-      entries,
-      columnCount: exportColumnCount(pageSize, type),
-      pageSize: pageSize,
-      typography: type,
-    );
-    final longest = columns.fold<int>(
-      0,
-      (length, column) => column.length > length ? column.length : length,
-    );
-    return [
-      for (var row = 0; row < longest; row++)
-        for (final column in columns)
-          if (row < column.length) column[row],
-    ];
+  static List<WordEntry> _smartOrder(List<WordEntry> entries) =>
+      entries.toList()
+        ..sort((a, b) => _entryWeight(b).compareTo(_entryWeight(a)));
+
+  static double _entryWeight(WordEntry entry) {
+    var weight = (90 + entry.word.length * 3 + entry.definition.length)
+        .toDouble();
+    weight += entry.definitionZh.length * 1.15;
+    weight += (entry.synonyms.length + entry.antonyms.length) * 14;
+    weight += entry.examples.fold<int>(0, (sum, value) => sum + value.length);
+    weight += entry.examplesZh.fold<int>(0, (sum, value) => sum + value.length);
+    for (final phrase in entry.phrases) {
+      weight +=
+          phrase.phrase.length * 2 +
+          phrase.meaning.length +
+          phrase.meaningZh.length;
+    }
+    return weight.toDouble();
   }
 
   static String _xml(String value) => const HtmlEscape(

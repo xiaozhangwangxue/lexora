@@ -207,16 +207,17 @@ private struct LexoraNativeShell: View {
         Image(nsImage: NSApp.applicationIconImage)
           .resizable()
           .scaledToFit()
-          .frame(width: 34, height: 34)
-          .clipShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
+          .frame(width: 68, height: 68)
+          .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
         if expanded {
           Text("Lexora")
             .font(.system(size: 20, weight: .bold, design: .rounded))
             .transition(.opacity.combined(with: .move(edge: .leading)))
         }
       }
-      .frame(height: 50)
-      .padding(.horizontal, expanded ? 14 : 9)
+      .frame(maxWidth: .infinity, alignment: expanded ? .leading : .center)
+      .frame(height: 78)
+      .padding(.horizontal, expanded ? 14 : 0)
       .padding(.top, 40)
       .padding(.bottom, 10)
 
@@ -249,7 +250,7 @@ private struct LexoraNativeShell: View {
         .help(expanded ? localized("收起边栏", "Collapse sidebar") : localized("展开边栏", "Expand sidebar"))
       }
 
-      Text("3.0.1")
+      Text("3.1.0")
         .font(.caption2.monospacedDigit())
         .foregroundStyle(.tertiary)
         .frame(maxWidth: .infinity, alignment: expanded ? .leading : .center)

@@ -1,73 +1,65 @@
 {
-  "version": "3.0.1",
+  "version": "3.1.0",
   "releaseNotes": {
     "zh": [
-      "修复 macOS 应用内更新下载完成后无法准备和打开 DMG 的问题。",
-      "分页图片与长图阅读器恢复双指缩放，并避免缩放时误翻页。",
-      "优化图片、EPUB 和 DOCX 阅读器的后台解析与返回动画，快速返回更加流畅。",
-      "智能调整顺序升级为按页面和栏位最佳填充，短词条会补入当前页剩余空间。",
-      "设置中新增低开销开发者模式，可导出或删除包含完整错误堆栈的详细诊断日志。",
-      "Android 设置标题旁新增当前版本号。"
+      "恢复经过验证的稳定智能排版逻辑，避免新版自动排序导致栏位更加凌乱。",
+      "优化 PDF 阅读器的缓存、阴影绘制和打开动画，滚动与缩放更加流畅。",
+      "减少 Android 页面切换时的实时模糊和相邻页面预渲染，降低闪烁与掉帧。",
+      "优化单词拖拽、桌面侧栏动画和大批量生成日志，长列表操作更轻快。",
+      "修复 macOS 应用内更新因沙盒无法改写 DMG 隔离属性而中断的问题。",
+      "macOS 收起侧栏时应用图标改为严格居中，并放大为原来的两倍。"
     ],
     "en": [
-      "Fixed macOS in-app updates failing to prepare and open the DMG after download.",
-      "Restored pinch zoom for page images and long images without accidental page changes.",
-      "Moved reader parsing off the UI thread and shortened reverse transitions for smooth quick returns.",
-      "Upgraded Smart reorder with page-and-column best-fit packing.",
-      "Added an opt-in low-overhead Developer mode with full diagnostic log export and deletion.",
-      "Added the installed version beside the Android Settings title."
+      "Restored the proven stable Smart reorder layout to avoid the uneven results introduced by the newer packing algorithm.",
+      "Optimized PDF cache, page painting, and opening transitions for smoother scrolling and zooming.",
+      "Reduced live blur and adjacent-page prerendering during Android navigation to prevent flashes and dropped frames.",
+      "Optimized word dragging, desktop sidebar motion, and large-batch diagnostic logging.",
+      "Fixed macOS in-app updates stopping when the sandbox cannot rewrite the DMG quarantine attribute.",
+      "Centered the macOS app icon in the collapsed sidebar and doubled its size."
     ]
   },
   "downloads": {
-    "android": "/downloads/lexora-android-v3.0.1.apk",
-    "macos": "/downloads/lexora-macos-v3.0.1.dmg",
-    "windows": "/downloads/lexora-windows-v3.0.1-setup.exe",
-    "linux": "/downloads/lexora-linux-v3.0.1.tar.gz"
+    "android": "/downloads/lexora-android-v3.1.0.apk",
+    "macos": "/downloads/lexora-macos-v3.1.0.dmg",
+    "windows": "/downloads/lexora-windows-v3.1.0-setup.exe",
+    "linux": "/downloads/lexora-linux-v3.1.0.tar.gz"
   },
   "verifiedDownloads": {
     "android": {
-      "filename": "lexora-android-v3.0.1.apk",
-      "url": "/updates/lexora-android-v3.0.1.apk",
+      "filename": "lexora-android-v3.1.0.apk",
+      "url": "/updates/lexora-android-v3.1.0.apk",
       "sources": [
-        "/updates/lexora-android-v3.0.1.apk",
-        "https://lexora-official.xiaozhangwangxue.workers.dev/updates/lexora-android-v3.0.1.apk",
-        "https://github.com/xiaozhangwangxue/lexora/releases/download/v3.0.1/lexora-android-v3.0.1.apk"
-      ],
-      "sha256": "5335b5cae02a0d280905a56796c496953080b35f509e98d199f6e4c21d28952a",
-      "size": 98388315
+        "/updates/lexora-android-v3.1.0.apk",
+        "https://lexora-official.xiaozhangwangxue.workers.dev/updates/lexora-android-v3.1.0.apk",
+        "https://github.com/xiaozhangwangxue/lexora/releases/download/v3.1.0/lexora-android-v3.1.0.apk"
+      ]
     },
     "macos": {
-      "filename": "lexora-macos-v3.0.1.dmg",
-      "url": "/updates/lexora-macos-v3.0.1.dmg",
+      "filename": "lexora-macos-v3.1.0.dmg",
+      "url": "/updates/lexora-macos-v3.1.0.dmg",
       "sources": [
-        "/updates/lexora-macos-v3.0.1.dmg",
-        "https://lexora-official.xiaozhangwangxue.workers.dev/updates/lexora-macos-v3.0.1.dmg",
-        "https://github.com/xiaozhangwangxue/lexora/releases/download/v3.0.1/lexora-macos-v3.0.1.dmg"
-      ],
-      "sha256": "94dfc38c7359d30d793970a6d90a2fc2634d9c4c0508439fc5fd8f8fd45f70bd",
-      "size": 46868375
+        "/updates/lexora-macos-v3.1.0.dmg",
+        "https://lexora-official.xiaozhangwangxue.workers.dev/updates/lexora-macos-v3.1.0.dmg",
+        "https://github.com/xiaozhangwangxue/lexora/releases/download/v3.1.0/lexora-macos-v3.1.0.dmg"
+      ]
     },
     "windows": {
-      "filename": "lexora-windows-v3.0.1-setup.exe",
-      "url": "/updates/lexora-windows-v3.0.1-setup.exe",
+      "filename": "lexora-windows-v3.1.0-setup.exe",
+      "url": "/updates/lexora-windows-v3.1.0-setup.exe",
       "sources": [
-        "/updates/lexora-windows-v3.0.1-setup.exe",
-        "https://lexora-official.xiaozhangwangxue.workers.dev/updates/lexora-windows-v3.0.1-setup.exe",
-        "https://github.com/xiaozhangwangxue/lexora/releases/download/v3.0.1/lexora-windows-v3.0.1-setup.exe"
-      ],
-      "sha256": "d3011a760ce16df76d73a8a403dd386603c3dd751876a668643fe0d7eb2ab827",
-      "size": 27204846
+        "/updates/lexora-windows-v3.1.0-setup.exe",
+        "https://lexora-official.xiaozhangwangxue.workers.dev/updates/lexora-windows-v3.1.0-setup.exe",
+        "https://github.com/xiaozhangwangxue/lexora/releases/download/v3.1.0/lexora-windows-v3.1.0-setup.exe"
+      ]
     },
     "linux": {
-      "filename": "lexora-linux-v3.0.1.tar.gz",
-      "url": "/updates/lexora-linux-v3.0.1.tar.gz",
+      "filename": "lexora-linux-v3.1.0.tar.gz",
+      "url": "/updates/lexora-linux-v3.1.0.tar.gz",
       "sources": [
-        "/updates/lexora-linux-v3.0.1.tar.gz",
-        "https://lexora-official.xiaozhangwangxue.workers.dev/updates/lexora-linux-v3.0.1.tar.gz",
-        "https://github.com/xiaozhangwangxue/lexora/releases/download/v3.0.1/lexora-linux-v3.0.1.tar.gz"
-      ],
-      "sha256": "75923f3897416484b96bad669590208c8eef6f9109f4a4282c454d1c2dff5bd7",
-      "size": 31319033
+        "/updates/lexora-linux-v3.1.0.tar.gz",
+        "https://lexora-official.xiaozhangwangxue.workers.dev/updates/lexora-linux-v3.1.0.tar.gz",
+        "https://github.com/xiaozhangwangxue/lexora/releases/download/v3.1.0/lexora-linux-v3.1.0.tar.gz"
+      ]
     }
   }
 }

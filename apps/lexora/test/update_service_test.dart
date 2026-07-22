@@ -260,6 +260,54 @@ void main() {
     );
     expect(events, ['prepare', 'open', 'finish']);
   });
+
+  test(
+    'opens a verified macOS DMG when quarantine preparation is denied',
+    () async {
+      final events = <String>[];
+      await _withServer(
+        (request, origin) async {
+          if (request.uri.path == '/version.json') {
+            await _json(
+              request.response,
+              _manifest(
+                origin,
+                apkBytes,
+                platform: 'macos',
+                filename: 'lexora-macos.zip',
+                sources: ['/updates/lexora-macos.zip'],
+              ),
+            );
+          } else {
+            request.response.add(apkBytes);
+            await request.response.close();
+          }
+        },
+        (origin, cache) async {
+          final service = UpdateService(
+            manifestUri: origin.resolve('/version.json'),
+            platformKey: 'macos',
+            cacheDirectory: () async => cache,
+            prepareMacInstaller: (_) async {
+              events.add('prepare-denied');
+              throw const FileSystemException('Operation not permitted');
+            },
+            openInstaller: (_) async {
+              events.add('open');
+              return true;
+            },
+            finishMacUpdate: () async => events.add('finish'),
+            isMacOS: true,
+          );
+          await service.downloadAndLaunch(
+            (await service.check())!,
+            onProgress: (_) {},
+          );
+        },
+      );
+      expect(events, ['prepare-denied', 'open', 'finish']);
+    },
+  );
 }
 
 Map<String, dynamic> _manifest(

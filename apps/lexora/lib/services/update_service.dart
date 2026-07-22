@@ -150,7 +150,22 @@ class UpdateService {
         'update.download_validated',
         data: {'path': file.path, 'bytes': await file.length()},
       );
-      if (_isMacOS) await _prepareMacInstaller(file);
+      if (_isMacOS) {
+        try {
+          await _prepareMacInstaller(file);
+        } catch (error, stack) {
+          // macOS may attach a quarantine attribute while the sandbox denies
+          // rewriting that same attribute. The DMG is already integrity-
+          // checked above, so preparation is an optional compatibility hint
+          // and must never prevent Launch Services from opening the installer.
+          DeveloperLogService.instance.log(
+            'update.mac_prepare_skipped',
+            data: {'path': file.path},
+            error: error,
+            stackTrace: stack,
+          );
+        }
+      }
       if (!await _openInstaller(file)) {
         throw FileSystemException(
           'The system installer could not be opened.',

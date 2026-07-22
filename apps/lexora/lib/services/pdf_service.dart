@@ -126,135 +126,6 @@ class PdfTypography {
   );
 }
 
-/// Packs entries into page-sized column bins instead of balancing only the
-/// final column totals. A short entry can therefore fill the remainder below
-/// a tall entry instead of being stranded on the following page.
-List<List<WordEntry>> smartColumnLayout(
-  List<WordEntry> entries, {
-  required int columnCount,
-  required BookPageSize pageSize,
-  required PdfTypography typography,
-  bool showPageFurniture = true,
-}) {
-  if (columnCount <= 1 || entries.length <= 1) return [entries.toList()];
-  final margin = pageSize == BookPageSize.a5 ? 15.0 : 18.0;
-  final pageWidth = pageSize.pdfFormat.width - margin * 2;
-  final columnWidth = pageWidth / columnCount - 6;
-  final pageHeight = pageSize.pdfFormat.height - margin * 2;
-  final furniture = showPageFurniture ? 34.0 : 4.0;
-  final firstCapacity = pageHeight - furniture - 58;
-  final laterCapacity = pageHeight - furniture;
-  final items = [
-    for (final entry in entries)
-      _SmartLayoutItem(
-        entry,
-        _estimatedEntryHeight(entry, typography, columnWidth, columnCount == 3),
-      ),
-  ]..sort((a, b) => b.height.compareTo(a.height));
-  final pages = <List<_SmartColumnBin>>[];
-
-  for (final item in items) {
-    _SmartColumnBin? best;
-    _SmartColumnBin? emptyFallback;
-    var bestRemainder = double.infinity;
-    for (var pageIndex = 0; pageIndex < pages.length; pageIndex++) {
-      final capacity = pageIndex == 0 ? firstCapacity : laterCapacity;
-      for (final bin in pages[pageIndex]) {
-        emptyFallback ??= bin.entries.isEmpty ? bin : null;
-        final remainder = capacity - bin.height - item.height;
-        if (remainder >= 0 && remainder < bestRemainder) {
-          best = bin;
-          bestRemainder = remainder;
-        }
-      }
-    }
-    // Seed every visible column before backfilling. Pure best-fit bin packing
-    // would fill one column top-to-bottom while leaving its neighbours empty.
-    best = emptyFallback ?? best;
-    if (best == null) {
-      final bins = List.generate(columnCount, (_) => _SmartColumnBin());
-      pages.add(bins);
-      best = bins.first;
-    }
-    best.entries.add(item.entry);
-    best.height += item.height;
-  }
-
-  return [
-    for (var column = 0; column < columnCount; column++)
-      [for (final page in pages) ...page[column].entries],
-  ];
-}
-
-class _SmartLayoutItem {
-  const _SmartLayoutItem(this.entry, this.height);
-  final WordEntry entry;
-  final double height;
-}
-
-class _SmartColumnBin {
-  final entries = <WordEntry>[];
-  double height = 0;
-}
-
-double _estimatedEntryHeight(
-  WordEntry entry,
-  PdfTypography type,
-  double width,
-  bool denseHeader,
-) {
-  double units(String text) =>
-      text.runes.fold<double>(0, (sum, rune) => sum + (rune > 0x2ff ? 1 : .56));
-  double block(String text, double font, {double lineHeight = 1.24}) {
-    if (text.trim().isEmpty) return 0;
-    final lineUnits = (width / font).clamp(5.0, 120.0);
-    final lines = (units(text) / lineUnits).ceil().clamp(1, 1000);
-    return lines * font * lineHeight;
-  }
-
-  var height = 10.0;
-  height += block(entry.word, type.word, lineHeight: 1.12);
-  if (entry.isFuzzyMatch) {
-    height += block('(${entry.originalTerm})', type.related);
-  }
-  if (denseHeader) height += type.related * 2.05 + 3;
-  height += block(
-    'US 美式 ${entry.usPhonetic} UK 英式 ${entry.ukPhonetic}',
-    type.phonetic,
-  );
-  height += block(entry.definition, type.definition) + 2;
-  height += block(entry.definitionZh, type.definition) + 2;
-  if (entry.synonyms.isNotEmpty) {
-    height +=
-        3 +
-        block(
-          'Synonyms / 近义词 ${entry.synonyms.join(' · ')} ${entry.synonymsZh}',
-          type.related,
-        );
-  }
-  if (entry.antonyms.isNotEmpty) {
-    height +=
-        2 +
-        block(
-          'Antonyms / 反义词 ${entry.antonyms.join(' · ')} ${entry.antonymsZh}',
-          type.related,
-        );
-  }
-  for (var index = 0; index < entry.examples.length; index++) {
-    height += 3 + block(entry.examples[index], type.example);
-    if (index < entry.examplesZh.length) {
-      height += block(entry.examplesZh[index], type.example);
-    }
-  }
-  if (entry.phrases.isNotEmpty) height += type.phrase * 1.3 + 3;
-  for (final phrase in entry.phrases) {
-    height += 2 + block(phrase.phrase, type.phrase);
-    height += block(phrase.meaning, type.phrase);
-    height += block(phrase.meaningZh, type.phrase);
-  }
-  return height + 3;
-}
-
 class PdfService {
   late final Future<pw.Font> _regularFont = _assetFont(
     'assets/fonts/NotoSansSC-Regular.ttf',
@@ -388,8 +259,6 @@ class PdfService {
             bold,
             ipa,
             resolvedTypography,
-            pageSize: pageSize,
-            showPageFurniture: showPageFurniture,
             columnCount: columnCount,
             smartReorder: smartReorder,
           ),
@@ -405,12 +274,13 @@ class PdfService {
     pw.Font bold,
     pw.Font ipa,
     PdfTypography typography, {
-    required BookPageSize pageSize,
-    required bool showPageFurniture,
     required int columnCount,
     required bool smartReorder,
   }) {
-    final orderedEntries = entries;
+    final orderedEntries = smartReorder
+        ? (entries.toList()
+            ..sort((a, b) => _entryWeight(b).compareTo(_entryWeight(a))))
+        : entries;
     if (columnCount == 1) {
       return [
         for (var index = 0; index < orderedEntries.length; index++) ...[
@@ -428,47 +298,28 @@ class PdfService {
     }
 
     final columns = List.generate(columnCount, (_) => <pw.Widget>[]);
-    final entryNumbers = <WordEntry, int>{
-      for (var index = 0; index < entries.length; index++)
-        entries[index]: index + 1,
-    };
-    final columnEntries = smartReorder
-        ? smartColumnLayout(
-            entries,
-            columnCount: columnCount,
-            pageSize: pageSize,
-            typography: typography,
-            showPageFurniture: showPageFurniture,
-          )
-        : [
-            for (var column = 0; column < columnCount; column++)
-              [
-                for (
-                  var index = column;
-                  index < entries.length;
-                  index += columnCount
-                )
-                  entries[index],
-              ],
-          ];
-    for (var columnIndex = 0; columnIndex < columnCount; columnIndex++) {
+    final columnWeights = List<double>.filled(columnCount, 0);
+    for (var index = 0; index < orderedEntries.length; index++) {
+      final columnIndex = smartReorder
+          ? columnWeights.indexOf(columnWeights.reduce((a, b) => a < b ? a : b))
+          : index % columnCount;
       final column = columns[columnIndex];
-      for (final entry in columnEntries[columnIndex]) {
-        column.add(
-          pw.Padding(
-            padding: const pw.EdgeInsets.symmetric(horizontal: 3),
-            child: _entry(
-              entryNumbers[entry]!,
-              entry,
-              bold,
-              ipa,
-              typography,
-              denseHeader: columnCount == 3,
-            ),
+      final entry = orderedEntries[index];
+      column.add(
+        pw.Padding(
+          padding: const pw.EdgeInsets.symmetric(horizontal: 3),
+          child: _entry(
+            index + 1,
+            entry,
+            bold,
+            ipa,
+            typography,
+            denseHeader: columnCount == 3,
           ),
-        );
-        column.add(pw.SizedBox(height: 3));
-      }
+        ),
+      );
+      column.add(pw.SizedBox(height: 3));
+      columnWeights[columnIndex] += _entryWeight(entry);
     }
 
     // Each partition flows independently across pages. Unlike a row-based
@@ -482,6 +333,22 @@ class PdfService {
         ],
       ),
     ];
+  }
+
+  static double _entryWeight(WordEntry entry) {
+    var weight = (90 + entry.word.length * 3 + entry.definition.length)
+        .toDouble();
+    weight += entry.definitionZh.length * 1.15;
+    weight += (entry.synonyms.length + entry.antonyms.length) * 14;
+    weight += entry.examples.fold<int>(0, (sum, value) => sum + value.length);
+    weight += entry.examplesZh.fold<int>(0, (sum, value) => sum + value.length);
+    for (final phrase in entry.phrases) {
+      weight +=
+          phrase.phrase.length * 2 +
+          phrase.meaning.length +
+          phrase.meaningZh.length;
+    }
+    return weight.toDouble();
   }
 
   pw.Widget _entry(
