@@ -37,15 +37,15 @@
       "size": 98404699
     },
     "macos": {
-      "filename": "lexora-macos-v3.1.0.dmg",
-      "url": "/updates/lexora-macos-v3.1.0.dmg",
+      "filename": "lexora-macos-browser-download-v3.1.0.webloc",
+      "url": "https://lexora-official.xiaozhangwangxue.workers.dev/updates/lexora-macos-browser-download-v3.1.0.webloc",
       "sources": [
-        "/updates/lexora-macos-v3.1.0.dmg",
-        "https://lexora-official.xiaozhangwangxue.workers.dev/updates/lexora-macos-v3.1.0.dmg",
-        "https://github.com/xiaozhangwangxue/lexora/releases/download/v3.1.0/lexora-macos-v3.1.0.dmg"
+        "https://lexora-official.xiaozhangwangxue.workers.dev/updates/lexora-macos-browser-download-v3.1.0.webloc",
+        "/updates/lexora-macos-browser-download-v3.1.0.webloc",
+        "https://github.com/xiaozhangwangxue/lexora/releases/download/v3.1.0/lexora-macos-browser-download-v3.1.0.webloc"
       ],
-      "sha256": "ce8c1f631a94c40490c6e915754e01c66f5cb257d675977d8566c88fd5289c75",
-      "size": 46863594
+      "sha256": "54b02364570f5c4f68eaddbe06023e2a4608058cf26981c7fbeca0cb452b0739",
+      "size": 287
     },
     "windows": {
       "filename": "lexora-windows-v3.1.0-setup.exe",
