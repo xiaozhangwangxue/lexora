@@ -1,4 +1,5 @@
 import Cocoa
+import Darwin
 import FlutterMacOS
 import SwiftUI
 
@@ -60,6 +61,24 @@ private final class LexoraNavigationModel: ObservableObject {
           DispatchQueue.main.async { self?.selectedPage = page }
         }
         result(nil)
+      case "prepareMacInstaller":
+        guard let path = call.arguments as? String else {
+          result(FlutterError(code: "invalid_installer_path", message: "The installer path is missing.", details: nil))
+          return
+        }
+        do {
+          try Self.prepareMacInstaller(at: path)
+          result(nil)
+        } catch {
+          result(FlutterError(code: "prepare_installer_failed", message: error.localizedDescription, details: path))
+        }
+      case "openMacInstaller":
+        guard let path = call.arguments as? String else {
+          result(FlutterError(code: "invalid_installer_path", message: "The installer path is missing.", details: nil))
+          return
+        }
+        let opened = NSWorkspace.shared.open(URL(fileURLWithPath: path))
+        result(opened)
       case "showCustomization":
         guard
           let arguments = call.arguments as? [String: Any],
@@ -81,6 +100,28 @@ private final class LexoraNavigationModel: ObservableObject {
       default:
         result(FlutterMethodNotImplemented)
       }
+    }
+  }
+
+  private static func prepareMacInstaller(at path: String) throws {
+    let timestamp = String(Int(Date().timeIntervalSince1970), radix: 16)
+    let quarantine = "0081;\(timestamp);Lexora;"
+    let data = Data(quarantine.utf8)
+    let status = data.withUnsafeBytes { bytes in
+      path.withCString { pathPointer in
+        "com.apple.quarantine".withCString { namePointer in
+          setxattr(pathPointer, namePointer, bytes.baseAddress, data.count, 0, 0)
+        }
+      }
+    }
+    guard status == 0 else {
+      let code = errno
+      let message = String(cString: strerror(code))
+      throw NSError(
+        domain: NSPOSIXErrorDomain,
+        code: Int(code),
+        userInfo: [NSLocalizedDescriptionKey: "The macOS installer could not be prepared: \(message)"]
+      )
     }
   }
 
@@ -208,7 +249,7 @@ private struct LexoraNativeShell: View {
         .help(expanded ? localized("收起边栏", "Collapse sidebar") : localized("展开边栏", "Expand sidebar"))
       }
 
-      Text("3.0.0")
+      Text("3.0.1")
         .font(.caption2.monospacedDigit())
         .foregroundStyle(.tertiary)
         .frame(maxWidth: .infinity, alignment: expanded ? .leading : .center)

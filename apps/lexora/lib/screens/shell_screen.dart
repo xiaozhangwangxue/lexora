@@ -13,6 +13,7 @@ import '../l10n/app_localizations.dart';
 import '../models/word_entry.dart';
 import '../services/generation_progress.dart';
 import '../services/document_export_service.dart';
+import '../services/developer_log_service.dart';
 import '../services/haptic_service.dart';
 import '../services/history_service.dart';
 import '../services/notification_service.dart';
@@ -113,6 +114,10 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    DeveloperLogService.instance.log(
+      'app.lifecycle',
+      data: {'state': state.name, 'page': _index},
+    );
     if (_isAndroid) {
       if (state == AppLifecycleState.resumed) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -241,6 +246,7 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
 
   void _selectPage(int value, {bool animate = true}) {
     if (value == _index) return;
+    final previous = _index;
     _dismissAndroidHomeKeyboard(value);
     if (_isAndroid && animate && _pageController.hasClients) {
       setState(() => _index = value);
@@ -260,6 +266,10 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
     if (_nativeMacShellAvailable == true) {
       unawaited(_nativeNavigation.invokeMethod<void>('pageChanged', value));
     }
+    DeveloperLogService.instance.log(
+      'navigation.page_changed',
+      data: {'from': previous, 'to': value, 'animated': animate},
+    );
   }
 
   void _dismissAndroidHomeKeyboard(int destination) {
@@ -274,6 +284,7 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
   }
 
   Future<void> _showPdfCustomizer() async {
+    DeveloperLogService.instance.log('customizer.opened');
     FocusManager.instance.primaryFocus?.unfocus(
       disposition: UnfocusDisposition.scope,
     );
@@ -300,6 +311,10 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
       updated = await showPdfCustomizationDialog(context, _settings!);
     }
     if (updated != null && mounted) _updateSettings(updated);
+    DeveloperLogService.instance.log(
+      'customizer.closed',
+      data: {'saved': updated != null},
+    );
     FocusManager.instance.primaryFocus?.unfocus(
       disposition: UnfocusDisposition.scope,
     );
@@ -364,6 +379,17 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
   Future<void> _runGeneration(List<String> terms) async {
     final strings = AppLocalizations.of(context);
     final settings = _settings!;
+    DeveloperLogService.instance.log(
+      'generation.started',
+      data: {
+        'terms': terms,
+        'count': terms.length,
+        'format': settings.format.name,
+        'pageSize': settings.pageSize.name,
+        'fontSize': settings.fontSize.name,
+        'smartReorder': settings.smartReorder,
+      },
+    );
     _generationProgress.start(terms.length);
     if (mounted) setState(() {});
     unawaited(_haptics.generationStarted());
@@ -400,6 +426,16 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
       await _historyService.save(book);
       await _historyService.recordWords(result.entries, book.createdAt);
       _generationProgress.complete();
+      DeveloperLogService.instance.log(
+        'generation.completed',
+        data: {
+          'bookId': book.id,
+          'path': book.path,
+          'entries': result.entries.length,
+          'failures': result.failures.length,
+          'fuzzyMatches': result.fuzzyMatches.length,
+        },
+      );
       await _haptics.generationCompleted();
       if (!mounted) return;
       setState(() {
@@ -423,7 +459,13 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
           fuzzyMatches: result.fuzzyMatches,
         );
       }
-    } catch (error) {
+    } catch (error, stack) {
+      DeveloperLogService.instance.log(
+        'generation.failed',
+        error: error,
+        stackTrace: stack,
+        data: {'terms': terms},
+      );
       _generationProgress.fail(error.toString());
       if (mounted) {
         setState(() {});
@@ -443,12 +485,33 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
   }
 
   Future<void> _openBook(GeneratedBook book) async {
+    DeveloperLogService.instance.log(
+      'reader.opened',
+      data: {'id': book.id, 'format': book.format.name, 'path': book.path},
+    );
     const recordsPage = 1;
     _selectPage(recordsPage, animate: false);
     await Navigator.of(context).push(
-      MaterialPageRoute<void>(builder: (_) => PdfReaderScreen(book: book)),
+      PageRouteBuilder<void>(
+        allowSnapshotting: true,
+        transitionDuration: const Duration(milliseconds: 170),
+        reverseTransitionDuration: const Duration(milliseconds: 110),
+        pageBuilder: (_, __, ___) => PdfReaderScreen(book: book),
+        transitionsBuilder: (_, animation, __, child) => FadeTransition(
+          opacity: CurvedAnimation(
+            parent: animation,
+            curve: const Cubic(.23, 1, .32, 1),
+            reverseCurve: Curves.easeOut,
+          ),
+          child: child,
+        ),
+      ),
     );
     if (mounted) _selectPage(recordsPage, animate: false);
+    DeveloperLogService.instance.log(
+      'reader.closed',
+      data: {'id': book.id, 'format': book.format.name},
+    );
   }
 
   Future<void> _showGenerationComplete(

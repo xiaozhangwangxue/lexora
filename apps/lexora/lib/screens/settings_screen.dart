@@ -1,17 +1,20 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../app_version.dart';
 import '../l10n/app_localizations.dart';
 import '../models/word_entry.dart';
+import '../services/developer_log_service.dart';
 import '../services/pdf_service.dart';
 import '../services/pdf_settings_service.dart';
 import '../services/update_service.dart';
 import '../widgets/github_button.dart';
 import '../widgets/lexora_wordmark.dart';
 
-class SettingsScreen extends StatelessWidget {
+class SettingsScreen extends StatefulWidget {
   const SettingsScreen({
     super.key,
     required this.settings,
@@ -22,6 +25,70 @@ class SettingsScreen extends StatelessWidget {
   final PdfSettings settings;
   final ValueChanged<PdfSettings> onChanged;
   final VoidCallback onOpenTypography;
+
+  @override
+  State<SettingsScreen> createState() => _SettingsScreenState();
+}
+
+class _SettingsScreenState extends State<SettingsScreen> {
+  PdfSettings get settings => widget.settings;
+  ValueChanged<PdfSettings> get onChanged => widget.onChanged;
+  VoidCallback get onOpenTypography => widget.onOpenTypography;
+
+  Future<void> _setDeveloperMode(bool value) async {
+    await DeveloperLogService.instance.setEnabled(value);
+    if (mounted) setState(() {});
+  }
+
+  Future<void> _exportLogs(BuildContext context) async {
+    final strings = AppLocalizations.of(context);
+    try {
+      DeveloperLogService.instance.log('logs.export_requested');
+      final file = await DeveloperLogService.instance.exportFullLog();
+      await Share.shareXFiles([
+        XFile(file.path, mimeType: 'application/x-ndjson'),
+      ], subject: 'Lexora $appVersion diagnostics');
+    } catch (error, stack) {
+      DeveloperLogService.instance.log(
+        'logs.export_failed',
+        error: error,
+        stackTrace: stack,
+      );
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(strings.exportLogsFailed(error.toString()))),
+        );
+      }
+    }
+  }
+
+  Future<void> _deleteLogs(BuildContext context) async {
+    final strings = AppLocalizations.of(context);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(strings.deleteLogs),
+        content: Text(strings.deleteLogsConfirm),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text(strings.cancel),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: Text(strings.delete),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    await DeveloperLogService.instance.deleteLogs();
+    if (context.mounted) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(strings.logsDeleted)));
+    }
+  }
 
   Future<void> _openWebsite(BuildContext context) async {
     final uri = Uri.parse('https://lexora.12323456.xyz');
@@ -252,11 +319,28 @@ class SettingsScreen extends StatelessWidget {
                 Row(
                   children: [
                     Expanded(
-                      child: Text(
-                        strings.settings,
-                        style: theme.textTheme.headlineMedium?.copyWith(
-                          fontWeight: FontWeight.w800,
-                        ),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.baseline,
+                        textBaseline: TextBaseline.alphabetic,
+                        children: [
+                          Text(
+                            strings.settings,
+                            style: theme.textTheme.headlineMedium?.copyWith(
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                          if (Theme.of(context).platform ==
+                              TargetPlatform.android) ...[
+                            const SizedBox(width: 9),
+                            Text(
+                              'v$appVersion',
+                              style: theme.textTheme.labelSmall?.copyWith(
+                                color: theme.colorScheme.onSurfaceVariant,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ],
                       ),
                     ),
                     const GitHubButton(),
@@ -466,6 +550,57 @@ class SettingsScreen extends StatelessWidget {
                                   settings.copyWith(exampleAmount: value.first),
                                 ),
                               ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 18),
+                      _SettingsSection(
+                        title: strings.developerMode,
+                        icon: Icons.terminal_rounded,
+                        child: Column(
+                          children: [
+                            SwitchListTile.adaptive(
+                              contentPadding: EdgeInsets.zero,
+                              title: Text(strings.developerLogging),
+                              subtitle: Text(strings.developerLoggingHint),
+                              value: DeveloperLogService.instance.enabled,
+                              onChanged: _setDeveloperMode,
+                            ),
+                            AnimatedSwitcher(
+                              duration: const Duration(milliseconds: 180),
+                              switchInCurve: const Cubic(.23, 1, .32, 1),
+                              switchOutCurve: Curves.easeOut,
+                              child: DeveloperLogService.instance.enabled
+                                  ? Column(
+                                      key: const ValueKey('developer-actions'),
+                                      children: [
+                                        const Divider(height: 20),
+                                        ListTile(
+                                          contentPadding: EdgeInsets.zero,
+                                          leading: const Icon(
+                                            Icons.ios_share_rounded,
+                                          ),
+                                          title: Text(strings.exportLogs),
+                                          subtitle: Text(
+                                            strings.exportLogsHint,
+                                          ),
+                                          onTap: () => _exportLogs(context),
+                                        ),
+                                        ListTile(
+                                          contentPadding: EdgeInsets.zero,
+                                          leading: Icon(
+                                            Icons.delete_outline_rounded,
+                                            color: theme.colorScheme.error,
+                                          ),
+                                          title: Text(strings.deleteLogs),
+                                          onTap: () => _deleteLogs(context),
+                                        ),
+                                      ],
+                                    )
+                                  : const SizedBox.shrink(
+                                      key: ValueKey('developer-actions-hidden'),
+                                    ),
                             ),
                           ],
                         ),

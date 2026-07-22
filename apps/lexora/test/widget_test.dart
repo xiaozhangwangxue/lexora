@@ -210,6 +210,13 @@ void main() {
       await tester.tap(find.text('设置').last);
       await pumpUi(tester);
       expect(find.text('文档自定义'), findsOneWidget);
+      expect(find.text('v$appVersion'), findsOneWidget);
+      await tester.scrollUntilVisible(
+        find.text('开发者模式'),
+        220,
+        scrollable: find.byType(Scrollable).last,
+      );
+      expect(find.text('详细诊断日志'), findsOneWidget);
       final rootScaffold = tester.widget<Scaffold>(find.byType(Scaffold).last);
       expect(rootScaffold.resizeToAvoidBottomInset, isFalse);
       expect(tester.getBottomRight(find.byType(NavigationBar)).dy, 1280);

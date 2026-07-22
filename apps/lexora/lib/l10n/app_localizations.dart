@@ -215,6 +215,23 @@ class AppLocalizations {
   String get generationAlreadyRunning =>
       isZh ? '已有生成任务正在进行。' : 'A generation task is already running.';
   String get quickLinks => isZh ? '快速链接' : 'Quick links';
+  String get developerMode => isZh ? '开发者模式' : 'Developer mode';
+  String get developerLogging =>
+      isZh ? '详细诊断日志' : 'Detailed diagnostic logging';
+  String get developerLoggingHint => isZh
+      ? '启用后会低开销记录运行、生成、导出和错误信息，方便诊断问题。日志可能包含你输入的词条，请仅发送给信任的人。'
+      : 'Records runtime, generation, export, and error details with low overhead. Logs may contain entered terms; share them only with people you trust.';
+  String get exportLogs => isZh ? '导出完整日志文件' : 'Export full log file';
+  String get exportLogsHint => isZh
+      ? '生成可直接分享的 JSONL 诊断文件'
+      : 'Create a shareable JSONL diagnostics file';
+  String exportLogsFailed(String error) =>
+      isZh ? '日志导出失败：$error' : 'Could not export logs: $error';
+  String get deleteLogs => isZh ? '删除日志文件' : 'Delete log files';
+  String get deleteLogsConfirm => isZh
+      ? '确定删除 Lexora 已保存的全部诊断日志吗？'
+      : 'Delete all diagnostic logs saved by Lexora?';
+  String get logsDeleted => isZh ? '诊断日志已删除。' : 'Diagnostic logs deleted.';
   String get officialWebsite => isZh ? 'Lexora 官网' : 'Lexora website';
   String get officialWebsiteHint =>
       isZh ? '下载更新、查看安装说明' : 'Downloads, updates, and installation help';

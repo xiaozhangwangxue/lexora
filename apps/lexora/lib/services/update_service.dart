@@ -3,11 +3,13 @@ import 'dart:io';
 
 import 'package:crypto/crypto.dart';
 import 'package:http/http.dart' as http;
+import 'package:flutter/services.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../app_version.dart';
+import 'developer_log_service.dart';
 
 typedef InstallerOpener = Future<bool> Function(File file);
 typedef CacheDirectoryProvider = Future<Directory> Function();
@@ -68,6 +70,7 @@ class UpdateService {
     'https://lexora.12323456.xyz/version.json',
   );
   static const _cacheFolderName = 'lexora_update_installers';
+  static const _nativeMacUpdate = MethodChannel('lexora/native-navigation');
   final http.Client _client;
   final Uri _manifestUri;
   final String? _platformKeyOverride;
@@ -81,6 +84,10 @@ class UpdateService {
     final uri = _manifestUri.replace(
       queryParameters: {'t': DateTime.now().millisecondsSinceEpoch.toString()},
     );
+    DeveloperLogService.instance.log(
+      'update.check_started',
+      data: {'manifest': _manifestUri.toString()},
+    );
     final response = await _client
         .get(uri)
         .timeout(const Duration(seconds: 15));
@@ -93,7 +100,13 @@ class UpdateService {
     final json =
         jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
     final version = json['version'] as String? ?? '';
-    if (version.isEmpty || !_isNewer(version, appVersion)) return null;
+    if (version.isEmpty || !_isNewer(version, appVersion)) {
+      DeveloperLogService.instance.log(
+        'update.up_to_date',
+        data: {'current': appVersion, 'manifestVersion': version},
+      );
+      return null;
+    }
     final downloads = json['downloads'] as Map<String, dynamic>? ?? const {};
     final verifiedDownloads =
         json['verifiedDownloads'] as Map<String, dynamic>? ?? const {};
@@ -105,27 +118,60 @@ class UpdateService {
       );
     }
     final notes = json['releaseNotes'] as Map<String, dynamic>? ?? const {};
-    return UpdateInfo(
+    final info = UpdateInfo(
       version: version,
       download: _parseDownload(rawDownload),
       notesZh: _stringList(notes['zh']),
       notesEn: _stringList(notes['en']),
     );
+    DeveloperLogService.instance.log(
+      'update.available',
+      data: {
+        'current': appVersion,
+        'available': version,
+        'filename': info.download.filename,
+        'sources': info.download.urls.map((uri) => uri.host).toList(),
+      },
+    );
+    return info;
   }
 
   Future<void> downloadAndLaunch(
     UpdateInfo info, {
     required void Function(double?) onProgress,
   }) async {
-    final file = await _downloadValidated(info.download, onProgress);
-    if (_isMacOS) await _prepareMacInstaller(file);
-    if (!await _openInstaller(file)) {
-      throw FileSystemException(
-        'The system installer could not be opened.',
-        file.path,
+    try {
+      DeveloperLogService.instance.log(
+        'update.download_started',
+        data: {'version': info.version, 'filename': info.download.filename},
       );
+      final file = await _downloadValidated(info.download, onProgress);
+      DeveloperLogService.instance.log(
+        'update.download_validated',
+        data: {'path': file.path, 'bytes': await file.length()},
+      );
+      if (_isMacOS) await _prepareMacInstaller(file);
+      if (!await _openInstaller(file)) {
+        throw FileSystemException(
+          'The system installer could not be opened.',
+          file.path,
+        );
+      }
+      DeveloperLogService.instance.log(
+        'update.installer_opened',
+        data: {'path': file.path, 'platform': _platformKey},
+      );
+      if (_isMacOS) await _finishMacUpdate();
+    } catch (error, stack) {
+      DeveloperLogService.instance.log(
+        'update.failed',
+        data: {'version': info.version, 'filename': info.download.filename},
+        error: error,
+        stackTrace: stack,
+      );
+      await DeveloperLogService.instance.flush();
+      rethrow;
     }
-    if (_isMacOS) await _finishMacUpdate();
   }
 
   Future<File> _downloadValidated(
@@ -136,9 +182,19 @@ class UpdateService {
     for (var attempt = 0; attempt < 2; attempt++) {
       for (final url in download.urls) {
         try {
+          DeveloperLogService.instance.log(
+            'update.source_attempt',
+            data: {'attempt': attempt + 1, 'host': url.host, 'path': url.path},
+          );
           return await _downloadFrom(url, download, onProgress);
-        } catch (error) {
+        } catch (error, stack) {
           lastError = error;
+          DeveloperLogService.instance.log(
+            'update.source_failed',
+            data: {'attempt': attempt + 1, 'host': url.host},
+            error: error,
+            stackTrace: stack,
+          );
           onProgress(0);
         }
       }
@@ -321,8 +377,11 @@ class UpdateService {
   static Future<bool> _defaultOpenInstaller(File file) async {
     if (Platform.isMacOS) {
       try {
-        final result = await Process.run('/usr/bin/open', [file.path]);
-        if (result.exitCode == 0) return true;
+        return await _nativeMacUpdate.invokeMethod<bool>(
+              'openMacInstaller',
+              file.path,
+            ) ??
+            false;
       } catch (_) {
         // Fall through to the cross-platform opener.
       }
@@ -337,21 +396,9 @@ class UpdateService {
     // a generic "can't be opened" error before Gatekeeper can offer Open
     // Anyway. The update button is an explicit user action, so replace that
     // flag with the normal user-approved download quarantine value.
-    final timestamp = (DateTime.now().millisecondsSinceEpoch ~/ 1000)
-        .toRadixString(16);
-    final value = '0081;$timestamp;Lexora;';
-    final result = await Process.run('/usr/bin/xattr', [
-      '-w',
-      'com.apple.quarantine',
-      value,
-      file.path,
-    ]);
-    if (result.exitCode != 0) {
-      throw FileSystemException(
-        'The macOS installer could not be prepared.',
-        file.path,
-      );
-    }
+    // A sandboxed app cannot reliably launch /usr/bin/xattr. The native
+    // runner performs setxattr(2) inside the already-authorized process.
+    await _nativeMacUpdate.invokeMethod<void>('prepareMacInstaller', file.path);
   }
 
   static Future<void> _defaultFinishMacUpdate() async {

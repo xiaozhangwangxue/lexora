@@ -1,9 +1,12 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:pdfrx/pdfrx.dart';
+import 'package:photo_view/photo_view.dart';
+import 'package:photo_view/photo_view_gallery.dart';
 import 'package:printing/printing.dart';
 import 'package:share_plus/share_plus.dart';
 
@@ -36,11 +39,17 @@ class _ImageBookReader extends StatefulWidget {
 
 class _ImageBookReaderState extends State<_ImageBookReader> {
   final _pageController = PageController();
+  late final List<PhotoViewController> _photoControllers = [
+    for (final _ in widget.book.allPaths) PhotoViewController(),
+  ];
   int _page = 0;
 
   @override
   void dispose() {
     _pageController.dispose();
+    for (final controller in _photoControllers) {
+      controller.dispose();
+    }
     super.dispose();
   }
 
@@ -50,12 +59,6 @@ class _ImageBookReaderState extends State<_ImageBookReader> {
     final strings = AppLocalizations.of(context);
     final surface = Theme.of(context).colorScheme.surface;
     final isLong = widget.book.format == BookFormat.longImage;
-    Widget zoomable(String path) => InteractiveViewer(
-      minScale: .6,
-      maxScale: 6,
-      boundaryMargin: const EdgeInsets.all(80),
-      child: Image.file(File(path), fit: BoxFit.contain),
-    );
     return Scaffold(
       backgroundColor: surface,
       appBar: AppBar(
@@ -76,20 +79,38 @@ class _ImageBookReaderState extends State<_ImageBookReader> {
           ),
         ],
       ),
-      body: isLong
-          ? SingleChildScrollView(
-              padding: const EdgeInsets.all(12),
-              child: zoomable(paths.first),
-            )
-          : PageView.builder(
-              controller: _pageController,
-              itemCount: paths.length,
-              onPageChanged: (value) => setState(() => _page = value),
-              itemBuilder: (context, index) => Padding(
-                padding: const EdgeInsets.all(12),
-                child: zoomable(paths[index]),
+      body: RepaintBoundary(
+        child: isLong
+            ? PhotoView(
+                key: ValueKey(paths.first),
+                imageProvider: FileImage(File(paths.first)),
+                controller: _photoControllers.first,
+                backgroundDecoration: BoxDecoration(color: surface),
+                initialScale: PhotoViewComputedScale.covered,
+                minScale: PhotoViewComputedScale.contained,
+                maxScale: PhotoViewComputedScale.covered * 5,
+                enableRotation: false,
+                filterQuality: FilterQuality.medium,
+              )
+            : PhotoViewGallery.builder(
+                pageController: _pageController,
+                backgroundDecoration: BoxDecoration(color: surface),
+                scrollPhysics: const ClampingScrollPhysics(),
+                enableRotation: false,
+                itemCount: paths.length,
+                onPageChanged: (value) {
+                  if (_page != value) setState(() => _page = value);
+                },
+                builder: (context, index) => PhotoViewGalleryPageOptions(
+                  imageProvider: FileImage(File(paths[index])),
+                  controller: _photoControllers[index],
+                  initialScale: PhotoViewComputedScale.contained,
+                  minScale: PhotoViewComputedScale.contained * .9,
+                  maxScale: PhotoViewComputedScale.covered * 5,
+                  filterQuality: FilterQuality.medium,
+                ),
               ),
-            ),
+      ),
     );
   }
 }
@@ -171,11 +192,7 @@ class _EditableBookReaderState extends State<_EditableBookReader> {
     if (path == null) return const [];
     final file = File(path);
     if (!await file.exists()) return const [];
-    final data = jsonDecode(await file.readAsString()) as Map<String, dynamic>;
-    return (data['entries'] as List? ?? const [])
-        .whereType<Map>()
-        .map((item) => WordEntry.fromJson(item.cast<String, dynamic>()))
-        .toList();
+    return compute(_decodeReaderEntries, await file.readAsString());
   }
 
   @override
@@ -285,6 +302,14 @@ class _EditableBookReaderState extends State<_EditableBookReader> {
       ),
     );
   }
+}
+
+List<WordEntry> _decodeReaderEntries(String source) {
+  final data = jsonDecode(source) as Map<String, dynamic>;
+  return (data['entries'] as List? ?? const [])
+      .whereType<Map>()
+      .map((item) => WordEntry.fromJson(item.cast<String, dynamic>()))
+      .toList();
 }
 
 class _EntryCard extends StatelessWidget {

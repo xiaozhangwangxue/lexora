@@ -42,7 +42,7 @@ Lexora is an English vocabulary organizer for Android, macOS, Windows, and Linux
 - **Automatic language:** follows the device language, using Simplified Chinese on Chinese devices and English elsewhere.
 - **First-run guidance:** a concise three-step tutorial introduces capture, ordering, generation, and sharing.
 - **Dedicated settings:** document format, type, and example count live in Settings alongside quick website access and donation QR codes.
-- **Three export formats:** print-ready PDF, standards-based EPUB, and structured DOCX that remains easy to edit.
+- **Five export formats:** print-ready PDF, standards-based EPUB, editable DOCX, page images, and one continuous long image.
 - **Custom layout:** small, medium, and large type plus 0, 1, or 2–3 examples; medium uses two compact columns, sufficiently small typography switches to three, and independent column flow removes gaps between uneven cards.
 - **Stable fonts:** Noto Sans SC for Chinese and IPA-complete Noto Sans for phonetics; DOCX embeds both fonts to avoid missing glyphs across devices.
 - **Generated records:** pinch to zoom, read, export, share, or delete PDF, EPUB, and DOCX books, with a first-words preview in each overflow menu.
@@ -57,15 +57,15 @@ Use the [official download section](https://lexora.12323456.xyz/#download) for b
 
 | Platform | Package | Requirement | Download |
 | --- | --- | --- | --- |
-| Android | APK | Android 8.0+ | [Official mirror](https://lexora.12323456.xyz/downloads/lexora-android-v1.2.0.apk) |
-| macOS | Drag-to-install DMG | macOS 12+ | [Official mirror](https://lexora.12323456.xyz/downloads/lexora-macos-v1.2.0.dmg) |
-| Windows | Setup EXE (launch option checked by default) | Windows 10 / 11 | [Official mirror](https://lexora.12323456.xyz/downloads/lexora-windows-v1.2.0-setup.exe) |
-| Linux | tar.gz | 64-bit Linux | [Official mirror](https://lexora.12323456.xyz/downloads/lexora-linux-v1.2.0.tar.gz) |
+| Android | APK | Android 8.0+ | [Official mirror](https://lexora.12323456.xyz/downloads/lexora-android-v3.0.1.apk) |
+| macOS | Drag-to-install DMG | macOS 12+ | [Official mirror](https://lexora.12323456.xyz/downloads/lexora-macos-v3.0.1.dmg) |
+| Windows | Setup EXE (launch option checked by default) | Windows 10 / 11 | [Official mirror](https://lexora.12323456.xyz/downloads/lexora-windows-v3.0.1-setup.exe) |
+| Linux | tar.gz | 64-bit Linux | [Official mirror](https://lexora.12323456.xyz/downloads/lexora-linux-v3.0.1.tar.gz) |
 
 > [!IMPORTANT]
 > Android v0.2.0 used an ephemeral build signature whose private key cannot be recovered. Moving to the stable v0.3.0 signing key therefore requires one uninstall and reinstall. From v0.3.0 onward, future APKs use the same release key and install directly over the existing app. Export any PDFs you need before removing v0.2.0.
 
-Every release filename contains its version, such as `lexora-android-v1.2.0.apk`, so old and new installers remain easy to distinguish. In-app updates prefer Cloudflare R2 and verify download completeness plus SHA-256 before opening an installer.
+Every release filename contains its version, such as `lexora-android-v3.0.1.apk`, so old and new installers remain easy to distinguish. In-app updates prefer Cloudflare R2 and verify download completeness plus SHA-256 before opening an installer.
 
 ## Three steps to a vocabulary book
 

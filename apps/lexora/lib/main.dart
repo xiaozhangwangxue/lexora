@@ -1,17 +1,54 @@
+import 'dart:async';
+import 'dart:ui';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'l10n/app_localizations.dart';
 import 'screens/shell_screen.dart';
+import 'services/developer_log_service.dart';
 import 'services/notification_service.dart';
 import 'services/update_service.dart';
 
-Future<void> main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  await UpdateService.cleanupCachedInstallers();
-  await NotificationService.instance.initialize();
-  runApp(const LexoraApp());
+void main() {
+  runZonedGuarded(
+    () async {
+      WidgetsFlutterBinding.ensureInitialized();
+      final logs = DeveloperLogService.instance;
+      await logs.initialize();
+      FlutterError.onError = (details) {
+        FlutterError.presentError(details);
+        logs.log(
+          'flutter.error',
+          error: details.exception,
+          stackTrace: details.stack,
+          data: {
+            'library': details.library,
+            'context': details.context?.toString(),
+          },
+        );
+        unawaited(logs.flush());
+      };
+      PlatformDispatcher.instance.onError = (error, stack) {
+        logs.log('platform.error', error: error, stackTrace: stack);
+        unawaited(logs.flush());
+        return true;
+      };
+      await UpdateService.cleanupCachedInstallers();
+      await NotificationService.instance.initialize();
+      logs.log('app.ready');
+      runApp(const LexoraApp());
+    },
+    (error, stack) {
+      DeveloperLogService.instance.log(
+        'zone.error',
+        error: error,
+        stackTrace: stack,
+      );
+      unawaited(DeveloperLogService.instance.flush());
+    },
+  );
 }
 
 class LexoraApp extends StatelessWidget {
