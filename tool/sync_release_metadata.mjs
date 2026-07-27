@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const checkOnly = process.argv.includes("--check");
 const read = (path) => readFile(join(root, path), "utf8");
+const normalized = (content) => content.replace(/\r\n/g, "\n");
 const metadata = JSON.parse(await read("public/version.json"));
 
 if (!/^\d+\.\d+\.\d+$/.test(metadata.version) || !Number.isInteger(metadata.build)) {
@@ -41,7 +42,7 @@ ${dartList(metadata.inAppReleaseNotes.en)}
 const appVersionPath = join(root, "apps/lexora/lib/app_version.dart");
 const currentAppVersion = await readFile(appVersionPath, "utf8");
 if (checkOnly) {
-  if (currentAppVersion !== generatedAppVersion) {
+  if (normalized(currentAppVersion) !== normalized(generatedAppVersion)) {
     throw new Error("apps/lexora/lib/app_version.dart is out of sync.");
   }
 } else {
@@ -90,7 +91,9 @@ async function synchronizeReadme(path, language) {
   }
   const current = await read(path);
   if (checkOnly) {
-    if (current !== next) throw new Error(`${path} is out of sync.`);
+    if (normalized(current) !== normalized(next)) {
+      throw new Error(`${path} is out of sync.`);
+    }
   } else if (current !== next) {
     await writeFile(join(root, path), next);
   }
