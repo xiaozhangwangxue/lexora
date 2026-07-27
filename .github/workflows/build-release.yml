@@ -77,6 +77,10 @@ jobs:
           sed -i '/<manifest/a\\    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />' android/app/src/main/AndroidManifest.xml
           sed -i 's/compileSdk = flutter.compileSdkVersion/compileSdk = 36/' android/app/build.gradle.kts
           sed -i '/compileOptions {/a\\        isCoreLibraryDesugaringEnabled = true' android/app/build.gradle.kts
+          # jni 1.0.1 skips applying Kotlin on AGP 9 but still configures its
+          # Kotlin extension. Apply the already-declared plugin before Gradle
+          # evaluates the dependency so current Flutter stable can build it.
+          sed -i '0,/subprojects {/s//subprojects {\n    if (name == "jni") pluginManager.apply("org.jetbrains.kotlin.android")/' android/build.gradle.kts
           printf '\ndependencies {\n    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.5")\n}\n' >> android/app/build.gradle.kts
       - name: Restore stable Android signing key
         if: matrix.platform == 'android'
