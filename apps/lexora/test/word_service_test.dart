@@ -9,6 +9,177 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   test(
+    'core result is presented within two seconds while full lookup continues',
+    () async {
+      SharedPreferences.setMockInitialValues({});
+      var dictionaryRequests = 0;
+      var exactRequests = 0;
+      final client = MockClient((request) async {
+        if (request.url.host == 'api.dictionaryapi.dev') {
+          dictionaryRequests++;
+          await Future<void>.delayed(const Duration(milliseconds: 2200));
+          return http.Response(
+            jsonEncode([
+              {
+                'word': 'word',
+                'phonetic': '/wɜːd/',
+                'phonetics': const [],
+                'meanings': [
+                  {
+                    'partOfSpeech': 'noun',
+                    'synonyms': const [],
+                    'antonyms': const [],
+                    'definitions': [
+                      {
+                        'definition': 'A unit of language.',
+                        'example': 'This is a word.',
+                      },
+                    ],
+                  },
+                ],
+              },
+            ]),
+            200,
+          );
+        }
+        if (request.url.host == 'api.datamuse.com') {
+          if (request.url.queryParameters['sp'] == 'word') {
+            exactRequests++;
+            await Future<void>.delayed(const Duration(milliseconds: 40));
+            return http.Response(
+              jsonEncode([
+                {
+                  'word': 'word',
+                  'defs': ['n\tA unit of language.'],
+                  'tags': ['f:147.7', 'pron:W ER1 D'],
+                },
+              ]),
+              200,
+            );
+          }
+          return http.Response('[]', 200);
+        }
+        if (request.url.host == 'api.mymemory.translated.net') {
+          return http.Response(
+            jsonEncode({
+              'responseData': {'translatedText': '语言单位。'},
+            }),
+            200,
+          );
+        }
+        return http.Response('{}', 404);
+      });
+      final service = WordService(client: client);
+      final stopwatch = Stopwatch()..start();
+      final coreFuture = service.lookupCore('word', exampleCount: 3);
+      final fullFuture = service.lookupAll(
+        const ['word'],
+        exampleCount: 3,
+        maxConcurrency: 1,
+      );
+
+      final core = await coreFuture;
+      final coreElapsed = stopwatch.elapsedMilliseconds;
+      expect(core.word, 'word');
+      expect(core.definition, 'A unit of language.');
+      expect(coreElapsed, lessThan(2000));
+
+      final full = await fullFuture;
+      expect(full.entries, hasLength(1));
+      expect(full.entries.first.definition, 'A unit of language.');
+      expect(dictionaryRequests, 1);
+      expect(exactRequests, 1);
+    },
+  );
+
+  test('complete English search stage returns under two seconds', () async {
+    SharedPreferences.setMockInitialValues({});
+    final dictionary = [
+      {
+        'word': 'word',
+        'phonetic': '/wɜːd/',
+        'phonetics': const [],
+        'meanings': [
+          {
+            'partOfSpeech': 'noun',
+            'synonyms': ['term'],
+            'antonyms': const [],
+            'definitions': [
+              {
+                'definition': 'A unit of language.',
+                'example': 'This is a word.',
+              },
+            ],
+          },
+        ],
+      },
+    ];
+    final exact = [
+      {
+        'word': 'word',
+        'defs': ['n\tA unit of language.'],
+        'tags': ['f:147.7', 'pron:W ER1 D'],
+      },
+    ];
+    final client = MockClient((request) async {
+      if (request.url.path == '/api/dictionary/core') {
+        await Future<void>.delayed(const Duration(milliseconds: 35));
+        return http.Response(
+          jsonEncode({'dictionary': dictionary, 'exact': exact}),
+          200,
+        );
+      }
+      if (request.url.path == '/api/dictionary/full') {
+        await Future<void>.delayed(const Duration(milliseconds: 55));
+        return http.Response(
+          jsonEncode({
+            'dictionary': dictionary,
+            'related': const [],
+            'exact': exact,
+            'synonyms': const [],
+            'antonyms': const [],
+          }),
+          200,
+        );
+      }
+      if (request.url.path == '/api/translate/batch') {
+        await Future<void>.delayed(const Duration(milliseconds: 45));
+        final payload = jsonDecode(request.body) as Map<String, dynamic>;
+        final texts = (payload['texts'] as List).cast<String>();
+        return http.Response(
+          jsonEncode({
+            'translations': [for (final text in texts) '中译：$text'],
+          }),
+          200,
+        );
+      }
+      if (request.url.host == 'api.dictionaryapi.dev') {
+        await Future<void>.delayed(const Duration(milliseconds: 60));
+        return http.Response(jsonEncode(dictionary), 200);
+      }
+      if (request.url.host == 'api.datamuse.com') {
+        await Future<void>.delayed(const Duration(milliseconds: 45));
+        return http.Response(
+          request.url.queryParameters['sp'] == 'word'
+              ? jsonEncode(exact)
+              : '[]',
+          200,
+        );
+      }
+      return http.Response('not found', 404);
+    });
+    final stopwatch = Stopwatch()..start();
+
+    final result = await WordService(
+      client: client,
+    ).lookupEnglish('word', exampleCount: 3);
+
+    expect(stopwatch.elapsedMilliseconds, lessThan(2000));
+    expect(result.definition, 'A unit of language.');
+    expect(result.definitionZh, isEmpty);
+  });
+
+  test(
     'lookupAll performs bounded concurrent work and preserves word order',
     () async {
       SharedPreferences.setMockInitialValues({});
@@ -494,7 +665,7 @@ void main() {
   });
 
   test(
-    'suggestion prefetch warms only three English entries and one translation',
+    'suggestion prefetch warms only three core entries without translations',
     () async {
       SharedPreferences.setMockInitialValues({});
       final dictionaryTerms = <String>[];
@@ -550,7 +721,7 @@ void main() {
       ]);
 
       expect(dictionaryTerms.toSet(), {'alpha', 'bravo', 'charlie'});
-      expect(translatedTexts, ['alpha definition']);
+      expect(translatedTexts, isEmpty);
     },
   );
 

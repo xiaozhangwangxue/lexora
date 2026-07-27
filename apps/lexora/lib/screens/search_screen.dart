@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../models/word_entry.dart';
+import '../services/developer_log_service.dart';
 import '../services/search_history_service.dart';
 import '../services/word_service.dart';
 import '../widgets/lexora_wordmark.dart';
@@ -55,8 +56,12 @@ class _SearchScreenState extends State<SearchScreen> {
   String _searchedTerm = '';
   String? _error;
   bool _loading = false;
+  bool _coreLoading = false;
+  bool _detailsLoading = false;
+  int _detailsStage = 4;
   Timer? _debounce;
   int _suggestionRevision = 0;
+  int _searchRevision = 0;
 
   bool get _isZh =>
       Localizations.localeOf(context).languageCode.toLowerCase() == 'zh';
@@ -102,6 +107,14 @@ class _SearchScreenState extends State<SearchScreen> {
   }
 
   void _queryChanged(String value) {
+    DeveloperLogService.instance.log(
+      'ui.search.query_changed',
+      data: {
+        'chars': value.length,
+        'normalized': _normalize(value),
+        'focused': _focusNode.hasFocus,
+      },
+    );
     _debounce?.cancel();
     final query = _normalize(value);
     if (query.isEmpty) {
@@ -163,46 +176,192 @@ class _SearchScreenState extends State<SearchScreen> {
   Future<void> _search(String raw) async {
     final term = _normalize(raw);
     if (term.isEmpty) return;
+    final revision = ++_searchRevision;
+    final totalStopwatch = Stopwatch()..start();
     _debounce?.cancel();
     _suggestionRevision++;
     _textController.text = term;
     _textController.selection = TextSelection.collapsed(offset: term.length);
     _focusNode.unfocus();
     widget.onResultVisibilityChanged?.call(true);
+    DeveloperLogService.instance.log(
+      'ui.search.submitted',
+      data: {'term': term, 'revision': revision},
+    );
     setState(() {
-      _loading = true;
+      _loading = false;
+      _coreLoading = true;
+      _detailsLoading = true;
+      _detailsStage = 0;
       _error = null;
+      _entry = _placeholderEntry(term);
       _remoteSuggestions = const [];
       _searchedTerm = term;
     });
+    final coreFuture = _wordService.lookupCore(term, exampleCount: 3);
+    var englishPresented = false;
+    unawaited(
+      coreFuture
+          .then((core) {
+            if (!mounted || revision != _searchRevision) return;
+            if (englishPresented) return;
+            setState(() {
+              _entry = core;
+              _coreLoading = false;
+            });
+            DeveloperLogService.instance.log(
+              'ui.search.core_presented',
+              data: {
+                'term': term,
+                'revision': revision,
+                'elapsedMs': totalStopwatch.elapsedMilliseconds,
+              },
+            );
+          })
+          .catchError((Object error, StackTrace stackTrace) {
+            DeveloperLogService.instance.log(
+              'ui.search.core_unavailable',
+              data: {
+                'term': term,
+                'revision': revision,
+                'elapsedMs': totalStopwatch.elapsedMilliseconds,
+              },
+              error: error,
+              stackTrace: stackTrace,
+            );
+          }),
+    );
+    unawaited(
+      _wordService
+          .lookupEnglish(term, exampleCount: 3)
+          .then((english) {
+            if (!mounted || revision != _searchRevision) return;
+            englishPresented = true;
+            setState(() {
+              _entry = english;
+              _coreLoading = false;
+              _detailsLoading = true;
+              _detailsStage = 4;
+            });
+            DeveloperLogService.instance.log(
+              'ui.search.english_presented',
+              data: {
+                'term': term,
+                'revision': revision,
+                'elapsedMs': totalStopwatch.elapsedMilliseconds,
+                'senses': english.senses.length,
+                'relatedWords': english.relatedWords.length,
+                'examples': english.examples.length,
+                'phrases': english.phrases.length,
+              },
+            );
+          })
+          .catchError((Object error, StackTrace stackTrace) {
+            DeveloperLogService.instance.log(
+              'ui.search.english_unavailable',
+              data: {
+                'term': term,
+                'revision': revision,
+                'elapsedMs': totalStopwatch.elapsedMilliseconds,
+              },
+              error: error,
+              stackTrace: stackTrace,
+            );
+          }),
+    );
     final result = await _wordService.lookupAll(
       [term],
       exampleCount: 3,
       maxConcurrency: 1,
     );
-    if (!mounted) return;
+    if (!mounted || revision != _searchRevision) return;
     if (result.entries.isEmpty) {
+      if (englishPresented) {
+        setState(() {
+          _loading = false;
+          _coreLoading = false;
+          _detailsLoading = false;
+          _detailsStage = 4;
+        });
+        DeveloperLogService.instance.log(
+          'ui.search.translation_unavailable',
+          data: {
+            'term': term,
+            'revision': revision,
+            'elapsedMs': totalStopwatch.elapsedMilliseconds,
+          },
+        );
+        return;
+      }
       setState(() {
         _loading = false;
+        _coreLoading = false;
+        _detailsLoading = false;
+        _detailsStage = 4;
         _entry = null;
         _error = _isZh
             ? '没有找到“$term”的可靠词典结果。请检查拼写后重试。'
             : 'No reliable dictionary result was found for “$term”. Check the spelling and try again.';
       });
       widget.onResultVisibilityChanged?.call(false);
+      DeveloperLogService.instance.log(
+        'ui.search.result_unavailable',
+        data: {
+          'term': term,
+          'revision': revision,
+          'elapsedMs': totalStopwatch.elapsedMilliseconds,
+          'failures': result.failures
+              .map((item) => {'term': item.term, 'message': item.message})
+              .toList(),
+        },
+      );
       return;
     }
     final entry = result.entries.first;
-    await _historyService.record(term, entry);
-    await _wordService.retainOnly(entry.word, exampleCount: 3);
-    await _reloadHistory();
-    if (!mounted) return;
     setState(() {
       _loading = false;
+      _coreLoading = false;
+      _detailsLoading = false;
+      _detailsStage = 4;
       _entry = entry;
     });
+    unawaited(_persistSearchResult(revision, term, entry));
+    DeveloperLogService.instance.log(
+      'ui.search.full_presented',
+      data: {
+        'term': term,
+        'resolvedTerm': entry.word,
+        'revision': revision,
+        'elapsedMs': totalStopwatch.elapsedMilliseconds,
+        'fuzzy': entry.isFuzzyMatch,
+      },
+    );
     widget.onResultVisibilityChanged?.call(true);
-    widget.onHistoryChanged();
+  }
+
+  Future<void> _persistSearchResult(
+    int revision,
+    String term,
+    WordEntry entry,
+  ) async {
+    try {
+      await _historyService.record(term, entry);
+      await _wordService.retainOnly(entry.word, exampleCount: 3);
+      await _reloadHistory();
+      if (!mounted || revision != _searchRevision) return;
+      widget.onHistoryChanged();
+      DeveloperLogService.instance.log(
+        'ui.search.result_persisted',
+        data: {'term': term, 'resolvedTerm': entry.word, 'revision': revision},
+      );
+    } catch (error, stackTrace) {
+      DeveloperLogService.instance.log(
+        'ui.search.result_persist_failed',
+        data: {'term': term, 'resolvedTerm': entry.word, 'revision': revision},
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
   }
 
   void _toggleVocabulary() {
@@ -222,6 +381,10 @@ class _SearchScreenState extends State<SearchScreen> {
       next.removeAt(index);
     }
     HapticFeedback.selectionClick();
+    DeveloperLogService.instance.log(
+      'ui.vocabulary.toggled',
+      data: {'term': entry.word, 'added': added, 'total': next.length},
+    );
     widget.onVocabularyChanged(next);
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
@@ -249,6 +412,7 @@ class _SearchScreenState extends State<SearchScreen> {
   void _reset() {
     _debounce?.cancel();
     _suggestionRevision++;
+    _searchRevision++;
     _focusNode.unfocus();
     _textController.clear();
     setState(() {
@@ -257,31 +421,41 @@ class _SearchScreenState extends State<SearchScreen> {
       _searchedTerm = '';
       _error = null;
       _loading = false;
+      _coreLoading = false;
+      _detailsLoading = false;
+      _detailsStage = 4;
     });
+    DeveloperLogService.instance.log('ui.search.reset');
     widget.onResultVisibilityChanged?.call(false);
   }
 
   Future<void> _showWordPreview(String term) async {
     final normalized = _normalize(term);
     if (normalized.isEmpty || !mounted) return;
-    await showModalBottomSheet<void>(
+    await showLexoraWordSheet(
       context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      backgroundColor: Colors.transparent,
-      builder: (sheetContext) => _WordPreviewSheet(
-        term: normalized,
-        wordService: _wordService,
-        isZh: _isZh,
-        vocabularyTerms: widget.vocabularyTerms,
-        onToggleVocabulary: _toggleVocabularyEntry,
-        onSearch: (next) {
-          Navigator.of(sheetContext).pop();
-          _search(next);
-        },
-      ),
+      term: normalized,
+      wordService: _wordService,
+      vocabularyTerms: widget.vocabularyTerms,
+      onToggleVocabulary: _toggleVocabularyEntry,
     );
   }
+
+  WordEntry _placeholderEntry(String term) => WordEntry(
+    word: term,
+    difficulty: '…',
+    frequency: 0,
+    usPhonetic: '',
+    ukPhonetic: '',
+    definition: '',
+    definitionZh: '',
+    synonyms: const [],
+    synonymsZh: '',
+    antonyms: const [],
+    antonymsZh: '',
+    examples: const [],
+    examplesZh: const [],
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -378,8 +552,11 @@ class _SearchScreenState extends State<SearchScreen> {
                             searchedTerm: _searchedTerm,
                             isZh: _isZh,
                             added: _isAdded,
+                            coreLoading: _coreLoading,
+                            detailsLoading: _detailsLoading,
+                            detailsStage: _detailsStage,
                             onToggleVocabulary: _toggleVocabulary,
-                            onSearch: _search,
+                            onSearch: _showWordPreview,
                             onPreview: _showWordPreview,
                           ),
                   ),
@@ -532,12 +709,102 @@ class _SearchError extends StatelessWidget {
   );
 }
 
+class _InlineLoading extends StatelessWidget {
+  const _InlineLoading({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) => Row(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      const SizedBox(
+        width: 15,
+        height: 15,
+        child: CircularProgressIndicator(strokeWidth: 2),
+      ),
+      const SizedBox(width: 8),
+      Text(
+        label,
+        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+          color: Theme.of(context).colorScheme.onSurfaceVariant,
+        ),
+      ),
+    ],
+  );
+}
+
+class _LoadingSection extends StatelessWidget {
+  const _LoadingSection({
+    super.key,
+    required this.title,
+    required this.message,
+  });
+
+  final String title;
+  final String message;
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+    liveRegion: true,
+    label: message,
+    child: Container(
+      margin: const EdgeInsets.only(bottom: 22),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
+      decoration: BoxDecoration(
+        color: Theme.of(
+          context,
+        ).colorScheme.surfaceContainerLow.withValues(alpha: .72),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: Theme.of(
+            context,
+          ).colorScheme.outlineVariant.withValues(alpha: .55),
+        ),
+      ),
+      child: Row(
+        children: [
+          const SizedBox(
+            width: 22,
+            height: 22,
+            child: CircularProgressIndicator(strokeWidth: 2.4),
+          ),
+          const SizedBox(width: 13),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  message,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
 class _ResultView extends StatelessWidget {
   const _ResultView({
     required this.entry,
     required this.searchedTerm,
     required this.isZh,
     required this.added,
+    required this.coreLoading,
+    required this.detailsLoading,
+    required this.detailsStage,
     required this.onToggleVocabulary,
     required this.onSearch,
     required this.onPreview,
@@ -548,6 +815,9 @@ class _ResultView extends StatelessWidget {
   final String searchedTerm;
   final bool isZh;
   final bool added;
+  final bool coreLoading;
+  final bool detailsLoading;
+  final int detailsStage;
   final VoidCallback onToggleVocabulary;
   final ValueChanged<String> onSearch;
   final ValueChanged<String> onPreview;
@@ -596,36 +866,50 @@ class _ResultView extends StatelessWidget {
                       ),
                     ),
                   const SizedBox(height: 5),
-                  Text(
-                    'US ${entry.usPhonetic}   ·   UK ${entry.ukPhonetic}',
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
+                  if (entry.usPhonetic.isNotEmpty ||
+                      entry.ukPhonetic.isNotEmpty)
+                    Text(
+                      'US ${entry.usPhonetic}   ·   UK ${entry.ukPhonetic}',
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    )
+                  else if (coreLoading)
+                    _InlineLoading(
+                      label: isZh ? '正在获取音标' : 'Loading pronunciation',
                     ),
-                  ),
                 ],
               );
-              final metrics = Wrap(
-                crossAxisAlignment: WrapCrossAlignment.center,
-                spacing: 6,
-                runSpacing: 6,
-                children: [
-                  Chip(label: Text(entry.difficulty)),
-                  Chip(
-                    label: Text('freq ${entry.frequency.toStringAsFixed(1)}'),
-                  ),
-                  IconButton(
-                    tooltip: isZh
-                        ? '难度和词频说明'
-                        : 'About difficulty and frequency',
-                    onPressed: () => _showMetricsHelp(context),
-                    icon: Icon(
-                      Icons.help_outline_rounded,
-                      size: 19,
-                      color: theme.colorScheme.outline,
-                    ),
-                  ),
-                ],
-              );
+              final metrics = coreLoading && entry.difficulty == '…'
+                  ? _InlineLoading(
+                      label: isZh
+                          ? '正在获取难度与词频'
+                          : 'Loading difficulty and frequency',
+                    )
+                  : Wrap(
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      spacing: 6,
+                      runSpacing: 6,
+                      children: [
+                        Chip(label: Text(entry.difficulty)),
+                        Chip(
+                          label: Text(
+                            'freq ${entry.frequency.toStringAsFixed(1)}',
+                          ),
+                        ),
+                        IconButton(
+                          tooltip: isZh
+                              ? '难度和词频说明'
+                              : 'About difficulty and frequency',
+                          onPressed: () => _showMetricsHelp(context),
+                          icon: Icon(
+                            Icons.help_outline_rounded,
+                            size: 19,
+                            color: theme.colorScheme.outline,
+                          ),
+                        ),
+                      ],
+                    );
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -638,7 +922,7 @@ class _ResultView extends StatelessWidget {
                         tooltip: added
                             ? (isZh ? '从词汇书移除' : 'Remove from Vocabulary Book')
                             : (isZh ? '添加到词汇书' : 'Add to Vocabulary Book'),
-                        onPressed: onToggleVocabulary,
+                        onPressed: coreLoading ? null : onToggleVocabulary,
                         icon: AnimatedSwitcher(
                           duration: MediaQuery.disableAnimationsOf(context)
                               ? const Duration(milliseconds: 100)
@@ -659,8 +943,18 @@ class _ResultView extends StatelessWidget {
             },
           ),
           const SizedBox(height: 20),
+          if (coreLoading && entry.definition.isEmpty)
+            _LoadingSection(
+              title: isZh ? '核心释义' : 'Core definition',
+              message: isZh
+                  ? '正在获取可靠词典结果…'
+                  : 'Loading a reliable dictionary result…',
+            ),
           for (final sense in senses)
-            if (sense.definitions.isNotEmpty)
+            if (!coreLoading &&
+                sense.definitions.any(
+                  (definition) => definition.definition.isNotEmpty,
+                ))
               _section(
                 context,
                 title: sense.partOfSpeech.isEmpty
@@ -690,7 +984,29 @@ class _ResultView extends StatelessWidget {
                     ),
                 ],
               ),
-          if (entry.relatedWords.isNotEmpty)
+          if (detailsLoading && detailsStage < 1)
+            _LoadingSection(
+              key: const ValueKey('translations-loading'),
+              title: isZh ? '完整中文释义' : 'Chinese translations',
+              message: isZh ? '正在补充完整翻译…' : 'Adding translations…',
+            ),
+          if (detailsLoading && detailsStage >= 4)
+            _LoadingSection(
+              key: const ValueKey('translations-background-loading'),
+              title: isZh ? '中文翻译正在补齐' : 'Translations are loading',
+              message: isZh
+                  ? '英文词典内容已可阅读，其余中文翻译会自动出现。'
+                  : 'English results are ready; Chinese translations will appear automatically.',
+            ),
+          if (detailsLoading && detailsStage < 2)
+            _LoadingSection(
+              key: const ValueKey('relations-loading'),
+              title: isZh ? '联想词与近反义词' : 'Related words',
+              message: isZh
+                  ? '正在整理联想词、近义词和反义词…'
+                  : 'Finding related words, synonyms and antonyms…',
+            ),
+          if (detailsStage >= 2 && entry.relatedWords.isNotEmpty)
             _section(
               context,
               title: isZh ? '联想词' : 'Related words',
@@ -705,7 +1021,7 @@ class _ResultView extends StatelessWidget {
                   ),
               ],
             ),
-          if (entry.synonyms.isNotEmpty)
+          if (detailsStage >= 2 && entry.synonyms.isNotEmpty)
             _WordLinks(
               title: isZh ? '近义词' : 'Synonyms',
               words: entry.synonyms,
@@ -714,7 +1030,7 @@ class _ResultView extends StatelessWidget {
               onSearch: onSearch,
               onPreview: onPreview,
             ),
-          if (entry.antonyms.isNotEmpty)
+          if (detailsStage >= 2 && entry.antonyms.isNotEmpty)
             _WordLinks(
               title: isZh ? '反义词' : 'Antonyms',
               words: entry.antonyms,
@@ -723,7 +1039,15 @@ class _ResultView extends StatelessWidget {
               onSearch: onSearch,
               onPreview: onPreview,
             ),
-          if (entry.examples.isNotEmpty)
+          if (detailsLoading && detailsStage < 3)
+            _LoadingSection(
+              key: const ValueKey('examples-loading'),
+              title: isZh ? '例句' : 'Examples',
+              message: isZh
+                  ? '正在查找并翻译例句…'
+                  : 'Finding and translating examples…',
+            ),
+          if (detailsStage >= 3 && entry.examples.isNotEmpty)
             _section(
               context,
               title: isZh ? '例句' : 'Examples',
@@ -750,7 +1074,15 @@ class _ResultView extends StatelessWidget {
                   ),
               ],
             ),
-          if (entry.phrases.isNotEmpty)
+          if (detailsLoading && detailsStage < 4)
+            _LoadingSection(
+              key: const ValueKey('phrases-loading'),
+              title: isZh ? '短语与常用搭配' : 'Phrases & collocations',
+              message: isZh
+                  ? '正在补充常见短语和搭配…'
+                  : 'Adding common phrases and collocations…',
+            ),
+          if (detailsStage >= 4 && entry.phrases.isNotEmpty)
             _section(
               context,
               title: isZh ? '短语与常用搭配' : 'Phrases & collocations',
@@ -970,43 +1302,266 @@ String _partOfSpeechLabel(String value, bool _) {
   return translated == null ? value : '$value · $translated';
 }
 
+Future<void> showLexoraWordSheet({
+  required BuildContext context,
+  required String term,
+  required WordService wordService,
+  required List<String> vocabularyTerms,
+  required ValueChanged<WordEntry> onToggleVocabulary,
+  WordEntry? initialEntry,
+}) async {
+  final normalized = term.trim().toLowerCase().replaceAll(RegExp(r'\s+'), ' ');
+  if (normalized.isEmpty) return;
+  final isZh =
+      Localizations.localeOf(context).languageCode.toLowerCase() == 'zh';
+  DeveloperLogService.instance.log(
+    'ui.word_sheet.opened',
+    data: {
+      'term': normalized,
+      'hasInitialEntry': initialEntry != null,
+      'screenWidth': MediaQuery.sizeOf(context).width,
+      'screenHeight': MediaQuery.sizeOf(context).height,
+    },
+  );
+  await showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    useSafeArea: true,
+    enableDrag: true,
+    isDismissible: true,
+    backgroundColor: Colors.transparent,
+    barrierColor: Colors.black.withValues(alpha: .46),
+    builder: (_) => _WordPreviewSheet(
+      term: normalized,
+      initialEntry: initialEntry,
+      wordService: wordService,
+      isZh: isZh,
+      vocabularyTerms: vocabularyTerms,
+      onToggleVocabulary: onToggleVocabulary,
+    ),
+  );
+  DeveloperLogService.instance.log(
+    'ui.word_sheet.closed',
+    data: {'term': normalized},
+  );
+}
+
 class _WordPreviewSheet extends StatefulWidget {
   const _WordPreviewSheet({
     required this.term,
+    required this.initialEntry,
     required this.wordService,
     required this.isZh,
     required this.vocabularyTerms,
     required this.onToggleVocabulary,
-    required this.onSearch,
   });
 
   final String term;
+  final WordEntry? initialEntry;
   final WordService wordService;
   final bool isZh;
   final List<String> vocabularyTerms;
   final ValueChanged<WordEntry> onToggleVocabulary;
-  final ValueChanged<String> onSearch;
 
   @override
   State<_WordPreviewSheet> createState() => _WordPreviewSheetState();
 }
 
 class _WordPreviewSheetState extends State<_WordPreviewSheet> {
-  late final Future<WordEntry> _entry = _load();
+  final _termStack = <String>[];
+  late String _term = widget.term;
+  WordEntry? _entry;
+  String? _error;
+  bool _coreLoading = false;
+  bool _detailsLoading = false;
+  bool _englishPresented = false;
+  int _detailsStage = 4;
   bool? _addedOverride;
+  int _loadRevision = 0;
+  double _lastLoggedExtent = -1;
 
-  Future<WordEntry> _load() async {
+  @override
+  void initState() {
+    super.initState();
+    final initial = widget.initialEntry;
+    if (initial != null) {
+      _entry = initial;
+      DeveloperLogService.instance.log(
+        'ui.word_sheet.initial_entry_presented',
+        data: {'term': initial.word, 'source': 'search-history'},
+      );
+    } else {
+      _beginLoad(_term);
+    }
+  }
+
+  void _beginLoad(String rawTerm) {
+    final term = rawTerm.trim().toLowerCase();
+    final revision = ++_loadRevision;
+    final stopwatch = Stopwatch()..start();
+    setState(() {
+      _term = term;
+      _entry = _placeholderWordEntry(term);
+      _error = null;
+      _coreLoading = true;
+      _detailsLoading = true;
+      _englishPresented = false;
+      _detailsStage = 0;
+      _addedOverride = null;
+    });
+    DeveloperLogService.instance.log(
+      'ui.word_sheet.lookup_started',
+      data: {'term': term, 'revision': revision, 'depth': _termStack.length},
+    );
+    unawaited(
+      widget.wordService
+          .lookupCore(term, exampleCount: 3)
+          .then((core) {
+            if (!mounted || revision != _loadRevision) return;
+            if (_englishPresented) return;
+            setState(() {
+              _entry = core;
+              _coreLoading = false;
+            });
+            DeveloperLogService.instance.log(
+              'ui.word_sheet.core_presented',
+              data: {
+                'term': term,
+                'revision': revision,
+                'elapsedMs': stopwatch.elapsedMilliseconds,
+              },
+            );
+          })
+          .catchError((Object error, StackTrace stackTrace) {
+            DeveloperLogService.instance.log(
+              'ui.word_sheet.core_unavailable',
+              data: {
+                'term': term,
+                'revision': revision,
+                'elapsedMs': stopwatch.elapsedMilliseconds,
+              },
+              error: error,
+              stackTrace: stackTrace,
+            );
+          }),
+    );
+    unawaited(
+      widget.wordService
+          .lookupEnglish(term, exampleCount: 3)
+          .then((english) {
+            if (!mounted || revision != _loadRevision) return;
+            setState(() {
+              _entry = english;
+              _coreLoading = false;
+              _detailsLoading = true;
+              _englishPresented = true;
+              _detailsStage = 4;
+            });
+            DeveloperLogService.instance.log(
+              'ui.word_sheet.english_presented',
+              data: {
+                'term': term,
+                'revision': revision,
+                'elapsedMs': stopwatch.elapsedMilliseconds,
+                'senses': english.senses.length,
+                'relatedWords': english.relatedWords.length,
+                'examples': english.examples.length,
+                'phrases': english.phrases.length,
+              },
+            );
+          })
+          .catchError((Object error, StackTrace stackTrace) {
+            DeveloperLogService.instance.log(
+              'ui.word_sheet.english_unavailable',
+              data: {
+                'term': term,
+                'revision': revision,
+                'elapsedMs': stopwatch.elapsedMilliseconds,
+              },
+              error: error,
+              stackTrace: stackTrace,
+            );
+          }),
+    );
+    unawaited(_loadFull(term, revision, stopwatch));
+  }
+
+  Future<void> _loadFull(String term, int revision, Stopwatch stopwatch) async {
     final result = await widget.wordService.lookupAll(
-      [widget.term],
+      [term],
       exampleCount: 3,
       maxConcurrency: 1,
     );
+    if (!mounted || revision != _loadRevision) return;
     if (result.entries.isEmpty) {
-      throw WordLookupException(
-        widget.isZh ? '没有找到可靠的词典结果。' : 'No reliable result was found.',
+      if (_englishPresented) {
+        setState(() {
+          _coreLoading = false;
+          _detailsLoading = false;
+          _detailsStage = 4;
+        });
+        return;
+      }
+      setState(() {
+        _entry = null;
+        _coreLoading = false;
+        _detailsLoading = false;
+        _detailsStage = 4;
+        _error = widget.isZh ? '没有找到可靠的词典结果。' : 'No reliable result was found.';
+      });
+      DeveloperLogService.instance.log(
+        'ui.word_sheet.lookup_failed',
+        data: {
+          'term': term,
+          'revision': revision,
+          'elapsedMs': stopwatch.elapsedMilliseconds,
+          'failures': result.failures
+              .map((item) => {'term': item.term, 'message': item.message})
+              .toList(),
+        },
       );
+      return;
     }
-    return result.entries.first;
+    setState(() {
+      _entry = result.entries.first;
+      _coreLoading = false;
+      _detailsLoading = false;
+      _detailsStage = 4;
+    });
+    DeveloperLogService.instance.log(
+      'ui.word_sheet.full_presented',
+      data: {
+        'term': term,
+        'resolvedTerm': result.entries.first.word,
+        'revision': revision,
+        'elapsedMs': stopwatch.elapsedMilliseconds,
+      },
+    );
+  }
+
+  void _openLinkedWord(String next) {
+    final normalized = next.trim().toLowerCase();
+    if (normalized.isEmpty || normalized == _term) return;
+    _termStack.add(_term);
+    HapticFeedback.selectionClick();
+    DeveloperLogService.instance.log(
+      'ui.word_sheet.link_opened',
+      data: {'from': _term, 'to': normalized, 'depth': _termStack.length},
+    );
+    _beginLoad(normalized);
+  }
+
+  void _goBack() {
+    if (_termStack.isEmpty) {
+      Navigator.of(context).pop();
+      return;
+    }
+    final previous = _termStack.removeLast();
+    DeveloperLogService.instance.log(
+      'ui.word_sheet.back',
+      data: {'from': _term, 'to': previous, 'depth': _termStack.length},
+    );
+    _beginLoad(previous);
   }
 
   bool _isAdded(WordEntry entry) =>
@@ -1018,85 +1573,136 @@ class _WordPreviewSheetState extends State<_WordPreviewSheet> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return DraggableScrollableSheet(
-      initialChildSize: .54,
-      minChildSize: .28,
-      maxChildSize: .96,
-      snap: true,
-      snapSizes: const [.54, .96],
-      shouldCloseOnMinExtent: true,
-      expand: false,
-      builder: (context, scrollController) => Material(
-        color: theme.colorScheme.surface,
-        elevation: 12,
-        clipBehavior: Clip.antiAlias,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-        child: Stack(
-          children: [
-            FutureBuilder<WordEntry>(
-              future: _entry,
-              builder: (context, snapshot) {
-                if (snapshot.connectionState != ConnectionState.done) {
-                  return CustomScrollView(
-                    controller: scrollController,
-                    slivers: const [
-                      SliverFillRemaining(
-                        child: Center(child: CircularProgressIndicator()),
-                      ),
-                    ],
-                  );
-                }
-                if (snapshot.hasError || snapshot.data == null) {
-                  return CustomScrollView(
-                    controller: scrollController,
-                    slivers: [
-                      SliverFillRemaining(
-                        child: _SearchError(
-                          message: snapshot.error?.toString() ?? '',
+    return PopScope(
+      canPop: _termStack.isEmpty,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) _goBack();
+      },
+      child: NotificationListener<DraggableScrollableNotification>(
+        onNotification: (notification) {
+          if ((_lastLoggedExtent - notification.extent).abs() >= .08 ||
+              notification.extent == notification.minExtent ||
+              notification.extent == notification.maxExtent) {
+            _lastLoggedExtent = notification.extent;
+            DeveloperLogService.instance.log(
+              'ui.word_sheet.extent_changed',
+              data: {
+                'term': _term,
+                'extent': notification.extent,
+                'min': notification.minExtent,
+                'max': notification.maxExtent,
+              },
+            );
+          }
+          return false;
+        },
+        child: DraggableScrollableSheet(
+          key: const Key('lexora-word-sheet'),
+          initialChildSize: .56,
+          minChildSize: .26,
+          maxChildSize: .96,
+          snap: true,
+          snapAnimationDuration: MediaQuery.disableAnimationsOf(context)
+              ? Duration.zero
+              : const Duration(milliseconds: 320),
+          snapSizes: const [.56, .96],
+          shouldCloseOnMinExtent: true,
+          expand: false,
+          builder: (context, scrollController) => Align(
+            alignment: Alignment.bottomCenter,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 860),
+              child: Material(
+                color: theme.colorScheme.surface,
+                elevation: 16,
+                shadowColor: Colors.black.withValues(alpha: .24),
+                clipBehavior: Clip.antiAlias,
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(28),
+                ),
+                child: Stack(
+                  children: [
+                    if (_error != null)
+                      CustomScrollView(
+                        controller: scrollController,
+                        slivers: [
+                          SliverFillRemaining(
+                            child: _SearchError(message: _error!),
+                          ),
+                        ],
+                      )
+                    else
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(22, 16, 22, 0),
+                        child: _ResultView(
+                          entry: _entry ?? _placeholderWordEntry(_term),
+                          searchedTerm: _term,
+                          isZh: widget.isZh,
+                          added: _entry == null ? false : _isAdded(_entry!),
+                          coreLoading: _coreLoading,
+                          detailsLoading: _detailsLoading,
+                          detailsStage: _detailsStage,
+                          onToggleVocabulary: () {
+                            final entry = _entry;
+                            if (entry == null) return;
+                            widget.onToggleVocabulary(entry);
+                            setState(() => _addedOverride = !_isAdded(entry));
+                          },
+                          onSearch: _openLinkedWord,
+                          onPreview: _openLinkedWord,
+                          scrollController: scrollController,
                         ),
                       ),
-                    ],
-                  );
-                }
-                final entry = snapshot.data!;
-                return Padding(
-                  padding: const EdgeInsets.fromLTRB(22, 10, 22, 0),
-                  child: _ResultView(
-                    entry: entry,
-                    searchedTerm: widget.term,
-                    isZh: widget.isZh,
-                    added: _isAdded(entry),
-                    onToggleVocabulary: () {
-                      widget.onToggleVocabulary(entry);
-                      setState(() => _addedOverride = !_isAdded(entry));
-                    },
-                    onSearch: widget.onSearch,
-                    onPreview: widget.onSearch,
-                    scrollController: scrollController,
-                  ),
-                );
-              },
-            ),
-            Align(
-              alignment: Alignment.topCenter,
-              child: IgnorePointer(
-                child: Container(
-                  width: 38,
-                  height: 5,
-                  margin: const EdgeInsets.only(top: 8),
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.outlineVariant,
-                    borderRadius: BorderRadius.circular(999),
-                  ),
+                    Align(
+                      alignment: Alignment.topCenter,
+                      child: IgnorePointer(
+                        child: Container(
+                          width: 42,
+                          height: 5,
+                          margin: const EdgeInsets.only(top: 8),
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.outlineVariant,
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                        ),
+                      ),
+                    ),
+                    if (_termStack.isNotEmpty)
+                      Positioned(
+                        left: 12,
+                        top: 8,
+                        child: IconButton.filledTonal(
+                          tooltip: widget.isZh ? '返回上一个单词' : 'Previous word',
+                          onPressed: _goBack,
+                          icon: const Icon(Icons.arrow_back_rounded),
+                        ),
+                      ),
+                  ],
                 ),
               ),
             ),
-          ],
+          ),
         ),
       ),
     );
   }
 }
+
+WordEntry _placeholderWordEntry(String term) => WordEntry(
+  word: term,
+  difficulty: '…',
+  frequency: 0,
+  usPhonetic: '',
+  ukPhonetic: '',
+  definition: '',
+  definitionZh: '',
+  synonyms: const [],
+  synonymsZh: '',
+  antonyms: const [],
+  antonymsZh: '',
+  examples: const [],
+  examplesZh: const [],
+);
 
 class _HighlightedText extends StatelessWidget {
   const _HighlightedText({required this.text, required this.term});

@@ -1,71 +1,71 @@
 {
-  "version": "3.2.4",
+  "version": "3.2.5",
   "releaseNotes": {
     "zh": [
-      "联想输入时仅预取前三个候选的英文词典数据，并只预热首项释义翻译，避免翻译服务限流。",
-      "翻译请求限制为两路并发，遇到限流会渐进重试；失败结果不再污染缓存。",
-      "确认查询后保留已完成的翻译缓存，重复查看释义更快、更稳定。",
-      "macOS 侧栏改为贴边原生半透明材质，选中态与收展动画更接近系统应用。",
-      "词性在中英文界面中都同时显示中文说明。"
+      "搜索提交后立即进入结果页，核心释义目标在 2 秒内呈现，其余内容继续在后台补全。",
+      "新增 Cloudflare 边缘词典聚合，完整英文释义、音标、词性和关联内容会在第二阶段快速出现。",
+      "中文翻译改为边缘批量请求；联想与近反义词、例句、短语独立补齐，不再串行阻塞搜索。",
+      "搜索历史和结果中的关联词统一使用可拖拽浮层；上滑全屏、下滑关闭，系统返回可回到上一个词。",
+      "开发者模式记录输入、导航、搜索、网络响应、耗时、生成和阅读器等完整诊断信息。"
     ],
     "en": [
-      "Typing now prefetches English dictionary data for only the top three suggestions and warms just the first definition translation.",
-      "Translation work is capped at two concurrent requests with progressive retries; failed responses are no longer cached.",
-      "Completed translation cache survives a confirmed search for faster, more reliable repeat viewing.",
-      "The macOS sidebar now uses a flush native translucent material with calmer selection and resizing motion.",
-      "Parts of speech include Chinese labels in both interface languages."
+      "Search now enters the result immediately, targets the core definition within two seconds, and completes the rest in the background.",
+      "Cloudflare edge aggregation brings in the complete English dictionary, pronunciation, parts of speech, and related content as a fast second stage.",
+      "Chinese translation now uses edge batching while related words, examples, and phrases fill independently without serially blocking search.",
+      "Search history and linked words now share a draggable sheet that expands, dismisses, and returns through linked results naturally.",
+      "Developer mode captures detailed input, navigation, search, backend response, timing, generation, and reader diagnostics."
     ]
   },
   "downloads": {
-    "android": "/downloads/lexora-android-v3.2.4.apk",
-    "macos": "/downloads/lexora-macos-v3.2.4.dmg",
-    "windows": "/downloads/lexora-windows-v3.2.4-setup.exe",
-    "linux": "/downloads/lexora-linux-v3.2.4.tar.gz"
+    "android": "/downloads/lexora-android-v3.2.5.apk",
+    "macos": "/downloads/lexora-macos-v3.2.5.dmg",
+    "windows": "/downloads/lexora-windows-v3.2.5-setup.exe",
+    "linux": "/downloads/lexora-linux-v3.2.5.tar.gz"
   },
   "verifiedDownloads": {
     "android": {
-      "filename": "lexora-android-v3.2.4.apk",
-      "url": "/updates/lexora-android-v3.2.4.apk",
+      "filename": "lexora-android-v3.2.5.apk",
+      "url": "/updates/lexora-android-v3.2.5.apk",
       "sources": [
-        "/updates/lexora-android-v3.2.4.apk",
-        "https://lexora-official.xiaozhangwangxue.workers.dev/updates/lexora-android-v3.2.4.apk",
-        "https://github.com/xiaozhangwangxue/lexora/releases/download/v3.2.4/lexora-android-v3.2.4.apk"
+        "/updates/lexora-android-v3.2.5.apk",
+        "https://lexora-official.xiaozhangwangxue.workers.dev/updates/lexora-android-v3.2.5.apk",
+        "https://github.com/xiaozhangwangxue/lexora/releases/download/v3.2.5/lexora-android-v3.2.5.apk"
       ],
-      "sha256": "a61a39ad6664fdf39de7b5b6956d8bb179ee21946ef19f2eb76b6a0fbb783d5d",
-      "size": 99060847
+      "sha256": "",
+      "size": 0
     },
     "macos": {
-      "filename": "lexora-macos-v3.2.4.dmg",
-      "url": "/updates/lexora-macos-v3.2.4.dmg",
+      "filename": "lexora-macos-v3.2.5.dmg",
+      "url": "/updates/lexora-macos-v3.2.5.dmg",
       "sources": [
-        "/updates/lexora-macos-v3.2.4.dmg",
-        "https://lexora-official.xiaozhangwangxue.workers.dev/updates/lexora-macos-v3.2.4.dmg",
-        "https://github.com/xiaozhangwangxue/lexora/releases/download/v3.2.4/lexora-macos-v3.2.4.dmg"
+        "/updates/lexora-macos-v3.2.5.dmg",
+        "https://lexora-official.xiaozhangwangxue.workers.dev/updates/lexora-macos-v3.2.5.dmg",
+        "https://github.com/xiaozhangwangxue/lexora/releases/download/v3.2.5/lexora-macos-v3.2.5.dmg"
       ],
-      "sha256": "78758a744a05e6b65c1304ad38b784d9622611b0c55c7426767d2c92fd2a52a0",
-      "size": 47123114
+      "sha256": "",
+      "size": 0
     },
     "windows": {
-      "filename": "lexora-windows-v3.2.4-setup.exe",
-      "url": "/updates/lexora-windows-v3.2.4-setup.exe",
+      "filename": "lexora-windows-v3.2.5-setup.exe",
+      "url": "/updates/lexora-windows-v3.2.5-setup.exe",
       "sources": [
-        "/updates/lexora-windows-v3.2.4-setup.exe",
-        "https://lexora-official.xiaozhangwangxue.workers.dev/updates/lexora-windows-v3.2.4-setup.exe",
-        "https://github.com/xiaozhangwangxue/lexora/releases/download/v3.2.4/lexora-windows-v3.2.4-setup.exe"
+        "/updates/lexora-windows-v3.2.5-setup.exe",
+        "https://lexora-official.xiaozhangwangxue.workers.dev/updates/lexora-windows-v3.2.5-setup.exe",
+        "https://github.com/xiaozhangwangxue/lexora/releases/download/v3.2.5/lexora-windows-v3.2.5-setup.exe"
       ],
-      "sha256": "3ed2a5b2143955e72bd947d5a680a5cb2033ae3d2f99ae04d0bb6b6e04938d87",
-      "size": 27268090
+      "sha256": "",
+      "size": 0
     },
     "linux": {
-      "filename": "lexora-linux-v3.2.4.tar.gz",
-      "url": "/updates/lexora-linux-v3.2.4.tar.gz",
+      "filename": "lexora-linux-v3.2.5.tar.gz",
+      "url": "/updates/lexora-linux-v3.2.5.tar.gz",
       "sources": [
-        "/updates/lexora-linux-v3.2.4.tar.gz",
-        "https://lexora-official.xiaozhangwangxue.workers.dev/updates/lexora-linux-v3.2.4.tar.gz",
-        "https://github.com/xiaozhangwangxue/lexora/releases/download/v3.2.4/lexora-linux-v3.2.4.tar.gz"
+        "/updates/lexora-linux-v3.2.5.tar.gz",
+        "https://lexora-official.xiaozhangwangxue.workers.dev/updates/lexora-linux-v3.2.5.tar.gz",
+        "https://github.com/xiaozhangwangxue/lexora/releases/download/v3.2.5/lexora-linux-v3.2.5.tar.gz"
       ],
-      "sha256": "1bc80c2a186b1b76018f31168bb05666a61ac81a47b691a8274867edb87e8d19",
-      "size": 31426609
+      "sha256": "",
+      "size": 0
     }
   }
 }

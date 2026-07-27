@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/word_entry.dart';
+import 'developer_log_service.dart';
 
 class SearchHistoryRecord {
   const SearchHistoryRecord({
@@ -38,9 +39,16 @@ class SearchHistoryService {
   static const _limit = 120;
 
   Future<List<SearchHistoryRecord>> load() async {
+    final stopwatch = Stopwatch()..start();
     final preferences = await SharedPreferences.getInstance();
     final raw = preferences.getString(_key);
-    if (raw == null) return const [];
+    if (raw == null) {
+      DeveloperLogService.instance.log(
+        'history.search.loaded',
+        data: {'durationMs': stopwatch.elapsedMilliseconds, 'records': 0},
+      );
+      return const [];
+    }
     try {
       final records = (jsonDecode(raw) as List)
           .map(
@@ -52,8 +60,21 @@ class SearchHistoryService {
           )
           .toList();
       records.sort((a, b) => b.searchedAt.compareTo(a.searchedAt));
+      DeveloperLogService.instance.log(
+        'history.search.loaded',
+        data: {
+          'durationMs': stopwatch.elapsedMilliseconds,
+          'records': records.length,
+        },
+      );
       return records;
-    } catch (_) {
+    } catch (error, stackTrace) {
+      DeveloperLogService.instance.log(
+        'history.search.load_failed',
+        data: {'durationMs': stopwatch.elapsedMilliseconds},
+        error: error,
+        stackTrace: stackTrace,
+      );
       return const [];
     }
   }
@@ -75,7 +96,17 @@ class SearchHistoryService {
           entry: entry,
         ),
       );
-    await _save(records.take(_limit).toList(growable: false));
+    final saved = records.take(_limit).toList(growable: false);
+    await _save(saved);
+    DeveloperLogService.instance.log(
+      'history.search.recorded',
+      data: {
+        'query': normalized,
+        'resolvedWord': entry.word,
+        'fuzzy': entry.isFuzzyMatch,
+        'records': saved.length,
+      },
+    );
   }
 
   Future<void> remove(SearchHistoryRecord record) async {
@@ -85,6 +116,10 @@ class SearchHistoryService {
             item.searchedAt == record.searchedAt && item.query == record.query,
       );
     await _save(records);
+    DeveloperLogService.instance.log(
+      'history.search.removed_one',
+      data: {'query': record.query, 'remaining': records.length},
+    );
   }
 
   Future<void> removeMany(Iterable<SearchHistoryRecord> selected) async {
@@ -97,9 +132,16 @@ class SearchHistoryService {
             keys.contains('${item.searchedAt.toIso8601String()}|${item.query}'),
       );
     await _save(records);
+    DeveloperLogService.instance.log(
+      'history.search.removed_many',
+      data: {'removed': keys.length, 'remaining': records.length},
+    );
   }
 
-  Future<void> clear() => _save(const []);
+  Future<void> clear() async {
+    await _save(const []);
+    DeveloperLogService.instance.log('history.search.cleared');
+  }
 
   Future<void> _save(List<SearchHistoryRecord> records) async {
     final preferences = await SharedPreferences.getInstance();

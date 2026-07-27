@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:ui' as ui;
@@ -12,10 +13,12 @@ import 'package:lexora/l10n/app_localizations.dart';
 import 'package:lexora/main.dart';
 import 'package:lexora/models/word_entry.dart';
 import 'package:lexora/screens/history_screen.dart';
+import 'package:lexora/screens/search_history_screen.dart';
 import 'package:lexora/screens/search_screen.dart';
 import 'package:lexora/screens/word_history_screen.dart';
 import 'package:lexora/services/generation_progress.dart';
 import 'package:lexora/services/history_service.dart';
+import 'package:lexora/services/search_history_service.dart';
 import 'package:lexora/services/word_service.dart';
 import 'package:lexora/widgets/lexora_wordmark.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -26,9 +29,35 @@ Future<void> pumpUi(WidgetTester tester) async {
 }
 
 class _ImmediateWordService extends WordService {
+  static const entry = WordEntry(
+    word: 'word',
+    difficulty: 'A1–A2',
+    frequency: 147.7,
+    usPhonetic: '/wɜːd/',
+    ukPhonetic: '/wɜːd/',
+    definition: 'A unit of language.',
+    definitionZh: '语言单位。',
+    synonyms: [],
+    synonymsZh: '',
+    antonyms: [],
+    antonymsZh: '',
+    examples: [],
+    examplesZh: [],
+  );
+
   @override
   Future<List<String>> suggest(String rawTerm, {int maxResults = 12}) async =>
       const [];
+
+  @override
+  Future<WordEntry> lookupCore(String rawWord, {int exampleCount = 1}) async =>
+      entry;
+
+  @override
+  Future<WordEntry> lookupEnglish(
+    String rawWord, {
+    int exampleCount = 1,
+  }) async => entry;
 
   @override
   Future<LookupBatchResult> lookupAll(
@@ -36,27 +65,46 @@ class _ImmediateWordService extends WordService {
     int exampleCount = 1,
     int maxConcurrency = 4,
     void Function(int completed, int total, String term)? onProgress,
-  }) async => const LookupBatchResult(
-    entries: [
-      WordEntry(
-        word: 'word',
-        difficulty: 'A1–A2',
-        frequency: 147.7,
-        usPhonetic: '/wɜːd/',
-        ukPhonetic: '/wɜːd/',
-        definition: 'A unit of language.',
-        definitionZh: '语言单位。',
-        synonyms: [],
-        synonymsZh: '',
-        antonyms: [],
-        antonymsZh: '',
-        examples: [],
-        examplesZh: [],
-      ),
-    ],
-    failures: [],
-    fuzzyMatches: [],
-  );
+  }) async =>
+      const LookupBatchResult(entries: [entry], failures: [], fuzzyMatches: []);
+}
+
+class _ProgressiveWordService extends WordService {
+  final core = Completer<WordEntry>();
+  final english = Completer<WordEntry>();
+  final full = Completer<LookupBatchResult>();
+
+  @override
+  Future<List<String>> suggest(String rawTerm, {int maxResults = 12}) async =>
+      const [];
+
+  @override
+  Future<WordEntry> lookupCore(String rawWord, {int exampleCount = 1}) =>
+      core.future;
+
+  @override
+  Future<WordEntry> lookupEnglish(String rawWord, {int exampleCount = 1}) =>
+      english.future;
+
+  @override
+  Future<LookupBatchResult> lookupAll(
+    List<String> terms, {
+    int exampleCount = 1,
+    int maxConcurrency = 4,
+    void Function(int completed, int total, String term)? onProgress,
+  }) => full.future;
+
+  @override
+  Future<void> retainOnly(String rawTerm, {int exampleCount = 1}) async {}
+}
+
+class _StaticSearchHistoryService extends SearchHistoryService {
+  _StaticSearchHistoryService(this.records);
+
+  final List<SearchHistoryRecord> records;
+
+  @override
+  Future<List<SearchHistoryRecord>> load() async => records;
 }
 
 void main() {
@@ -252,6 +300,182 @@ void main() {
     expect(resultVisible, isTrue);
     expect(find.text('word'), findsWidgets);
     expect(find.text('freq 147.7'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('search enters immediately and progressively fills the result', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({});
+    final controller = SearchScreenController();
+    final service = _ProgressiveWordService();
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('zh', 'CN'),
+        supportedLocales: const [Locale('en'), Locale('zh')],
+        localizationsDelegates: const [
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        home: Scaffold(
+          body: SearchScreen(
+            active: true,
+            controller: controller,
+            vocabularyTerms: const [],
+            onVocabularyChanged: (_) {},
+            onHistoryChanged: () {},
+            wordService: service,
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    controller.search('word');
+    await tester.pump();
+
+    expect(find.text('word'), findsWidgets);
+    expect(find.text('核心释义'), findsOneWidget);
+    expect(find.byKey(const ValueKey('translations-loading')), findsOneWidget);
+
+    service.core.complete(_ImmediateWordService.entry);
+    await tester.pump();
+    expect(find.text('A unit of language.'), findsOneWidget);
+    expect(find.byKey(const ValueKey('translations-loading')), findsOneWidget);
+
+    service.english.complete(_ImmediateWordService.entry);
+    await tester.pump();
+    expect(
+      find.byKey(const ValueKey('translations-background-loading')),
+      findsOneWidget,
+    );
+
+    const fullEntry = WordEntry(
+      word: 'word',
+      difficulty: 'A1–A2',
+      frequency: 147.7,
+      usPhonetic: '/wɜːd/',
+      ukPhonetic: '/wɜːd/',
+      definition: 'A unit of language.',
+      definitionZh: '语言单位。',
+      synonyms: ['term'],
+      synonymsZh: '词语',
+      antonyms: [],
+      antonymsZh: '',
+      examples: ['This is a word.'],
+      examplesZh: ['这是一个单词。'],
+      phrases: [
+        PhraseEntry(phrase: 'in a word', meaning: 'briefly', meaningZh: '简而言之'),
+      ],
+    );
+    service.full.complete(
+      const LookupBatchResult(
+        entries: [fullEntry],
+        failures: [],
+        fuzzyMatches: [],
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(find.text('正在补充完整翻译…'), findsNothing);
+    await tester.scrollUntilVisible(
+      find.text('This is a word.'),
+      180,
+      scrollable: find.byType(Scrollable).last,
+    );
+    expect(find.text('This is a word.'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('in a word'),
+      180,
+      scrollable: find.byType(Scrollable).last,
+    );
+    expect(find.text('in a word'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('search history opens a draggable result sheet in place', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({});
+    final record = SearchHistoryRecord(
+      query: 'word',
+      resolvedWord: 'word',
+      searchedAt: DateTime.utc(2026, 7, 27),
+      entry: const WordEntry(
+        word: 'word',
+        difficulty: 'A1–A2',
+        frequency: 147.7,
+        usPhonetic: '/wɜːd/',
+        ukPhonetic: '/wɜːd/',
+        definition: 'A unit of language.',
+        definitionZh: '语言单位。',
+        synonyms: ['term'],
+        synonymsZh: '词语',
+        antonyms: [],
+        antonymsZh: '',
+        examples: [],
+        examplesZh: [],
+      ),
+    );
+    final service = _ImmediateWordService();
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('zh', 'CN'),
+        supportedLocales: const [Locale('en'), Locale('zh')],
+        localizationsDelegates: const [
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        home: Builder(
+          builder: (context) => Scaffold(
+            body: SearchHistoryScreen(
+              historyService: _StaticSearchHistoryService([record]),
+              onCreateVocabularyBook: (_) {},
+              onSearch: (selected) => showLexoraWordSheet(
+                context: context,
+                term: selected.resolvedWord,
+                initialEntry: selected.entry,
+                wordService: service,
+                vocabularyTerms: const [],
+                onToggleVocabulary: (_) {},
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump();
+    await tester.tap(find.text('word'));
+    await tester.pumpAndSettle();
+
+    final sheet = find.byKey(const Key('lexora-word-sheet'));
+    expect(sheet, findsOneWidget);
+    final initialHeight = tester.getSize(sheet).height;
+    await tester.drag(sheet, const Offset(0, -360));
+    await tester.pumpAndSettle();
+    expect(tester.getSize(sheet).height, greaterThan(initialHeight));
+
+    final termLink = find.ancestor(
+      of: find.text('term'),
+      matching: find.byType(InkWell),
+    );
+    expect(termLink, findsOneWidget);
+    await tester.tap(termLink);
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pumpAndSettle();
+    expect(find.byTooltip('返回上一个单词'), findsOneWidget);
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(sheet, findsOneWidget);
+    expect(find.byTooltip('返回上一个单词'), findsNothing);
+
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(sheet, findsNothing);
+    expect(find.text('word'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../services/developer_log_service.dart';
 import '../services/search_history_service.dart';
 
 enum SearchHistorySort { searchedTime, initialLetter, difficulty, frequency }
@@ -12,7 +13,7 @@ class SearchHistoryScreen extends StatefulWidget {
     this.historyService,
   });
 
-  final ValueChanged<String> onSearch;
+  final ValueChanged<SearchHistoryRecord> onSearch;
   final ValueChanged<List<String>> onCreateVocabularyBook;
   final SearchHistoryService? historyService;
 
@@ -42,7 +43,15 @@ class _SearchHistoryScreenState extends State<SearchHistoryScreen> {
       '${record.searchedAt.toIso8601String()}|${record.query}';
 
   Future<void> _removeMany(Iterable<SearchHistoryRecord> records) async {
-    await _service.removeMany(records);
+    final snapshot = records.toList(growable: false);
+    DeveloperLogService.instance.log(
+      'ui.search_history.delete_requested',
+      data: {
+        'count': snapshot.length,
+        'terms': snapshot.map((record) => record.resolvedWord).toList(),
+      },
+    );
+    await _service.removeMany(snapshot);
     if (!mounted) return;
     setState(() {
       _records = _service.load();
@@ -79,6 +88,10 @@ class _SearchHistoryScreenState extends State<SearchHistoryScreen> {
         .toSet()
         .toList(growable: false);
     if (terms.isEmpty) return;
+    DeveloperLogService.instance.log(
+      'ui.search_history.create_book',
+      data: {'count': terms.length, 'terms': terms},
+    );
     widget.onCreateVocabularyBook(terms);
     setState(() {
       _selected.clear();
@@ -159,14 +172,27 @@ class _SearchHistoryScreenState extends State<SearchHistoryScreen> {
                   ),
                 ],
                 onChanged: (value) {
-                  if (value != null) setState(() => _sort = value);
+                  if (value != null) {
+                    DeveloperLogService.instance.log(
+                      'ui.search_history.sort_changed',
+                      data: {'sort': value.name, 'ascending': _ascending},
+                    );
+                    setState(() => _sort = value);
+                  }
                 },
               );
               final orderButton = IconButton.filledTonal(
                 tooltip: _ascending
                     ? (_isZh ? '升序' : 'Ascending')
                     : (_isZh ? '降序' : 'Descending'),
-                onPressed: () => setState(() => _ascending = !_ascending),
+                onPressed: () {
+                  final next = !_ascending;
+                  DeveloperLogService.instance.log(
+                    'ui.search_history.sort_direction_changed',
+                    data: {'sort': _sort.name, 'ascending': next},
+                  );
+                  setState(() => _ascending = next);
+                },
                 icon: Icon(
                   _ascending
                       ? Icons.arrow_upward_rounded
@@ -310,7 +336,19 @@ class _SearchHistoryScreenState extends State<SearchHistoryScreen> {
                                 ? _selected.remove(key)
                                 : _selected.add(key);
                           })
-                        : () => widget.onSearch(record.resolvedWord),
+                        : () {
+                            DeveloperLogService.instance.log(
+                              'ui.search_history.result_opened',
+                              data: {
+                                'query': record.query,
+                                'resolvedTerm': record.resolvedWord,
+                                'searchedAt': record.searchedAt
+                                    .toUtc()
+                                    .toIso8601String(),
+                              },
+                            );
+                            widget.onSearch(record);
+                          },
                   ),
                 );
               },

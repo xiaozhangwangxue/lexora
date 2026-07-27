@@ -14,6 +14,8 @@ class HapticService {
 
   Future<void> generationStarted() => _play(HapticFeedback.mediumImpact);
 
+  Future<void> selection() => _play(HapticFeedback.selectionClick);
+
   Future<void> generationCompleted() async {
     if (!_isAndroid) return;
     try {

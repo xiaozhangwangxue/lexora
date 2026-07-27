@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../services/history_service.dart';
+import '../services/search_history_service.dart';
 import 'search_history_screen.dart';
 import 'word_history_screen.dart';
 
@@ -18,7 +19,7 @@ class HistoryHubScreen extends StatefulWidget {
   final bool generationRunning;
   final ValueChanged<List<String>> onRegenerate;
   final Future<void> Function() onCustomizePdf;
-  final ValueChanged<String> onSearch;
+  final ValueChanged<SearchHistoryRecord> onSearch;
   final ValueChanged<List<String>> onCreateVocabularyBook;
   final HistoryService? historyService;
 

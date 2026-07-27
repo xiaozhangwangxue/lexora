@@ -82,6 +82,9 @@ class LexoraApp extends StatelessWidget {
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
+      navigatorObservers: [_DeveloperNavigationObserver()],
+      builder: (context, child) =>
+          _InteractionLogger(child: child ?? const SizedBox.shrink()),
       home: const ShellScreen(),
     );
   }
@@ -156,6 +159,89 @@ class LexoraApp extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _InteractionLogger extends StatelessWidget {
+  const _InteractionLogger({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => Listener(
+    behavior: HitTestBehavior.translucent,
+    onPointerDown: (event) => DeveloperLogService.instance.log(
+      'input.pointer_down',
+      data: {
+        'pointer': event.pointer,
+        'kind': event.kind.name,
+        'x': event.position.dx,
+        'y': event.position.dy,
+        'buttons': event.buttons,
+      },
+    ),
+    onPointerUp: (event) => DeveloperLogService.instance.log(
+      'input.pointer_up',
+      data: {
+        'pointer': event.pointer,
+        'kind': event.kind.name,
+        'x': event.position.dx,
+        'y': event.position.dy,
+        'buttons': event.buttons,
+      },
+    ),
+    onPointerCancel: (event) => DeveloperLogService.instance.log(
+      'input.pointer_cancel',
+      data: {'pointer': event.pointer, 'kind': event.kind.name},
+    ),
+    onPointerSignal: (event) => DeveloperLogService.instance.log(
+      'input.pointer_signal',
+      data: {
+        'pointer': event.pointer,
+        'kind': event.kind.name,
+        'x': event.position.dx,
+        'y': event.position.dy,
+        'signal': event.runtimeType.toString(),
+      },
+    ),
+    child: child,
+  );
+}
+
+class _DeveloperNavigationObserver extends NavigatorObserver {
+  String? _name(Route<dynamic>? route) =>
+      route?.settings.name ?? route?.runtimeType.toString();
+
+  @override
+  void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    DeveloperLogService.instance.log(
+      'route.pushed',
+      data: {'route': _name(route), 'previous': _name(previousRoute)},
+    );
+  }
+
+  @override
+  void didPop(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    DeveloperLogService.instance.log(
+      'route.popped',
+      data: {'route': _name(route), 'revealed': _name(previousRoute)},
+    );
+  }
+
+  @override
+  void didRemove(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    DeveloperLogService.instance.log(
+      'route.removed',
+      data: {'route': _name(route), 'previous': _name(previousRoute)},
+    );
+  }
+
+  @override
+  void didReplace({Route<dynamic>? newRoute, Route<dynamic>? oldRoute}) {
+    DeveloperLogService.instance.log(
+      'route.replaced',
+      data: {'old': _name(oldRoute), 'new': _name(newRoute)},
     );
   }
 }

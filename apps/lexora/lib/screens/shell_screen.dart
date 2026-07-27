@@ -200,6 +200,7 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
   }
 
   Future<void> _finishOnboarding() async {
+    DeveloperLogService.instance.log('onboarding.completed');
     final preferences = await SharedPreferences.getInstance();
     await preferences.setBool(_onboardingKey, true);
     if (mounted) {
@@ -303,8 +304,49 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
   }
 
   void _updateSettings(PdfSettings settings) {
+    DeveloperLogService.instance.log(
+      'settings.changed',
+      data: {
+        'format': settings.format.name,
+        'pageSize': settings.pageSize.name,
+        'fontSize': settings.fontSize.name,
+        'exampleAmount': settings.exampleAmount.name,
+        'smartReorder': settings.smartReorder,
+        'searchTextScale': settings.searchTextScale,
+        'typography': {
+          'word': settings.typography.word,
+          'phonetic': settings.typography.phonetic,
+          'definition': settings.typography.definition,
+          'related': settings.typography.related,
+          'example': settings.typography.example,
+          'phrase': settings.typography.phrase,
+        },
+      },
+    );
     setState(() => _settings = settings);
     unawaited(_settingsService.save(settings));
+  }
+
+  void _toggleVocabularyFromSheet(WordEntry entry) {
+    final next = [..._vocabularyTerms];
+    final normalized = entry.word.trim().toLowerCase();
+    final index = next.indexWhere(
+      (item) => item.trim().toLowerCase() == normalized,
+    );
+    final added = index < 0;
+    setState(() {
+      if (added) {
+        next.add(entry.word);
+      } else {
+        next.removeAt(index);
+      }
+      _vocabularyTerms = next;
+    });
+    unawaited(_haptics.selection());
+    DeveloperLogService.instance.log(
+      'ui.vocabulary.sheet_toggled',
+      data: {'term': entry.word, 'added': added, 'total': next.length},
+    );
   }
 
   Future<void> _showPdfCustomizer() async {
@@ -506,6 +548,10 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
 
   Future<void> _shareBook(GeneratedBook book) async {
     final strings = AppLocalizations.of(context);
+    DeveloperLogService.instance.log(
+      'share.book_requested',
+      data: {'id': book.id, 'format': book.format.name, 'paths': book.allPaths},
+    );
     await Share.shareXFiles([
       for (final path in book.allPaths)
         XFile(path, mimeType: book.format.mimeType),
@@ -790,6 +836,7 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
           setState(() => _searchShowingResult = visible);
         },
         textScale: _settings!.searchTextScale,
+        wordService: _wordService,
       ),
       HomeScreen(
         active: _index == 1,
@@ -813,12 +860,14 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
         generationRunning: _generationProgress.isRunning,
         onRegenerate: _startGeneration,
         onCustomizePdf: _showPdfCustomizer,
-        onSearch: (term) {
-          _selectPage(0, animate: false);
-          WidgetsBinding.instance.addPostFrameCallback(
-            (_) => _searchController.search(term),
-          );
-        },
+        onSearch: (record) => showLexoraWordSheet(
+          context: context,
+          term: record.resolvedWord,
+          initialEntry: record.entry,
+          wordService: _wordService,
+          vocabularyTerms: _vocabularyTerms,
+          onToggleVocabulary: _toggleVocabularyFromSheet,
+        ),
         onCreateVocabularyBook: (terms) {
           final merged = <String>{..._vocabularyTerms, ...terms}.toList();
           setState(() => _vocabularyTerms = merged);

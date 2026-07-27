@@ -285,7 +285,7 @@ private struct LexoraNativeShell: View {
         .help(expanded ? localized("收起边栏", "Collapse sidebar") : localized("展开边栏", "Expand sidebar"))
       }
 
-      Text("3.2.4")
+      Text("3.2.5")
         .font(.caption2.monospacedDigit())
         .foregroundStyle(.tertiary)
         .frame(maxWidth: .infinity, alignment: expanded ? .leading : .center)

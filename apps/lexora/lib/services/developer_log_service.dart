@@ -17,7 +17,11 @@ class DeveloperLogService {
   static const _maxFileBytes = 8 * 1024 * 1024;
 
   final _pending = <String>[];
+  final _uptime = Stopwatch()..start();
+  late final String _sessionId =
+      '${DateTime.now().toUtc().microsecondsSinceEpoch}-$pid';
   bool _enabled = false;
+  int _sequence = 0;
   File? _file;
   Timer? _flushTimer;
   Future<void>? _flushInFlight;
@@ -57,6 +61,9 @@ class DeveloperLogService {
     if (!_enabled) return;
     final record = <String, Object?>{
       'time': DateTime.now().toUtc().toIso8601String(),
+      'session': _sessionId,
+      'sequence': ++_sequence,
+      'uptimeMs': _uptime.elapsedMilliseconds,
       'event': event,
       if (data.isNotEmpty) 'data': data,
       if (error != null) 'error': error.toString(),
@@ -70,6 +77,39 @@ class DeveloperLogService {
         _flushTimer = null;
         unawaited(flush());
       });
+    }
+  }
+
+  /// Records a complete start/success/failure span without delaying UI work.
+  Future<T> trace<T>(
+    String operation,
+    Future<T> Function() task, {
+    Map<String, Object?> data = const {},
+    Map<String, Object?> Function(T value)? result,
+  }) async {
+    final stopwatch = Stopwatch()..start();
+    log('$operation.started', data: data);
+    try {
+      final value = await task();
+      stopwatch.stop();
+      log(
+        '$operation.completed',
+        data: {
+          ...data,
+          'durationMs': stopwatch.elapsedMilliseconds,
+          if (result != null) ...result(value),
+        },
+      );
+      return value;
+    } catch (error, stackTrace) {
+      stopwatch.stop();
+      log(
+        '$operation.failed',
+        data: {...data, 'durationMs': stopwatch.elapsedMilliseconds},
+        error: error,
+        stackTrace: stackTrace,
+      );
+      rethrow;
     }
   }
 
@@ -169,6 +209,9 @@ class DeveloperLogService {
 
   Map<String, Object?> _environment() => {
     'appVersion': appVersion,
+    'buildNumber': appBuildNumber,
+    'session': _sessionId,
+    'pid': pid,
     'platform': Platform.operatingSystem,
     'platformVersion': Platform.operatingSystemVersion,
     'locale': Platform.localeName,
