@@ -8,7 +8,7 @@ void main() {
       'packaging/macos/MainFlutterWindow.swift',
     ).readAsStringSync();
 
-    expect(source, contains('.frame(width: 68, height: 68)'));
+    expect(source, contains('.frame(width: 36, height: 36)'));
     expect(
       source,
       contains(
@@ -17,13 +17,15 @@ void main() {
     );
     expect(
       source,
-      contains('let sidebarWidth: CGFloat = expanded ? 218 : 112'),
+      contains('let sidebarWidth: CGFloat = expanded ? 224 : 112'),
     );
     expect(source, contains('minSize = NSSize(width: 980, height: 680)'));
     expect(source, contains('WindowChromeBridge('));
     expect(source, contains('(sidebarWidth - groupWidth) / 2'));
     expect(source, contains('isLiveResizing || reduceMotion'));
     expect(source, contains('.background(LexoraBackdrop())'));
+    expect(source, contains('LegacyVisualEffect(material: .sidebar)'));
+    expect(source, isNot(contains('.padding(5)')));
     expect(source, isNot(contains('simplified: isLiveResizing')));
   });
 

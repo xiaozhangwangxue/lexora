@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -53,11 +54,14 @@ void main() {
           return http.Response('[]', 200);
         }
         if (request.url.host == 'api.mymemory.translated.net') {
-          return http.Response(
-            jsonEncode({
-              'responseData': {'translatedText': '中文翻译'},
-            }),
+          return http.Response.bytes(
+            utf8.encode(
+              jsonEncode({
+                'responseData': {'translatedText': '中文翻译'},
+              }),
+            ),
             200,
+            headers: const {'content-type': 'application/json; charset=utf-8'},
           );
         }
         return http.Response('not found', 404);
@@ -487,5 +491,120 @@ void main() {
     expect(entry.phrases, hasLength(1));
     expect(entry.phrases.single.phrase, 'take it easy');
     expect(entry.phrases.single.meaningZh, contains('中译'));
+  });
+
+  test(
+    'suggestion prefetch warms only three English entries and one translation',
+    () async {
+      SharedPreferences.setMockInitialValues({});
+      final dictionaryTerms = <String>[];
+      final translatedTexts = <String>[];
+      final client = MockClient((request) async {
+        if (request.url.host == 'api.dictionaryapi.dev') {
+          final term = Uri.decodeComponent(request.url.pathSegments.last);
+          dictionaryTerms.add(term);
+          return http.Response(
+            jsonEncode([
+              {
+                'word': term,
+                'phonetics': const [],
+                'meanings': [
+                  {
+                    'partOfSpeech': 'noun',
+                    'synonyms': const [],
+                    'antonyms': const [],
+                    'definitions': [
+                      {'definition': '$term definition'},
+                    ],
+                  },
+                ],
+              },
+            ]),
+            200,
+          );
+        }
+        if (request.url.host == 'api.datamuse.com') {
+          return http.Response('[]', 200);
+        }
+        if (request.url.host == 'api.mymemory.translated.net') {
+          translatedTexts.add(request.url.queryParameters['q'] ?? '');
+          return http.Response.bytes(
+            utf8.encode(
+              jsonEncode({
+                'responseData': {'translatedText': '中文翻译'},
+              }),
+            ),
+            200,
+            headers: const {'content-type': 'application/json; charset=utf-8'},
+          );
+        }
+        return http.Response('not found', 404);
+      });
+
+      await WordService(client: client).prefetchCandidates(const [
+        'alpha',
+        'bravo',
+        'charlie',
+        'delta',
+        'echo',
+      ]);
+
+      expect(dictionaryTerms.toSet(), {'alpha', 'bravo', 'charlie'});
+      expect(translatedTexts, ['alpha definition']);
+    },
+  );
+
+  test('translation work never exceeds two concurrent requests', () async {
+    SharedPreferences.setMockInitialValues({});
+    var activeTranslations = 0;
+    var peakTranslations = 0;
+    final client = MockClient((request) async {
+      if (request.url.host == 'api.dictionaryapi.dev') {
+        return http.Response(
+          jsonEncode([
+            {
+              'word': 'rich',
+              'phonetics': const [],
+              'meanings': [
+                {
+                  'partOfSpeech': 'adjective',
+                  'synonyms': ['wealthy', 'abundant', 'vivid'],
+                  'antonyms': ['poor', 'plain'],
+                  'definitions': [
+                    {'definition': 'having a great deal of resources'},
+                    {'definition': 'producing a strong impression'},
+                  ],
+                },
+              ],
+            },
+          ]),
+          200,
+        );
+      }
+      if (request.url.host == 'api.datamuse.com') {
+        return http.Response('[]', 200);
+      }
+      if (request.url.host == 'api.mymemory.translated.net') {
+        activeTranslations++;
+        peakTranslations = max(peakTranslations, activeTranslations);
+        await Future<void>.delayed(const Duration(milliseconds: 12));
+        activeTranslations--;
+        return http.Response.bytes(
+          utf8.encode(
+            jsonEncode({
+              'responseData': {'translatedText': '中文翻译'},
+            }),
+          ),
+          200,
+          headers: const {'content-type': 'application/json; charset=utf-8'},
+        );
+      }
+      return http.Response('not found', 404);
+    });
+
+    await WordService(client: client).lookup('rich', exampleCount: 0);
+
+    expect(peakTranslations, lessThanOrEqualTo(2));
+    expect(peakTranslations, greaterThan(0));
   });
 }

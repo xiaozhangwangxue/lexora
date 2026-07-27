@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'dart:collection';
 import 'dart:convert';
 import 'dart:math';
 
@@ -49,11 +51,17 @@ class WordService {
   final Map<String, Future<List<String>>> _inFlightSuggestions = {};
   final Map<String, String> _translationCache = {};
   final Map<String, Future<String>> _inFlightTranslations = {};
+  final Map<String, List<http.Response?>> _sourceCache = {};
+  final Map<String, Future<List<http.Response?>>> _inFlightSourceLookups = {};
+  final Queue<Completer<void>> _translationWaiters = Queue();
+  int _activeTranslations = 0;
   String? _retainedLookupKey;
   // Bump the cache when provider/fallback semantics change so incomplete
   // results from older releases do not keep causing exact words to fail.
-  static const _cachePrefix = 'lexora.word.v7';
+  static const _cachePrefix = 'lexora.word.v8';
   static const _cacheLifetime = Duration(days: 14);
+  static const _translationUnavailable = '翻译暂不可用';
+  static const _maxTranslationConcurrency = 2;
 
   /// Looks up several words concurrently while preserving their input order.
   ///
@@ -199,6 +207,27 @@ class WordService {
     await Future.wait(List.generate(workers, (_) => worker()));
   }
 
+  /// Warms the dictionary providers for at most three likely suggestions.
+  ///
+  /// This intentionally does not translate every suggestion. Translation is
+  /// much more rate-limited than the English dictionary providers, so only the
+  /// first candidate's primary definition is warmed below.
+  Future<void> prefetchCandidates(
+    Iterable<String> rawTerms, {
+    int maxCandidates = 3,
+  }) async {
+    final terms = rawTerms
+        .map(_normalizeTerm)
+        .where((term) => term.isNotEmpty)
+        .toSet()
+        .take(max(1, min(maxCandidates, 3)))
+        .toList(growable: false);
+    if (terms.isEmpty) return;
+
+    await Future.wait(terms.map(_lookupSources));
+    await _prefetchPrimaryTranslation(terms.first);
+  }
+
   /// Starts a new suggestion session in which candidates may be cached.
   void allowSuggestionCaching() {
     _retainedLookupKey = null;
@@ -215,7 +244,8 @@ class WordService {
     _retainedLookupKey = lookupKey;
     _memoryCache.removeWhere((key, _) => key != lookupKey);
     _suggestionCache.clear();
-    _translationCache.clear();
+    _sourceCache.removeWhere((key, _) => key != word);
+    _inFlightSourceLookups.removeWhere((key, _) => key != word);
 
     final preferences = await SharedPreferences.getInstance();
     final obsolete = preferences.getKeys().where(
@@ -329,42 +359,10 @@ class WordService {
     final cacheKey = '$_cachePrefix.$exampleCount.$word';
     final cached = _readCache(preferences.getString(cacheKey));
     if (cached != null) return cached;
-    final dictionaryUri = Uri.https(
-      'api.dictionaryapi.dev',
-      '/api/v2/entries/en/$word',
-    );
-    final relatedUri = Uri.https('api.datamuse.com', '/words', {
-      'ml': word,
-      'md': 'dfr',
-      'ipa': '1',
-      'max': '30',
-    });
-    final exactUri = Uri.https('api.datamuse.com', '/words', {
-      'sp': word,
-      'md': 'dfrp',
-      'ipa': '1',
-      'max': '8',
-    });
-    final synonymsUri = Uri.https('api.datamuse.com', '/words', {
-      'rel_syn': word,
-      'md': 'f',
-      'max': '12',
-    });
-    final antonymsUri = Uri.https('api.datamuse.com', '/words', {
-      'rel_ant': word,
-      'max': '12',
-    });
-
     // Every provider is isolated. Previously one timeout in the optional
     // related-word request made Future.wait discard a perfectly valid exact
     // dictionary response (even for common words such as "word").
-    final responses = await Future.wait([
-      _getWithRetry(dictionaryUri),
-      _getWithRetry(relatedUri),
-      _getWithRetry(exactUri),
-      _getWithRetry(synonymsUri),
-      _getWithRetry(antonymsUri),
-    ]);
+    final responses = await _lookupSources(word);
     final dictionaryResponse = responses[0];
     final relatedResponse = responses[1];
     final exactResponse = responses[2];
@@ -759,7 +757,9 @@ class WordService {
     return _inFlightTranslations.putIfAbsent(normalized, () async {
       try {
         final translation = await _fetchTranslation(normalized);
-        _translationCache[normalized] = translation;
+        if (translation != _translationUnavailable) {
+          _translationCache[normalized] = translation;
+        }
         return translation;
       } finally {
         _inFlightTranslations.remove(normalized);
@@ -768,21 +768,146 @@ class WordService {
   }
 
   Future<String> _fetchTranslation(String text) async {
+    await _acquireTranslationPermit();
     try {
       final uri = Uri.https('api.mymemory.translated.net', '/get', {
         'q': text,
         'langpair': 'en|zh-CN',
       });
-      final response = await _client
-          .get(uri)
-          .timeout(const Duration(seconds: 15));
-      if (response.statusCode != 200) return '翻译暂不可用';
-      final data = _decodeJson(response) as Map<String, dynamic>;
-      return ((data['responseData'] as Map<String, dynamic>)['translatedText']
-              as String?) ??
-          '翻译暂不可用';
+      for (var attempt = 0; attempt < 3; attempt++) {
+        try {
+          final response = await _client
+              .get(uri)
+              .timeout(const Duration(seconds: 15));
+          if (response.statusCode == 200) {
+            final data = _decodeJson(response) as Map<String, dynamic>;
+            final translated =
+                ((data['responseData']
+                            as Map<String, dynamic>?)?['translatedText']
+                        as String?)
+                    ?.trim();
+            if (translated != null && translated.isNotEmpty) {
+              return translated;
+            }
+            return _translationUnavailable;
+          }
+          if (response.statusCode != 429 && response.statusCode < 500) {
+            return _translationUnavailable;
+          }
+        } catch (_) {
+          if (attempt == 2) return _translationUnavailable;
+        }
+        if (attempt < 2) {
+          await Future<void>.delayed(
+            Duration(milliseconds: 550 * (1 << attempt)),
+          );
+        }
+      }
+      return _translationUnavailable;
+    } finally {
+      _releaseTranslationPermit();
+    }
+  }
+
+  Future<List<http.Response?>> _lookupSources(String rawWord) {
+    final word = _normalizeTerm(rawWord);
+    final cached = _sourceCache[word];
+    if (cached != null) return Future.value(cached);
+    return _inFlightSourceLookups.putIfAbsent(word, () async {
+      try {
+        final dictionaryUri = Uri.https(
+          'api.dictionaryapi.dev',
+          '/api/v2/entries/en/$word',
+        );
+        final relatedUri = Uri.https('api.datamuse.com', '/words', {
+          'ml': word,
+          'md': 'dfr',
+          'ipa': '1',
+          'max': '30',
+        });
+        final exactUri = Uri.https('api.datamuse.com', '/words', {
+          'sp': word,
+          'md': 'dfrp',
+          'ipa': '1',
+          'max': '8',
+        });
+        final synonymsUri = Uri.https('api.datamuse.com', '/words', {
+          'rel_syn': word,
+          'md': 'f',
+          'max': '12',
+        });
+        final antonymsUri = Uri.https('api.datamuse.com', '/words', {
+          'rel_ant': word,
+          'max': '12',
+        });
+        final responses = await Future.wait([
+          _getWithRetry(dictionaryUri),
+          _getWithRetry(relatedUri),
+          _getWithRetry(exactUri),
+          _getWithRetry(synonymsUri),
+          _getWithRetry(antonymsUri),
+        ]);
+        if (responses.any((response) => response?.statusCode == 200) &&
+            (_retainedLookupKey == null ||
+                _retainedLookupKey!.endsWith('|$word'))) {
+          _sourceCache[word] = responses;
+        }
+        return responses;
+      } finally {
+        _inFlightSourceLookups.remove(word);
+      }
+    });
+  }
+
+  Future<void> _prefetchPrimaryTranslation(String word) async {
+    try {
+      final responses = await _lookupSources(word);
+      var definition = '';
+      final dictionaryResponse = responses[0];
+      if (dictionaryResponse?.statusCode == 200) {
+        final decoded = _decodeJson(dictionaryResponse!) as List;
+        if (decoded.isNotEmpty) {
+          final dictionary = decoded.first as Map<String, dynamic>;
+          final meanings = (dictionary['meanings'] as List? ?? const [])
+              .cast<Map<String, dynamic>>();
+          final definitions = meanings.expand(
+            (meaning) => (meaning['definitions'] as List? ?? const [])
+                .cast<Map<String, dynamic>>(),
+          );
+          for (final item in definitions) {
+            definition = (item['definition'] as String? ?? '').trim();
+            if (definition.isNotEmpty) break;
+          }
+        }
+      }
+      if (definition.isEmpty) {
+        final exact = _exactDatamuseItem(
+          _decodeDatamuseNullable(responses[2]),
+          word,
+        );
+        definition = _definitionFromDatamuse(exact);
+      }
+      if (definition.isNotEmpty) await _translate(definition);
     } catch (_) {
-      return '翻译暂不可用';
+      // Candidate prefetching must never interrupt typing.
+    }
+  }
+
+  Future<void> _acquireTranslationPermit() async {
+    if (_activeTranslations < _maxTranslationConcurrency) {
+      _activeTranslations++;
+      return;
+    }
+    final waiter = Completer<void>();
+    _translationWaiters.add(waiter);
+    await waiter.future;
+  }
+
+  void _releaseTranslationPermit() {
+    if (_translationWaiters.isNotEmpty) {
+      _translationWaiters.removeFirst().complete();
+    } else {
+      _activeTranslations--;
     }
   }
 

@@ -122,13 +122,7 @@ class _SearchScreenState extends State<SearchScreen> {
         ...suggestions,
       };
       widget.onResultVisibilityChanged?.call(visibleTerms.isNotEmpty);
-      unawaited(
-        _wordService.prefetchAll(
-          visibleTerms,
-          exampleCount: 3,
-          maxConcurrency: 4,
-        ),
-      );
+      unawaited(_wordService.prefetchCandidates(visibleTerms));
     });
     setState(() {});
     widget.onResultVisibilityChanged?.call(_matchingHistory.isNotEmpty);
@@ -954,8 +948,7 @@ class _WordLinks extends StatelessWidget {
   );
 }
 
-String _partOfSpeechLabel(String value, bool isZh) {
-  if (!isZh) return value;
+String _partOfSpeechLabel(String value, bool _) {
   const translations = {
     'noun': '名词',
     'verb': '动词',

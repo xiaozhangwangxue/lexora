@@ -189,7 +189,7 @@ private struct LexoraNativeShell: View {
     GeometryReader { proxy in
       let canExpand = proxy.size.width >= 850
       let expanded = canExpand && prefersExpandedSidebar
-      let sidebarWidth: CGFloat = expanded ? 218 : 112
+      let sidebarWidth: CGFloat = expanded ? 224 : 112
       HStack(spacing: 0) {
         nativeSidebar(expanded: expanded, canExpand: canExpand)
           .frame(width: sidebarWidth)
@@ -199,9 +199,6 @@ private struct LexoraNativeShell: View {
               : .timingCurve(0.77, 0, 0.175, 1, duration: 0.26),
             value: expanded
           )
-
-        Divider().opacity(0.36)
-
         FlutterControllerContainer(controller: flutterViewController)
           .background(Color(nsColor: .windowBackgroundColor).opacity(0.72))
           .clipShape(Rectangle())
@@ -241,11 +238,11 @@ private struct LexoraNativeShell: View {
         Image(nsImage: NSApp.applicationIconImage)
           .resizable()
           .scaledToFit()
-          .frame(width: 68, height: 68)
-          .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+          .frame(width: 36, height: 36)
+          .clipShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
         if expanded {
           Text("Lexora")
-            .font(.system(size: 20, weight: .bold, design: .rounded))
+            .font(.system(size: 18, weight: .semibold, design: .rounded))
             .transition(
               reduceMotion
                 ? .opacity
@@ -254,10 +251,10 @@ private struct LexoraNativeShell: View {
         }
       }
       .frame(maxWidth: .infinity, alignment: expanded ? .leading : .center)
-      .frame(height: 78)
-      .padding(.horizontal, expanded ? 14 : 0)
-      .padding(.top, 40)
-      .padding(.bottom, 10)
+      .frame(height: 48)
+      .padding(.horizontal, expanded ? 10 : 0)
+      .padding(.top, 42)
+      .padding(.bottom, 16)
 
       ForEach(Array(items.enumerated()), id: \.offset) { index, item in
         navigationButton(index: index, item: item, expanded: expanded)
@@ -284,30 +281,45 @@ private struct LexoraNativeShell: View {
         }
         .buttonStyle(.plain)
         .foregroundStyle(.secondary)
-        .padding(.horizontal, 9)
+        .padding(.horizontal, 4)
         .help(expanded ? localized("收起边栏", "Collapse sidebar") : localized("展开边栏", "Expand sidebar"))
       }
 
-      Text("3.2.3")
+      Text("3.2.4")
         .font(.caption2.monospacedDigit())
         .foregroundStyle(.tertiary)
         .frame(maxWidth: .infinity, alignment: expanded ? .leading : .center)
         .padding(.horizontal, expanded ? 15 : 0)
         .padding(.bottom, 14)
     }
-    .padding(.horizontal, 7)
+    .padding(.horizontal, 12)
     .contentShape(Rectangle())
+    .background {
+      ZStack {
+        LegacyVisualEffect(material: .sidebar)
+        LinearGradient(
+          colors: [
+            Color.white.opacity(0.055),
+            Color.accentColor.opacity(0.035),
+            Color.black.opacity(0.025),
+          ],
+          startPoint: .topLeading,
+          endPoint: .bottomTrailing
+        )
+      }
+      .ignoresSafeArea()
+    }
+    .overlay(alignment: .trailing) {
+      Rectangle()
+        .fill(Color.primary.opacity(0.10))
+        .frame(width: 0.5)
+        .ignoresSafeArea()
+    }
 
     if #available(macOS 26.0, *) {
-      content
-        .glassEffect(
-          .clear.interactive(),
-          in: RoundedRectangle(cornerRadius: 12, style: .continuous)
-        )
-        .padding(5)
+      content.glassEffect(.clear, in: Rectangle())
     } else {
       content
-        .background(.ultraThinMaterial)
     }
   }
 
@@ -336,26 +348,19 @@ private struct LexoraNativeShell: View {
             )
         }
       }
-      .foregroundStyle(selected ? Color.accentColor : Color.secondary)
+      .foregroundStyle(selected ? Color.primary : Color.secondary)
       .frame(maxWidth: .infinity, alignment: expanded ? .leading : .center)
       .frame(height: 42)
       .padding(.horizontal, expanded ? 12 : 0)
       .background(
         RoundedRectangle(cornerRadius: 10, style: .continuous)
-          .fill(selected ? Color.accentColor.opacity(0.12) : Color.clear)
+          .fill(selected ? Color.primary.opacity(0.075) : Color.clear)
       )
       .contentShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
     }
     .buttonStyle(.plain)
     .help(localized(item.zh, item.en))
-    if #available(macOS 26.0, *), selected {
-      button.glassEffect(
-        .clear.interactive(),
-        in: RoundedRectangle(cornerRadius: 10, style: .continuous)
-      )
-    } else {
-      button
-    }
+    button
   }
 
   private var items: [NavigationItem] {

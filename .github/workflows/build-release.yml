@@ -125,7 +125,16 @@ jobs:
           name: lexora-pdf-qa
           path: apps/lexora/build/qa/*.pdf
           if-no-files-found: error
+      - name: Build macOS application with the Xcode 26 lipo compatibility shim
+        if: matrix.platform == 'macos'
+        run: PATH="$PWD/tool:$PATH" flutter build macos --release
+        env:
+          ANDROID_KEYSTORE_PATH: ${{ github.workspace }}/apps/lexora/android/release.keystore
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
       - name: Build application
+        if: matrix.platform != 'macos'
         run: ${{ matrix.command }}
         env:
           ANDROID_KEYSTORE_PATH: ${{ github.workspace }}/apps/lexora/android/release.keystore

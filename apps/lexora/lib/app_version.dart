@@ -1,20 +1,18 @@
-const appVersion = '3.2.3';
-const appBuildNumber = 22;
+const appVersion = '3.2.4';
+const appBuildNumber = 23;
 
 const releaseNotesZh = <String>[
-  '输入时并发预取全部联想词结果，确认查询后只保留当前词条缓存。',
-  '修复部分词条显示原始音标编码的问题，音标统一转换为可读 IPA。',
-  '结果文字支持选择复制，关联词可双击打开可拖拽的快速预览。',
-  '双击桌面侧栏“单词”可返回搜索主页，联想出现时立即隐藏 GitHub 按钮。',
-  '词性增加中文说明，历史页顶栏和搜索历史列表使用统一布局。',
-  '调整设置页中搜索字体与开发者模式的位置。',
+  '联想输入时仅预取前三个候选的英文词典数据，并只预热首项释义翻译，避免翻译服务限流。',
+  '翻译请求限制为两路并发，遇到限流会渐进重试；失败结果不再污染缓存。',
+  '确认查询后保留已完成的翻译缓存，重复查看释义更快、更稳定。',
+  'macOS 侧栏改为贴边原生半透明材质，选中态与收展动画更接近系统应用。',
+  '词性在中英文界面中都同时显示中文说明。',
 ];
 
 const releaseNotesEn = <String>[
-  'All visible suggestions now prefetch concurrently; only the chosen result remains cached after search.',
-  'Fixed raw pronunciation codes by converting fallback phonetics into readable IPA.',
-  'Result text is selectable, and related words open in a draggable preview on double-click.',
-  'Double-click Words in the desktop sidebar to return home; GitHub hides as suggestions appear.',
-  'Parts of speech include Chinese labels, with a unified history header and list layout.',
-  'Reordered search text and developer settings for a clearer settings flow.',
+  'Typing now prefetches English dictionary data for only the top three suggestions and warms just the first definition translation.',
+  'Translation work is capped at two concurrent requests with progressive retries; failed responses are no longer cached.',
+  'Completed translation cache survives a confirmed search for faster, more reliable repeat viewing.',
+  'The macOS sidebar now uses a flush native translucent material with calmer selection and resizing motion.',
+  'Parts of speech include Chinese labels in both interface languages.',
 ];
