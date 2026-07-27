@@ -100,6 +100,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
+  Future<void> _openLicense(BuildContext context) async {
+    final uri = Uri.parse(
+      'https://github.com/xiaozhangwangxue/lexora/blob/main/LICENSE',
+    );
+    if (!await launchUrl(uri, mode: LaunchMode.externalApplication) &&
+        context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(AppLocalizations.of(context).openGitHubFailed)),
+      );
+    }
+  }
+
   Future<void> _showDonation(BuildContext context) => showDialog<void>(
     context: context,
     builder: (context) {
@@ -283,12 +295,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
             FilledButton.icon(
               onPressed: () => Navigator.of(dialogContext).pop(true),
               icon: const Icon(Icons.download_rounded),
-              label: Text(strings.downloadAndInstall),
+              label: Text(
+                Platform.isMacOS
+                    ? strings.openOfficialDownload
+                    : strings.downloadAndInstall,
+              ),
             ),
           ],
         ),
       );
-      if (confirmed == true && context.mounted) {
+      if (confirmed == true && context.mounted && Platform.isMacOS) {
+        await UpdateService().openMacDownloadPageAndQuit(update);
+      } else if (confirmed == true && context.mounted) {
         await showDialog<void>(
           context: context,
           barrierDismissible: false,
@@ -607,81 +625,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ),
                       const SizedBox(height: 18),
                       _SettingsSection(
-                        title: strings.quickLinks,
-                        icon: Icons.north_east_rounded,
-                        child: Column(
-                          children: [
-                            ListTile(
-                              contentPadding: EdgeInsets.zero,
-                              leading: Container(
-                                width: 42,
-                                height: 42,
-                                decoration: BoxDecoration(
-                                  color: theme.colorScheme.primaryContainer,
-                                  borderRadius: BorderRadius.circular(13),
-                                ),
-                                child: Icon(
-                                  Icons.system_update_alt_rounded,
-                                  color: theme.colorScheme.primary,
-                                ),
-                              ),
-                              title: Text(strings.checkForUpdates),
-                              subtitle: Text(strings.checkForUpdatesHint),
-                              trailing: const Icon(Icons.chevron_right_rounded),
-                              onTap: () => _checkForUpdates(context),
-                            ),
-                            const Divider(height: 24),
-                            ListTile(
-                              contentPadding: EdgeInsets.zero,
-                              leading: Container(
-                                width: 42,
-                                height: 42,
-                                decoration: BoxDecoration(
-                                  gradient: LinearGradient(
-                                    colors: [
-                                      theme.colorScheme.primary,
-                                      theme.colorScheme.tertiary,
-                                    ],
-                                    begin: Alignment.topLeft,
-                                    end: Alignment.bottomRight,
-                                  ),
-                                  borderRadius: BorderRadius.circular(13),
-                                ),
-                                child: const Icon(
-                                  Icons.language_rounded,
-                                  color: Colors.white,
-                                ),
-                              ),
-                              title: Text(strings.officialWebsite),
-                              subtitle: Text(strings.officialWebsiteHint),
-                              trailing: const Icon(Icons.open_in_new_rounded),
-                              onTap: () => _openWebsite(context),
-                            ),
-                            const Divider(height: 24),
-                            ListTile(
-                              contentPadding: EdgeInsets.zero,
-                              leading: Container(
-                                width: 42,
-                                height: 42,
-                                decoration: BoxDecoration(
-                                  color: theme.colorScheme.tertiaryContainer,
-                                  borderRadius: BorderRadius.circular(13),
-                                ),
-                                child: Icon(
-                                  Icons.favorite_rounded,
-                                  color: theme.colorScheme.tertiary,
-                                ),
-                              ),
-                              title: Text(strings.donate),
-                              subtitle: Text(strings.donateHint),
-                              trailing: const Icon(Icons.qr_code_2_rounded),
-                              onTap: () => _showDonation(context),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 18),
-                      _SettingsSection(
                         title: strings.isZh ? '搜索结果字体' : 'Search result text',
                         icon: Icons.text_fields_rounded,
                         child: Column(
@@ -731,6 +674,51 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                       settings.copyWith(searchTextScale: 1),
                                     ),
                               child: Text(strings.isZh ? '恢复默认' : 'Reset'),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 18),
+                      _SettingsSection(
+                        title: strings.quickLinks,
+                        icon: Icons.north_east_rounded,
+                        child: Column(
+                          children: [
+                            _QuickLinkTile(
+                              icon: Icons.system_update_alt_rounded,
+                              color: theme.colorScheme.primary,
+                              background: theme.colorScheme.primaryContainer,
+                              title: strings.checkForUpdates,
+                              subtitle: strings.checkForUpdatesHint,
+                              onTap: () => _checkForUpdates(context),
+                            ),
+                            const Divider(height: 24),
+                            _QuickLinkTile(
+                              icon: Icons.language_rounded,
+                              color: Colors.white,
+                              background: theme.colorScheme.primary,
+                              title: strings.officialWebsite,
+                              subtitle: strings.officialWebsiteHint,
+                              onTap: () => _openWebsite(context),
+                            ),
+                            const Divider(height: 24),
+                            _QuickLinkTile(
+                              icon: Icons.balance_rounded,
+                              color: theme.colorScheme.secondary,
+                              background: theme.colorScheme.secondaryContainer,
+                              title: strings.openSourceLicense,
+                              subtitle: strings.openSourceLicenseHint,
+                              onTap: () => _openLicense(context),
+                            ),
+                            const Divider(height: 24),
+                            _QuickLinkTile(
+                              icon: Icons.favorite_rounded,
+                              color: theme.colorScheme.tertiary,
+                              background: theme.colorScheme.tertiaryContainer,
+                              title: strings.donate,
+                              subtitle: strings.donateHint,
+                              trailing: Icons.qr_code_2_rounded,
+                              onTap: () => _showDonation(context),
                             ),
                           ],
                         ),
@@ -833,6 +821,44 @@ class _UpdateDownloadDialogState extends State<_UpdateDownloadDialog> {
       ),
     );
   }
+}
+
+class _QuickLinkTile extends StatelessWidget {
+  const _QuickLinkTile({
+    required this.icon,
+    required this.color,
+    required this.background,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+    this.trailing = Icons.open_in_new_rounded,
+  });
+
+  final IconData icon;
+  final Color color;
+  final Color background;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+  final IconData trailing;
+
+  @override
+  Widget build(BuildContext context) => ListTile(
+    contentPadding: EdgeInsets.zero,
+    leading: Container(
+      width: 42,
+      height: 42,
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(13),
+      ),
+      child: Icon(icon, color: color),
+    ),
+    title: Text(title),
+    subtitle: Text(subtitle),
+    trailing: Icon(trailing),
+    onTap: onTap,
+  );
 }
 
 class _SettingsSection extends StatelessWidget {

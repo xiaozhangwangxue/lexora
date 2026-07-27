@@ -62,6 +62,7 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
   bool _releaseNotesPending = false;
   bool _releaseNotesShowing = false;
   bool _searchShowingResult = false;
+  bool _readerOpen = false;
   bool? _desktopSidebarExpandedPreference;
   bool? _nativeMacShellAvailable;
   Completer<void>? _resumeCompleter;
@@ -113,6 +114,12 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
     if (call.method != 'selectPage') return;
     final page = call.arguments as int?;
     if (page == null || page < 0 || page > 4 || !mounted) return;
+    if (_readerOpen && Navigator.of(context).canPop()) {
+      Navigator.of(context).popUntil((route) => route.isFirst);
+      _readerOpen = false;
+      await WidgetsBinding.instance.endOfFrame;
+      if (!mounted) return;
+    }
     _selectPage(page, animate: false);
   }
 
@@ -500,6 +507,7 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
     const recordsPage = 2;
     _selectPage(recordsPage, animate: false);
     final isPdf = book.format == BookFormat.pdf;
+    _readerOpen = true;
     await Navigator.of(context).push(
       PageRouteBuilder<void>(
         // Rasterizing the first PDF pages and animating the entire route at
@@ -526,6 +534,7 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
               ),
       ),
     );
+    _readerOpen = false;
     if (mounted) _selectPage(recordsPage, animate: false);
     DeveloperLogService.instance.log(
       'reader.closed',
@@ -796,6 +805,12 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
           WidgetsBinding.instance.addPostFrameCallback(
             (_) => _searchController.search(term),
           );
+        },
+        onCreateVocabularyBook: (terms) {
+          final merged = <String>{..._vocabularyTerms, ...terms}.toList();
+          setState(() => _vocabularyTerms = merged);
+          _dismissAndroidKeyboard();
+          _selectPage(1, animate: false);
         },
       ),
       SettingsScreen(

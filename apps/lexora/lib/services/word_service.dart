@@ -43,6 +43,12 @@ class WordService {
   WordService({http.Client? client}) : _client = client ?? http.Client();
 
   final http.Client _client;
+  final Map<String, WordEntry> _memoryCache = {};
+  final Map<String, Future<WordEntry>> _inFlightLookups = {};
+  final Map<String, List<String>> _suggestionCache = {};
+  final Map<String, Future<List<String>>> _inFlightSuggestions = {};
+  final Map<String, String> _translationCache = {};
+  final Map<String, Future<String>> _inFlightTranslations = {};
   // Bump the cache when provider/fallback semantics change so incomplete
   // results from older releases do not keep causing exact words to fail.
   static const _cachePrefix = 'lexora.word.v6';
@@ -123,6 +129,27 @@ class WordService {
   Future<List<String>> suggest(String rawTerm, {int maxResults = 12}) async {
     final term = _normalizeTerm(rawTerm);
     if (term.isEmpty) return const [];
+    final key = '$maxResults|$term';
+    final cached = _suggestionCache[key];
+    if (cached != null) return cached;
+    return _inFlightSuggestions.putIfAbsent(key, () async {
+      try {
+        final suggestions = await _fetchSuggestions(
+          term,
+          maxResults: maxResults,
+        );
+        _suggestionCache[key] = suggestions;
+        return suggestions;
+      } finally {
+        _inFlightSuggestions.remove(key);
+      }
+    });
+  }
+
+  Future<List<String>> _fetchSuggestions(
+    String term, {
+    required int maxResults,
+  }) async {
     final response = await _getWithRetry(
       Uri.https('api.datamuse.com', '/sug', {
         's': term,
@@ -137,6 +164,14 @@ class WordService {
         .toSet()
         .take(maxResults)
         .toList(growable: false);
+  }
+
+  Future<void> prefetch(String rawWord, {int exampleCount = 1}) async {
+    try {
+      await lookup(rawWord, exampleCount: exampleCount);
+    } catch (_) {
+      // Prefetching is opportunistic; the explicit search reports errors.
+    }
   }
 
   Future<_FuzzyLookupResult?> _lookupFuzzy(
@@ -215,6 +250,24 @@ class WordService {
 
   Future<WordEntry> lookup(String rawWord, {int exampleCount = 1}) async {
     final word = _normalizeTerm(rawWord);
+    final key = '$exampleCount|$word';
+    final memoryEntry = _memoryCache[key];
+    if (memoryEntry != null) return memoryEntry;
+    return _inFlightLookups.putIfAbsent(key, () async {
+      try {
+        final entry = await _lookupUncached(word, exampleCount: exampleCount);
+        _memoryCache[key] = entry;
+        return entry;
+      } finally {
+        _inFlightLookups.remove(key);
+      }
+    });
+  }
+
+  Future<WordEntry> _lookupUncached(
+    String word, {
+    required int exampleCount,
+  }) async {
     final preferences = await SharedPreferences.getInstance();
     final cacheKey = '$_cachePrefix.$exampleCount.$word';
     final cached = _readCache(preferences.getString(cacheKey));
@@ -566,6 +619,22 @@ class WordService {
   }
 
   Future<String> _translate(String text) async {
+    final normalized = text.trim();
+    if (normalized.isEmpty) return '';
+    final cached = _translationCache[normalized];
+    if (cached != null) return cached;
+    return _inFlightTranslations.putIfAbsent(normalized, () async {
+      try {
+        final translation = await _fetchTranslation(normalized);
+        _translationCache[normalized] = translation;
+        return translation;
+      } finally {
+        _inFlightTranslations.remove(normalized);
+      }
+    });
+  }
+
+  Future<String> _fetchTranslation(String text) async {
     try {
       final uri = Uri.https('api.mymemory.translated.net', '/get', {
         'q': text,

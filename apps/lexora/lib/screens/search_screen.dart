@@ -75,7 +75,10 @@ class _SearchScreenState extends State<SearchScreen> {
       oldWidget.controller._search = null;
       widget.controller._search = _search;
     }
-    if (oldWidget.active && !widget.active) _focusNode.unfocus();
+    if (oldWidget.active && !widget.active) {
+      _focusNode.unfocus();
+      SystemChannels.textInput.invokeMethod<void>('TextInput.hide');
+    }
   }
 
   @override
@@ -104,6 +107,9 @@ class _SearchScreenState extends State<SearchScreen> {
       final suggestions = await _wordService.suggest(query, maxResults: 12);
       if (!mounted || revision != _suggestionRevision) return;
       setState(() => _remoteSuggestions = suggestions);
+      if (suggestions.any((item) => _normalize(item) == query)) {
+        unawaited(_wordService.prefetch(query, exampleCount: 3));
+      }
     });
     setState(() {});
   }
@@ -148,6 +154,7 @@ class _SearchScreenState extends State<SearchScreen> {
     _textController.text = term;
     _textController.selection = TextSelection.collapsed(offset: term.length);
     _focusNode.unfocus();
+    widget.onResultVisibilityChanged?.call(true);
     setState(() {
       _loading = true;
       _error = null;
@@ -238,6 +245,12 @@ class _SearchScreenState extends State<SearchScreen> {
         _focusNode.hasFocus &&
         hasQuery &&
         (_matchingHistory.isNotEmpty || _freshSuggestions.isNotEmpty);
+    final reduceMotion = MediaQuery.disableAnimationsOf(context);
+    final compactHeader =
+        _entry != null || _loading || _error != null || showSuggestions;
+    final motionDuration = reduceMotion
+        ? Duration.zero
+        : const Duration(milliseconds: 340);
     return SafeArea(
       child: Center(
         child: ConstrainedBox(
@@ -246,15 +259,22 @@ class _SearchScreenState extends State<SearchScreen> {
             padding: const EdgeInsets.fromLTRB(20, 18, 20, 12),
             child: Column(
               children: [
-                if (_entry == null && !_loading) ...[
-                  const Spacer(flex: 2),
-                  const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 24),
-                    child: LexoraWordmark(fontSize: 64, hero: true),
+                AnimatedSize(
+                  duration: motionDuration,
+                  curve: const Cubic(.22, 1, .36, 1),
+                  alignment: Alignment.bottomCenter,
+                  child: SizedBox(
+                    height: compactHeader ? 8 : 220,
+                    child: compactHeader
+                        ? null
+                        : const Center(
+                            child: Padding(
+                              padding: EdgeInsets.symmetric(horizontal: 24),
+                              child: LexoraWordmark(fontSize: 64, hero: true),
+                            ),
+                          ),
                   ),
-                  const SizedBox(height: 28),
-                ] else
-                  const SizedBox(height: 8),
+                ),
                 _SearchField(
                   controller: _textController,
                   focusNode: _focusNode,
@@ -262,13 +282,34 @@ class _SearchScreenState extends State<SearchScreen> {
                   onChanged: _queryChanged,
                   onSubmitted: _search,
                 ),
-                if (showSuggestions)
-                  _SuggestionPanel(
-                    history: _matchingHistory,
-                    fresh: _freshSuggestions,
-                    isZh: _isZh,
-                    onSelected: _search,
-                  ),
+                AnimatedSwitcher(
+                  duration: reduceMotion
+                      ? const Duration(milliseconds: 100)
+                      : const Duration(milliseconds: 260),
+                  switchInCurve: const Cubic(.22, 1, .36, 1),
+                  switchOutCurve: Curves.easeOut,
+                  transitionBuilder: (child, animation) {
+                    final fade = FadeTransition(
+                      opacity: animation,
+                      child: child,
+                    );
+                    if (reduceMotion) return fade;
+                    return SizeTransition(
+                      sizeFactor: animation,
+                      alignment: Alignment.topCenter,
+                      child: fade,
+                    );
+                  },
+                  child: showSuggestions
+                      ? _SuggestionPanel(
+                          key: const ValueKey('suggestions'),
+                          history: _matchingHistory,
+                          fresh: _freshSuggestions,
+                          isZh: _isZh,
+                          onSelected: _search,
+                        )
+                      : const SizedBox(key: ValueKey('no-suggestions')),
+                ),
                 if (_entry == null && !_loading && _error == null)
                   const Spacer(flex: 3)
                 else
@@ -335,6 +376,7 @@ class _SearchField extends StatelessWidget {
 
 class _SuggestionPanel extends StatelessWidget {
   const _SuggestionPanel({
+    super.key,
     required this.history,
     required this.fresh,
     required this.isZh,
@@ -472,7 +514,6 @@ class _ResultView extends StatelessWidget {
       children: [
         LayoutBuilder(
           builder: (context, constraints) {
-            final compact = constraints.maxWidth < 650;
             final title = Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -517,50 +558,36 @@ class _ResultView extends StatelessWidget {
                     color: theme.colorScheme.outline,
                   ),
                 ),
-                IconButton.filledTonal(
-                  tooltip: added
-                      ? (isZh ? '从词汇书移除' : 'Remove from Vocabulary Book')
-                      : (isZh ? '添加到词汇书' : 'Add to Vocabulary Book'),
-                  onPressed: onToggleVocabulary,
-                  icon: AnimatedSwitcher(
-                    duration: MediaQuery.disableAnimationsOf(context)
-                        ? const Duration(milliseconds: 120)
-                        : const Duration(milliseconds: 160),
-                    switchInCurve: const Cubic(.23, 1, .32, 1),
-                    transitionBuilder: (child, animation) {
-                      final fade = FadeTransition(
-                        opacity: animation,
-                        child: child,
-                      );
-                      if (MediaQuery.disableAnimationsOf(context)) return fade;
-                      return ScaleTransition(
-                        scale: Tween<double>(
-                          begin: .92,
-                          end: 1,
-                        ).animate(animation),
-                        child: fade,
-                      );
-                    },
-                    child: Icon(
-                      added ? Icons.check_rounded : Icons.add_rounded,
-                      key: ValueKey(added),
-                    ),
-                  ),
-                ),
               ],
             );
-            if (compact) {
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [title, const SizedBox(height: 12), metrics],
-              );
-            }
-            return Row(
+            return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(child: title),
-                const SizedBox(width: 18),
-                Flexible(child: metrics),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(child: title),
+                    const SizedBox(width: 12),
+                    IconButton.filledTonal(
+                      tooltip: added
+                          ? (isZh ? '从词汇书移除' : 'Remove from Vocabulary Book')
+                          : (isZh ? '添加到词汇书' : 'Add to Vocabulary Book'),
+                      onPressed: onToggleVocabulary,
+                      icon: AnimatedSwitcher(
+                        duration: MediaQuery.disableAnimationsOf(context)
+                            ? const Duration(milliseconds: 100)
+                            : const Duration(milliseconds: 180),
+                        switchInCurve: const Cubic(.22, 1, .36, 1),
+                        child: Icon(
+                          added ? Icons.check_rounded : Icons.add_rounded,
+                          key: ValueKey(added),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                metrics,
               ],
             );
           },

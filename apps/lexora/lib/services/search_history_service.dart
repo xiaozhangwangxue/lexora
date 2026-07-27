@@ -87,6 +87,18 @@ class SearchHistoryService {
     await _save(records);
   }
 
+  Future<void> removeMany(Iterable<SearchHistoryRecord> selected) async {
+    final keys = selected
+        .map((item) => '${item.searchedAt.toIso8601String()}|${item.query}')
+        .toSet();
+    final records = [...await load()]
+      ..removeWhere(
+        (item) =>
+            keys.contains('${item.searchedAt.toIso8601String()}|${item.query}'),
+      );
+    await _save(records);
+  }
+
   Future<void> clear() => _save(const []);
 
   Future<void> _save(List<SearchHistoryRecord> records) async {

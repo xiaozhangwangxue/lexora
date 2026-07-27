@@ -8,6 +8,35 @@ import 'package:lexora/services/update_service.dart';
 void main() {
   final apkBytes = <int>[0x50, 0x4b, 0x03, 0x04, 1, 2, 3, 4, 5, 6];
 
+  test('macOS browser update opens the official download then exits', () async {
+    final events = <String>[];
+    final service = UpdateService(
+      manifestUri: Uri.parse('https://lexora.12323456.xyz/version.json'),
+      platformKey: 'macos',
+      launchExternal: (uri) async {
+        events.add(uri.toString());
+        return true;
+      },
+      finishMacUpdate: () async => events.add('finish'),
+      isMacOS: true,
+    );
+    await service.openMacDownloadPageAndQuit(
+      UpdateInfo(
+        version: '99.0.0',
+        download: UpdateDownload(
+          urls: [Uri.parse('https://example.invalid/lexora.dmg')],
+          filename: 'lexora-macos-v99.0.0.dmg',
+        ),
+        notesZh: const [],
+        notesEn: const [],
+      ),
+    );
+    expect(events, [
+      'https://lexora.12323456.xyz/downloads/lexora-macos-v99.0.0.dmg',
+      'finish',
+    ]);
+  });
+
   test(
     'uses the verified R2 source before opening the Android installer',
     () async {

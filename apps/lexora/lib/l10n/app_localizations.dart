@@ -248,12 +248,14 @@ class AppLocalizations {
   String updateAvailable(String version) =>
       isZh ? '发现 Lexora $version' : 'Lexora $version is available';
   String get downloadAndInstall => isZh ? '下载并安装' : 'Download and install';
+  String get openOfficialDownload =>
+      isZh ? '前往官网下载' : 'Open official download';
   String get downloadingUpdate => isZh ? '正在下载安装包…' : 'Downloading installer…';
   String get launchingInstaller =>
       isZh ? '正在启动系统安装器…' : 'Opening the system installer…';
   String get macUpdateExitHint => isZh
-      ? '下载并校验完成后，Lexora 会打开 DMG 与“隐私与安全”设置并自动退出。拖动安装后若被拦截，请在该页面选择“仍要打开”。'
-      : 'After download and verification, Lexora opens the DMG and Privacy & Security, then quits automatically. If macOS blocks the updated app, choose Open Anyway there.';
+      ? '确认后会在浏览器打开官网下载链接，同时打开“隐私与安全”设置并自动退出 Lexora。安装后若被拦截，请在该页面选择“仍要打开”。'
+      : 'Lexora will open the official browser download and Privacy & Security, then quit automatically. If macOS blocks the updated app, choose Open Anyway there.';
   String updateFailed(String error) =>
       isZh ? '更新失败：$error' : 'Update failed: $error';
   String get retry => isZh ? '重试' : 'Retry';
@@ -261,6 +263,10 @@ class AppLocalizations {
   String get continueLabel => isZh ? '继续使用' : 'Continue';
   String get openWebsiteFailed =>
       isZh ? '无法打开 Lexora 官网。' : 'Could not open the Lexora website.';
+  String get openSourceLicense => isZh ? '开源协议' : 'Open-source license';
+  String get openSourceLicenseHint => isZh
+      ? '查看 Lexora 的开源许可内容'
+      : 'Read the license used by Lexora';
   String get donate => isZh ? '支持 Lexora' : 'Support Lexora';
   String get donateHint => isZh
       ? '捐款完全自愿，不会解锁付费功能。'

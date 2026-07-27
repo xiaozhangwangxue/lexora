@@ -19,7 +19,7 @@ const donationCodes = {
   alipay: "https://photo.12323456.xyz/api/rfile/%E6%94%AF%E4%BB%98%E5%AE%9D.jpg",
 };
 
-const currentVersion = "v3.2.1";
+const currentVersion = "v3.2.2";
 const previousVersion = "v3.1.0";
 const platforms: Array<{ key: PlatformKey; name: string; noteZh: string; noteEn: string; Icon: IconType; file: string }> = [
   { key: "macos", name: "macOS", noteZh: "macOS 12+ · 拖动安装 DMG", noteEn: "macOS 12+ · Drag-to-install DMG", Icon: FaApple, file: `lexora-macos-${currentVersion}.dmg` },
@@ -54,8 +54,8 @@ const installGuides: Record<PlatformKey, { zh: string[]; en: string[] }> = {
     en: ["Extract the tar.gz archive.", "If needed, allow the lexora file to run as a program or use chmod +x.", "Launch the lexora executable."],
   },
   android: {
-    zh: ["从 v0.3.0 或更高版本可直接覆盖安装 v3.2.1；只有 v0.2.0 需先卸载一次。", "下载 APK，系统询问时允许浏览器安装未知来源应用。", "确认文件来自本官网后，选择“仍要安装”；安装后可关闭该权限。"],
-    en: ["v0.3.0 and newer can update directly to v3.2.1. Only v0.2.0 requires one uninstall first.", "Download the APK and allow your browser to install unknown apps when Android asks.", "After verifying this official site, choose Install anyway. You can revoke that permission afterward."],
+    zh: ["从 v0.3.0 或更高版本可直接覆盖安装 v3.2.2；只有 v0.2.0 需先卸载一次。", "下载 APK，系统询问时允许浏览器安装未知来源应用。", "确认文件来自本官网后，选择“仍要安装”；安装后可关闭该权限。"],
+    en: ["v0.3.0 and newer can update directly to v3.2.2. Only v0.2.0 requires one uninstall first.", "Download the APK and allow your browser to install unknown apps when Android asks.", "After verifying this official site, choose Install anyway. You can revoke that permission afterward."],
   },
 };
 
@@ -71,6 +71,7 @@ export default function Home() {
   const [progress, setProgress] = useState<number | null>(null);
   const [downloadChoice, setDownloadChoice] = useState<PlatformKey | null>(null);
   const [detectedPlatform, setDetectedPlatform] = useState<DetectedPlatform | null>(null);
+  const [demoPage, setDemoPage] = useState<"search" | "book" | "history">("book");
   const draggedWord = useRef<string | null>(null);
   const listRef = useRef<HTMLOListElement | null>(null);
   const dragPreviewRef = useRef<DragPreview | null>(null);
@@ -259,21 +260,37 @@ export default function Home() {
           <a className="textButton" href="#demo">{zh ? "试试交互演示" : "Try the live demo"} <span>↘</span></a>
         </div>
 
-        <div className="appWindow" id="demo">
+        <div className={`appWindow demo-${detectedPlatform ?? "macos"} ${detectedPlatform === "android" || detectedPlatform === "ios" ? "demoMobile" : "demoDesktop"}`} id="demo">
           <div className="windowBar">
-            <div className="traffic"><i /><i /><i /></div>
+            <div className="traffic" aria-label={detectedPlatform === "windows" ? "Windows window controls" : "macOS window controls"}>
+              {detectedPlatform === "windows" ? <span className="windowsTitle">Lexora</span> : <><i /><i /><i /></>}
+            </div>
             <div className="miniBrand"><LexoraWordmark /></div>
-            <div className="windowMenu">•••</div>
+            <div className="windowMenu">{detectedPlatform === "windows" ? "—　□　×" : detectedPlatform === "android" || detectedPlatform === "ios" ? "9:41　●" : "•••"}</div>
           </div>
           <div className="appBody">
             <aside>
-              <button><span>⌕</span> {zh ? "单词" : "Words"}</button>
-              <button className="active"><span>◫</span> {zh ? "词汇书" : "Vocabulary Book"}</button>
-              <button><span>▤</span> {zh ? "生成记录" : "Generated"}</button>
+              <button className={demoPage === "search" ? "active" : undefined} onClick={() => setDemoPage("search")}><span>⌕</span> {zh ? "单词" : "Words"}</button>
+              <button className={demoPage === "book" ? "active" : undefined} onClick={() => setDemoPage("book")}><span>◫</span> {zh ? "词汇书" : "Vocabulary Book"}</button>
+              <button className={demoPage === "history" ? "active" : undefined} onClick={() => setDemoPage("history")}><span>▤</span> {zh ? "生成记录" : "Generated"}</button>
               <button><span>↺</span> {zh ? "历史" : "History"}</button>
               <div className="asideFoot">{currentVersion} · Open source</div>
             </aside>
-            <section className="composer">
+            {demoPage === "search" && (
+              <section className="demoSearchPage">
+                <LexoraWordmark hero />
+                <div className="demoSearchBox">⌕ <span>serendipity</span><kbd>↵</kbd></div>
+                <article className="demoResult">
+                  <header><div><h2>serendipity</h2><p>US /ˌserənˈdɪpəti/ · UK /ˌserənˈdɪpəti/</p></div><button aria-label={zh ? "添加到词汇书" : "Add to book"}>＋</button></header>
+                  <div><b>B2–C1</b><b>freq 2.4</b></div>
+                  <h3>noun · {zh ? "名词" : "noun"}</h3>
+                  <p>The occurrence of useful discoveries by chance.</p>
+                  <p className="demoTranslation">因偶然而发现有价值事物的机缘。</p>
+                  <p><a>chance discovery</a> · <a>happy accident</a> · <a>fortuity</a></p>
+                </article>
+              </section>
+            )}
+            {demoPage === "book" && <section className="composer">
               <div className="composerHead">
                 <h2>{zh ? "创建词汇书" : "Create a vocabulary book"}</h2>
                 <p>{zh ? "输入一个英文单词并按下回车键" : "Type an English word and press Enter"}</p>
@@ -367,8 +384,21 @@ export default function Home() {
                   <span className="dragPreviewHandle">⠿</span>
                 </div>
               )}
-            </section>
+            </section>}
+            {demoPage === "history" && (
+              <section className="demoHistoryPage">
+                <div className="composerHead"><h2>{zh ? "生成记录" : "Generated"}</h2><p>{zh ? "随时打开、分享或导出你的词汇书" : "Open, share, or export your books anytime"}</p></div>
+                {["lexora-20260727-181245.pdf", "my-vocabulary-book.epub", "weekly-review.docx"].map((file, index) => (
+                  <article key={file}><span>{index === 1 ? "EPUB" : index === 2 ? "DOCX" : "PDF"}</span><div><strong>{file}</strong><small>{12 + index * 8} {zh ? "个词条" : "entries"} · 2026-07-27</small></div><button>•••</button></article>
+                ))}
+              </section>
+            )}
           </div>
+          <nav className="demoBottomNav" aria-label={zh ? "演示页面" : "Demo pages"}>
+            <button className={demoPage === "search" ? "active" : undefined} onClick={() => setDemoPage("search")}>⌕<small>{zh ? "单词" : "Words"}</small></button>
+            <button className={demoPage === "book" ? "active" : undefined} onClick={() => setDemoPage("book")}>◫<small>{zh ? "词汇书" : "Book"}</small></button>
+            <button className={demoPage === "history" ? "active" : undefined} onClick={() => setDemoPage("history")}>▤<small>{zh ? "记录" : "Generated"}</small></button>
+          </nav>
         </div>
       </section>
 

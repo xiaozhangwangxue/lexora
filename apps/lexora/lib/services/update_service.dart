@@ -15,6 +15,7 @@ typedef InstallerOpener = Future<bool> Function(File file);
 typedef CacheDirectoryProvider = Future<Directory> Function();
 typedef MacUpdateFinisher = Future<void> Function();
 typedef MacInstallerPreparer = Future<void> Function(File file);
+typedef ExternalUriLauncher = Future<bool> Function(Uri uri);
 
 class UpdateDownload {
   const UpdateDownload({
@@ -55,6 +56,7 @@ class UpdateService {
     InstallerOpener? openInstaller,
     MacUpdateFinisher? finishMacUpdate,
     MacInstallerPreparer? prepareMacInstaller,
+    ExternalUriLauncher? launchExternal,
     bool? isMacOS,
   }) : _client = client ?? http.Client(),
        _manifestUri = manifestUri ?? _defaultManifestUri,
@@ -64,6 +66,7 @@ class UpdateService {
        _finishMacUpdate = finishMacUpdate ?? _defaultFinishMacUpdate,
        _prepareMacInstaller =
            prepareMacInstaller ?? _defaultPrepareMacInstaller,
+       _launchExternal = launchExternal ?? _defaultLaunchExternal,
        _isMacOS = isMacOS ?? Platform.isMacOS;
 
   static final Uri _defaultManifestUri = Uri.parse(
@@ -78,6 +81,7 @@ class UpdateService {
   final InstallerOpener _openInstaller;
   final MacUpdateFinisher _finishMacUpdate;
   final MacInstallerPreparer _prepareMacInstaller;
+  final ExternalUriLauncher _launchExternal;
   final bool _isMacOS;
 
   Future<UpdateInfo?> check() async {
@@ -187,6 +191,27 @@ class UpdateService {
       await DeveloperLogService.instance.flush();
       rethrow;
     }
+  }
+
+  /// Uses a normal browser download on macOS so Gatekeeper sees the same
+  /// user-approved file that it receives from Safari or Chrome.
+  Future<void> openMacDownloadPageAndQuit(UpdateInfo info) async {
+    if (!_isMacOS) {
+      throw UnsupportedError('The browser update flow is macOS-only.');
+    }
+    final downloadPage = _manifestUri.resolve(
+      '/downloads/${Uri.encodeComponent(info.download.filename)}',
+    );
+    DeveloperLogService.instance.log(
+      'update.mac_browser_download',
+      data: {'version': info.version, 'url': downloadPage.toString()},
+    );
+    if (!await _launchExternal(downloadPage)) {
+      throw const FileSystemException(
+        'The official download page could not be opened.',
+      );
+    }
+    await _finishMacUpdate();
   }
 
   Future<File> _downloadValidated(
@@ -404,6 +429,9 @@ class UpdateService {
     final result = await OpenFilex.open(file.path);
     return result.type == ResultType.done;
   }
+
+  static Future<bool> _defaultLaunchExternal(Uri uri) =>
+      launchUrl(uri, mode: LaunchMode.externalApplication);
 
   static Future<void> _defaultPrepareMacInstaller(File file) async {
     // Files created by a sandboxed app are tagged with quarantine flag 0x02

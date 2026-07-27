@@ -59,6 +59,8 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev
       - name: Generate platform shells
         run: flutter create --project-name lexora --platforms=android,linux,macos,windows .
+      - name: Enforce desktop minimum window size
+        run: dart run tool/configure_desktop_window_limits.dart
       - name: Enable current MSVC compatibility for Windows plugins
         if: matrix.platform == 'windows'
         shell: pwsh

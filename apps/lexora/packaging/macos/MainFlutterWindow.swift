@@ -195,7 +195,10 @@ private struct LexoraNativeShell: View {
           .background(Color(nsColor: .windowBackgroundColor).opacity(0.72))
           .clipShape(Rectangle())
       }
-      .background(LexoraBackdrop(simplified: isLiveResizing))
+      // Keep the native material alive during live resize. The minimum window
+      // size now prevents pathological layouts without visually flattening the
+      // Liquid Glass surface while the user drags an edge.
+      .background(LexoraBackdrop())
       .overlay(alignment: .topLeading) {
         WindowChromeBridge(
           sidebarWidth: sidebarWidth,
@@ -274,7 +277,7 @@ private struct LexoraNativeShell: View {
         .help(expanded ? localized("收起边栏", "Collapse sidebar") : localized("展开边栏", "Expand sidebar"))
       }
 
-      Text("3.2.1")
+      Text("3.2.2")
         .font(.caption2.monospacedDigit())
         .foregroundStyle(.tertiary)
         .frame(maxWidth: .infinity, alignment: expanded ? .leading : .center)
@@ -622,28 +625,20 @@ private struct NavigationItem {
 }
 
 private struct LexoraBackdrop: View {
-  var simplified = false
-
-  @ViewBuilder
   var body: some View {
-    if simplified {
-      Color(nsColor: .windowBackgroundColor)
+    ZStack {
+      LegacyVisualEffect(material: .underWindowBackground)
         .ignoresSafeArea()
-    } else {
-      ZStack {
-        LegacyVisualEffect(material: .underWindowBackground)
-          .ignoresSafeArea()
-        LinearGradient(
-          colors: [
-            Color.accentColor.opacity(0.08),
-            Color(nsColor: .windowBackgroundColor).opacity(0.58),
-            Color.cyan.opacity(0.035),
-          ],
-          startPoint: .topLeading,
-          endPoint: .bottomTrailing
-        )
-        .ignoresSafeArea()
-      }
+      LinearGradient(
+        colors: [
+          Color.accentColor.opacity(0.08),
+          Color(nsColor: .windowBackgroundColor).opacity(0.58),
+          Color.cyan.opacity(0.035),
+        ],
+        startPoint: .topLeading,
+        endPoint: .bottomTrailing
+      )
+      .ignoresSafeArea()
     }
   }
 }

@@ -11,6 +11,7 @@ class HistoryHubScreen extends StatefulWidget {
     required this.onRegenerate,
     required this.onCustomizePdf,
     required this.onSearch,
+    required this.onCreateVocabularyBook,
     this.historyService,
   });
 
@@ -18,6 +19,7 @@ class HistoryHubScreen extends StatefulWidget {
   final ValueChanged<List<String>> onRegenerate;
   final Future<void> Function() onCustomizePdf;
   final ValueChanged<String> onSearch;
+  final ValueChanged<List<String>> onCreateVocabularyBook;
   final HistoryService? historyService;
 
   @override
@@ -42,29 +44,59 @@ class _HistoryHubScreenState extends State<HistoryHubScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  _isZh ? '历史' : 'History',
-                  style: theme.textTheme.headlineMedium?.copyWith(
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const SizedBox(height: 14),
-                SegmentedButton<int>(
-                  segments: [
-                    ButtonSegment(
-                      value: 0,
-                      icon: const Icon(Icons.auto_stories_outlined),
-                      label: Text(_isZh ? '生成历史' : 'Generated words'),
-                    ),
-                    ButtonSegment(
-                      value: 1,
-                      icon: const Icon(Icons.manage_search_rounded),
-                      label: Text(_isZh ? '搜索历史' : 'Search history'),
-                    ),
-                  ],
-                  selected: {_tab},
-                  onSelectionChanged: (value) =>
-                      setState(() => _tab = value.first),
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final selector = SegmentedButton<int>(
+                      segments: [
+                        ButtonSegment(
+                          value: 0,
+                          icon: const Icon(Icons.auto_stories_outlined),
+                          label: Text(_isZh ? '生成历史' : 'Generated'),
+                        ),
+                        ButtonSegment(
+                          value: 1,
+                          icon: const Icon(Icons.manage_search_rounded),
+                          label: Text(_isZh ? '搜索历史' : 'Search'),
+                        ),
+                      ],
+                      selected: {_tab},
+                      onSelectionChanged: (value) =>
+                          setState(() => _tab = value.first),
+                    );
+                    if (constraints.maxWidth < 720) {
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            _isZh ? '历史' : 'History',
+                            style: theme.textTheme.headlineMedium?.copyWith(
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          Center(child: selector),
+                        ],
+                      );
+                    }
+                    return SizedBox(
+                      height: 48,
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          Align(
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              _isZh ? '历史' : 'History',
+                              style: theme.textTheme.headlineMedium?.copyWith(
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ),
+                          Center(child: selector),
+                        ],
+                      ),
+                    );
+                  },
                 ),
                 const SizedBox(height: 8),
                 Expanded(
@@ -78,7 +110,10 @@ class _HistoryHubScreenState extends State<HistoryHubScreen> {
                         onCustomizePdf: widget.onCustomizePdf,
                         historyService: widget.historyService,
                       ),
-                      SearchHistoryScreen(onSearch: widget.onSearch),
+                      SearchHistoryScreen(
+                        onSearch: widget.onSearch,
+                        onCreateVocabularyBook: widget.onCreateVocabularyBook,
+                      ),
                     ],
                   ),
                 ),

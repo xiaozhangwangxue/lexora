@@ -23,7 +23,8 @@ void main() {
     expect(source, contains('WindowChromeBridge('));
     expect(source, contains('(sidebarWidth - groupWidth) / 2'));
     expect(source, contains('isLiveResizing || reduceMotion'));
-    expect(source, contains('LexoraBackdrop(simplified: isLiveResizing)'));
+    expect(source, contains('.background(LexoraBackdrop())'));
+    expect(source, isNot(contains('simplified: isLiveResizing')));
   });
 
   test('macOS release declares photo-library usage before image export', () {

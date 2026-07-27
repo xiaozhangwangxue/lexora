@@ -1,71 +1,73 @@
 {
-  "version": "3.2.1",
+  "version": "3.2.2",
   "releaseNotes": {
     "zh": [
-      "修复 macOS 导出图片时因相册权限说明缺失而闪退的问题。",
-      "快速调整桌面窗口宽度时暂停高成本毛玻璃和侧栏动画，松手后自动恢复，明显减少卡顿。",
-      "搜索结果显示后自动隐藏 GitHub 按钮，避免遮挡内容。",
-      "修复窄窗口下搜索结果挤压错位，并限制桌面窗口最小尺寸。",
-      "重新居中 macOS 收起侧栏后的红绿灯按钮，并适当加宽收起状态。"
+      "macOS 更新改为跳转官网下载安装，并自动退出应用及打开“隐私与安全”。",
+      "搜索联想会提前预取结果，并复用内存缓存与进行中的请求，缩短等待时间。",
+      "搜索开始即隐藏 GitHub 按钮，联想面板与搜索框使用更自然的非线性动画。",
+      "修复阅读器无法通过桌面侧栏退出、安卓切换词汇书时误弹键盘的问题。",
+      "搜索历史支持多种排序、多选删除和批量加入词汇书。",
+      "官网演示会按设备显示移动端或桌面端外观，并可切换多个功能页面。"
     ],
     "en": [
-      "Fixed a macOS crash when exporting images caused by missing Photos permission descriptions.",
-      "Reduced desktop resize jank by pausing expensive glass effects and sidebar animation during live resizing, then restoring them afterward.",
-      "The GitHub button now hides when a search result is shown so it cannot cover content.",
-      "Fixed compressed search-result layouts and enforced a safe minimum desktop window size.",
-      "Recentered macOS traffic-light controls in the wider collapsed sidebar."
+      "macOS updates now open the official download, quit Lexora, and reveal Privacy & Security.",
+      "Suggestions now prefetch results and reuse memory caches plus in-flight requests for faster searches.",
+      "GitHub hides as soon as searching starts, with smoother nonlinear suggestion motion.",
+      "Fixed desktop sidebar reader exit and unwanted Android keyboard popups.",
+      "Search history now supports sorting, multi-select deletion, and batch book creation.",
+      "The website demo now adapts to mobile or desktop and includes multiple interactive pages."
     ]
   },
   "downloads": {
-    "android": "/downloads/lexora-android-v3.2.1.apk",
-    "macos": "/downloads/lexora-macos-v3.2.1.dmg",
-    "windows": "/downloads/lexora-windows-v3.2.1-setup.exe",
-    "linux": "/downloads/lexora-linux-v3.2.1.tar.gz"
+    "android": "/downloads/lexora-android-v3.2.2.apk",
+    "macos": "/downloads/lexora-macos-v3.2.2.dmg",
+    "windows": "/downloads/lexora-windows-v3.2.2-setup.exe",
+    "linux": "/downloads/lexora-linux-v3.2.2.tar.gz"
   },
   "verifiedDownloads": {
     "android": {
-      "filename": "lexora-android-v3.2.1.apk",
-      "url": "/updates/lexora-android-v3.2.1.apk",
+      "filename": "lexora-android-v3.2.2.apk",
+      "url": "/updates/lexora-android-v3.2.2.apk",
       "sources": [
-        "/updates/lexora-android-v3.2.1.apk",
-        "https://lexora-official.xiaozhangwangxue.workers.dev/updates/lexora-android-v3.2.1.apk",
-        "https://github.com/xiaozhangwangxue/lexora/releases/download/v3.2.1/lexora-android-v3.2.1.apk"
+        "/updates/lexora-android-v3.2.2.apk",
+        "https://lexora-official.xiaozhangwangxue.workers.dev/updates/lexora-android-v3.2.2.apk",
+        "https://github.com/xiaozhangwangxue/lexora/releases/download/v3.2.2/lexora-android-v3.2.2.apk"
       ],
-      "sha256": "bc3f03f3381384591cfda37ef42d149c027be34d9ce39248cd05798cd40c1ceb",
-      "size": 98667439
+      "sha256": "",
+      "size": 0
     },
     "macos": {
-      "filename": "lexora-macos-v3.2.1.dmg",
-      "url": "/updates/lexora-macos-v3.2.1.dmg",
+      "filename": "lexora-macos-v3.2.2.dmg",
+      "url": "/updates/lexora-macos-v3.2.2.dmg",
       "sources": [
-        "/updates/lexora-macos-v3.2.1.dmg",
-        "https://lexora-official.xiaozhangwangxue.workers.dev/updates/lexora-macos-v3.2.1.dmg",
-        "https://github.com/xiaozhangwangxue/lexora/releases/download/v3.2.1/lexora-macos-v3.2.1.dmg"
+        "/updates/lexora-macos-v3.2.2.dmg",
+        "https://lexora-official.xiaozhangwangxue.workers.dev/updates/lexora-macos-v3.2.2.dmg",
+        "https://github.com/xiaozhangwangxue/lexora/releases/download/v3.2.2/lexora-macos-v3.2.2.dmg"
       ],
-      "sha256": "8542b047508663896b94dbd566a3f88e94a8dc8fd8a24bcab70c41eda1f46e01",
-      "size": 47016059
+      "sha256": "",
+      "size": 0
     },
     "windows": {
-      "filename": "lexora-windows-v3.2.1-setup.exe",
-      "url": "/updates/lexora-windows-v3.2.1-setup.exe",
+      "filename": "lexora-windows-v3.2.2-setup.exe",
+      "url": "/updates/lexora-windows-v3.2.2-setup.exe",
       "sources": [
-        "/updates/lexora-windows-v3.2.1-setup.exe",
-        "https://lexora-official.xiaozhangwangxue.workers.dev/updates/lexora-windows-v3.2.1-setup.exe",
-        "https://github.com/xiaozhangwangxue/lexora/releases/download/v3.2.1/lexora-windows-v3.2.1-setup.exe"
+        "/updates/lexora-windows-v3.2.2-setup.exe",
+        "https://lexora-official.xiaozhangwangxue.workers.dev/updates/lexora-windows-v3.2.2-setup.exe",
+        "https://github.com/xiaozhangwangxue/lexora/releases/download/v3.2.2/lexora-windows-v3.2.2-setup.exe"
       ],
-      "sha256": "401903077694b3d3a55664533de3b86a4aaad76680e422c18538dfdc15475976",
-      "size": 27232976
+      "sha256": "",
+      "size": 0
     },
     "linux": {
-      "filename": "lexora-linux-v3.2.1.tar.gz",
-      "url": "/updates/lexora-linux-v3.2.1.tar.gz",
+      "filename": "lexora-linux-v3.2.2.tar.gz",
+      "url": "/updates/lexora-linux-v3.2.2.tar.gz",
       "sources": [
-        "/updates/lexora-linux-v3.2.1.tar.gz",
-        "https://lexora-official.xiaozhangwangxue.workers.dev/updates/lexora-linux-v3.2.1.tar.gz",
-        "https://github.com/xiaozhangwangxue/lexora/releases/download/v3.2.1/lexora-linux-v3.2.1.tar.gz"
+        "/updates/lexora-linux-v3.2.2.tar.gz",
+        "https://lexora-official.xiaozhangwangxue.workers.dev/updates/lexora-linux-v3.2.2.tar.gz",
+        "https://github.com/xiaozhangwangxue/lexora/releases/download/v3.2.2/lexora-linux-v3.2.2.tar.gz"
       ],
-      "sha256": "a6b30f6a31222d89018ffaa2e9eb02cdcdda260a4ddf384d8af31d79afb065a7",
-      "size": 31367873
+      "sha256": "",
+      "size": 0
     }
   }
 }

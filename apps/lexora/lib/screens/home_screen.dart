@@ -291,7 +291,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 TextField(
                   controller: _controller,
                   focusNode: _focusNode,
-                  autofocus: widget.active,
+                  autofocus: false,
                   textInputAction: TextInputAction.done,
                   onSubmitted: _addWord,
                   decoration: InputDecoration(
