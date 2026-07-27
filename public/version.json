@@ -202,8 +202,8 @@
         "https://lexora-official.xiaozhangwangxue.workers.dev/updates/lexora-android-v4.0.0.apk",
         "https://github.com/xiaozhangwangxue/lexora/releases/download/v4.0.0/lexora-android-v4.0.0.apk"
       ],
-      "sha256": null,
-      "size": null
+      "sha256": "fc57e1ed23611311c9a4c7569fda96f20d4476cf8564427adea6d2af500634de",
+      "size": 99749019
     },
     "macos": {
       "filename": "lexora-macos-v4.0.0.dmg",
@@ -213,8 +213,8 @@
         "https://lexora-official.xiaozhangwangxue.workers.dev/updates/lexora-macos-v4.0.0.dmg",
         "https://github.com/xiaozhangwangxue/lexora/releases/download/v4.0.0/lexora-macos-v4.0.0.dmg"
       ],
-      "sha256": null,
-      "size": null
+      "sha256": "50c53a08081c1a1f015f65e36c841a74001ff12cc0dc93f4dbd8daee6462442e",
+      "size": 47319031
     },
     "windows": {
       "filename": "lexora-windows-v4.0.0-setup.exe",
@@ -224,8 +224,8 @@
         "https://lexora-official.xiaozhangwangxue.workers.dev/updates/lexora-windows-v4.0.0-setup.exe",
         "https://github.com/xiaozhangwangxue/lexora/releases/download/v4.0.0/lexora-windows-v4.0.0-setup.exe"
       ],
-      "sha256": null,
-      "size": null
+      "sha256": "8325e19b98627b4751f611f54ff6b5d3e00e51c70ff7c25cfa422f8794b7f79d",
+      "size": 27331859
     },
     "linux": {
       "filename": "lexora-linux-v4.0.0.tar.gz",
@@ -235,8 +235,8 @@
         "https://lexora-official.xiaozhangwangxue.workers.dev/updates/lexora-linux-v4.0.0.tar.gz",
         "https://github.com/xiaozhangwangxue/lexora/releases/download/v4.0.0/lexora-linux-v4.0.0.tar.gz"
       ],
-      "sha256": null,
-      "size": null
+      "sha256": "237ef65c46dd70911309e5bd7a3b9971b92c1524e4bae36386e7614ccfc16498",
+      "size": 31515321
     }
   },
   "historicalDownloads": [
