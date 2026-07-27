@@ -33,8 +33,8 @@
         "https://lexora-official.xiaozhangwangxue.workers.dev/updates/lexora-android-v3.2.2.apk",
         "https://github.com/xiaozhangwangxue/lexora/releases/download/v3.2.2/lexora-android-v3.2.2.apk"
       ],
-      "sha256": "",
-      "size": 0
+      "sha256": "dc6f24f9febaed32c36934fb20ccb967fc14aaae01fdc7f3765b16416200acd7",
+      "size": 98765935
     },
     "macos": {
       "filename": "lexora-macos-v3.2.2.dmg",
@@ -44,8 +44,8 @@
         "https://lexora-official.xiaozhangwangxue.workers.dev/updates/lexora-macos-v3.2.2.dmg",
         "https://github.com/xiaozhangwangxue/lexora/releases/download/v3.2.2/lexora-macos-v3.2.2.dmg"
       ],
-      "sha256": "",
-      "size": 0
+      "sha256": "6e65aed4e49f5ddee8fd31f266149d06322606955940cb2cb84a13b57d80a026",
+      "size": 47023608
     },
     "windows": {
       "filename": "lexora-windows-v3.2.2-setup.exe",
@@ -55,8 +55,8 @@
         "https://lexora-official.xiaozhangwangxue.workers.dev/updates/lexora-windows-v3.2.2-setup.exe",
         "https://github.com/xiaozhangwangxue/lexora/releases/download/v3.2.2/lexora-windows-v3.2.2-setup.exe"
       ],
-      "sha256": "",
-      "size": 0
+      "sha256": "7b9e98ef3ac0e6feee1807c0bb42711d00c1682cdceb35bea264122539bf3024",
+      "size": 27240005
     },
     "linux": {
       "filename": "lexora-linux-v3.2.2.tar.gz",
@@ -66,8 +66,8 @@
         "https://lexora-official.xiaozhangwangxue.workers.dev/updates/lexora-linux-v3.2.2.tar.gz",
         "https://github.com/xiaozhangwangxue/lexora/releases/download/v3.2.2/lexora-linux-v3.2.2.tar.gz"
       ],
-      "sha256": "",
-      "size": 0
+      "sha256": "363c5ca5b92f380ae03c13379e47033d99c16eb4a05c8113dbc886b2c9d91c6f",
+      "size": 31379150
     }
   }
 }
