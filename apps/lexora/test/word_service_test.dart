@@ -355,6 +355,48 @@ void main() {
     expect(entry.frequency, 210);
   });
 
+  test('Datamuse ARPAbet fallback is converted to readable IPA', () async {
+    SharedPreferences.setMockInitialValues({});
+    final client = MockClient((request) async {
+      if (request.url.host == 'api.dictionaryapi.dev') {
+        return http.Response('{}', 404);
+      }
+      if (request.url.host == 'api.datamuse.com' &&
+          request.url.queryParameters['sp'] == 'excellently') {
+        return http.Response(
+          jsonEncode([
+            {
+              'word': 'excellently',
+              'defs': ['adv\tin an excellent manner'],
+              'tags': ['pron:EH1 K S AH0 L AH0 N T L IY0', 'f:1.2'],
+            },
+          ]),
+          200,
+        );
+      }
+      if (request.url.host == 'api.datamuse.com') {
+        return http.Response('[]', 200);
+      }
+      if (request.url.host == 'api.mymemory.translated.net') {
+        return http.Response(
+          jsonEncode({
+            'responseData': {'translatedText': '出色地'},
+          }),
+          200,
+        );
+      }
+      return http.Response('not found', 404);
+    });
+
+    final entry = await WordService(
+      client: client,
+    ).lookup('excellently', exampleCount: 0);
+
+    expect(entry.usPhonetic, '/ˈɛksələntli/');
+    expect(entry.ukPhonetic, '/ˈɛksələntli/');
+    expect(entry.usPhonetic, isNot(contains('EH1')));
+  });
+
   test(
     'lookupAll rejects a suggestion that is not sufficiently similar',
     () async {

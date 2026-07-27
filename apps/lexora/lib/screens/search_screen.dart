@@ -10,8 +10,10 @@ import '../widgets/lexora_wordmark.dart';
 
 class SearchScreenController {
   void Function(String term)? _search;
+  VoidCallback? _reset;
 
   void search(String term) => _search?.call(term);
+  void reset() => _reset?.call();
 }
 
 class SearchScreen extends StatefulWidget {
@@ -65,6 +67,7 @@ class _SearchScreenState extends State<SearchScreen> {
     _wordService = widget.wordService ?? WordService();
     _historyService = widget.historyService ?? SearchHistoryService();
     widget.controller._search = _search;
+    widget.controller._reset = _reset;
     unawaited(_reloadHistory());
   }
 
@@ -73,7 +76,9 @@ class _SearchScreenState extends State<SearchScreen> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.controller != widget.controller) {
       oldWidget.controller._search = null;
+      oldWidget.controller._reset = null;
       widget.controller._search = _search;
+      widget.controller._reset = _reset;
     }
     if (oldWidget.active && !widget.active) {
       _focusNode.unfocus();
@@ -84,6 +89,7 @@ class _SearchScreenState extends State<SearchScreen> {
   @override
   void dispose() {
     widget.controller._search = null;
+    widget.controller._reset = null;
     _debounce?.cancel();
     _textController.dispose();
     _focusNode.dispose();
@@ -100,18 +106,32 @@ class _SearchScreenState extends State<SearchScreen> {
     final query = _normalize(value);
     if (query.isEmpty) {
       setState(() => _remoteSuggestions = const []);
+      widget.onResultVisibilityChanged?.call(
+        _entry != null || _loading || _error != null,
+      );
       return;
     }
+    _wordService.allowSuggestionCaching();
     final revision = ++_suggestionRevision;
     _debounce = Timer(const Duration(milliseconds: 130), () async {
       final suggestions = await _wordService.suggest(query, maxResults: 12);
       if (!mounted || revision != _suggestionRevision) return;
       setState(() => _remoteSuggestions = suggestions);
-      if (suggestions.any((item) => _normalize(item) == query)) {
-        unawaited(_wordService.prefetch(query, exampleCount: 3));
-      }
+      final visibleTerms = <String>{
+        ..._matchingHistory.map((record) => record.resolvedWord),
+        ...suggestions,
+      };
+      widget.onResultVisibilityChanged?.call(visibleTerms.isNotEmpty);
+      unawaited(
+        _wordService.prefetchAll(
+          visibleTerms,
+          exampleCount: 3,
+          maxConcurrency: 4,
+        ),
+      );
     });
     setState(() {});
+    widget.onResultVisibilityChanged?.call(_matchingHistory.isNotEmpty);
   }
 
   List<SearchHistoryRecord> get _matchingHistory {
@@ -180,6 +200,7 @@ class _SearchScreenState extends State<SearchScreen> {
     }
     final entry = result.entries.first;
     await _historyService.record(term, entry);
+    await _wordService.retainOnly(entry.word, exampleCount: 3);
     await _reloadHistory();
     if (!mounted) return;
     setState(() {
@@ -192,7 +213,10 @@ class _SearchScreenState extends State<SearchScreen> {
 
   void _toggleVocabulary() {
     final entry = _entry;
-    if (entry == null) return;
+    if (entry != null) _toggleVocabularyEntry(entry);
+  }
+
+  void _toggleVocabularyEntry(WordEntry entry) {
     final next = [...widget.vocabularyTerms];
     final index = next.indexWhere(
       (item) => _normalize(item) == _normalize(entry.word),
@@ -225,6 +249,43 @@ class _SearchScreenState extends State<SearchScreen> {
     if (entry == null) return false;
     return widget.vocabularyTerms.any(
       (item) => _normalize(item) == _normalize(entry.word),
+    );
+  }
+
+  void _reset() {
+    _debounce?.cancel();
+    _suggestionRevision++;
+    _focusNode.unfocus();
+    _textController.clear();
+    setState(() {
+      _remoteSuggestions = const [];
+      _entry = null;
+      _searchedTerm = '';
+      _error = null;
+      _loading = false;
+    });
+    widget.onResultVisibilityChanged?.call(false);
+  }
+
+  Future<void> _showWordPreview(String term) async {
+    final normalized = _normalize(term);
+    if (normalized.isEmpty || !mounted) return;
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) => _WordPreviewSheet(
+        term: normalized,
+        wordService: _wordService,
+        isZh: _isZh,
+        vocabularyTerms: widget.vocabularyTerms,
+        onToggleVocabulary: _toggleVocabularyEntry,
+        onSearch: (next) {
+          Navigator.of(sheetContext).pop();
+          _search(next);
+        },
+      ),
     );
   }
 
@@ -325,6 +386,7 @@ class _SearchScreenState extends State<SearchScreen> {
                             added: _isAdded,
                             onToggleVocabulary: _toggleVocabulary,
                             onSearch: _search,
+                            onPreview: _showWordPreview,
                           ),
                   ),
               ],
@@ -484,6 +546,8 @@ class _ResultView extends StatelessWidget {
     required this.added,
     required this.onToggleVocabulary,
     required this.onSearch,
+    required this.onPreview,
+    this.scrollController,
   });
 
   final WordEntry entry;
@@ -492,6 +556,8 @@ class _ResultView extends StatelessWidget {
   final bool added;
   final VoidCallback onToggleVocabulary;
   final ValueChanged<String> onSearch;
+  final ValueChanged<String> onPreview;
+  final ScrollController? scrollController;
 
   @override
   Widget build(BuildContext context) {
@@ -509,114 +575,180 @@ class _ResultView extends StatelessWidget {
             ),
           ]
         : entry.senses;
-    return ListView(
-      padding: const EdgeInsets.only(top: 22, bottom: 40),
-      children: [
-        LayoutBuilder(
-          builder: (context, constraints) {
-            final title = Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  entry.word,
-                  style: theme.textTheme.displaySmall?.copyWith(
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: -1.2,
-                  ),
-                ),
-                if (entry.isFuzzyMatch)
+    return SelectionArea(
+      child: ListView(
+        controller: scrollController,
+        padding: const EdgeInsets.only(top: 22, bottom: 40),
+        children: [
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final title = Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
                   Text(
-                    isZh
-                        ? '由“${entry.originalTerm}”匹配'
-                        : 'Matched from “${entry.originalTerm}”',
-                    style: theme.textTheme.bodySmall?.copyWith(
+                    entry.word,
+                    style: theme.textTheme.displaySmall?.copyWith(
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: -1.2,
+                    ),
+                  ),
+                  if (entry.isFuzzyMatch)
+                    Text(
+                      isZh
+                          ? '由“${entry.originalTerm}”匹配'
+                          : 'Matched from “${entry.originalTerm}”',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  const SizedBox(height: 5),
+                  Text(
+                    'US ${entry.usPhonetic}   ·   UK ${entry.ukPhonetic}',
+                    style: theme.textTheme.bodyMedium?.copyWith(
                       color: theme.colorScheme.onSurfaceVariant,
                     ),
                   ),
-                const SizedBox(height: 5),
-                Text(
-                  'US ${entry.usPhonetic}   ·   UK ${entry.ukPhonetic}',
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
+                ],
+              );
+              final metrics = Wrap(
+                crossAxisAlignment: WrapCrossAlignment.center,
+                spacing: 6,
+                runSpacing: 6,
+                children: [
+                  Chip(label: Text(entry.difficulty)),
+                  Chip(
+                    label: Text('freq ${entry.frequency.toStringAsFixed(1)}'),
                   ),
-                ),
-              ],
-            );
-            final metrics = Wrap(
-              crossAxisAlignment: WrapCrossAlignment.center,
-              spacing: 6,
-              runSpacing: 6,
-              children: [
-                Chip(label: Text(entry.difficulty)),
-                Chip(label: Text('freq ${entry.frequency.toStringAsFixed(1)}')),
-                IconButton(
-                  tooltip: isZh ? '难度和词频说明' : 'About difficulty and frequency',
-                  onPressed: () => _showMetricsHelp(context),
-                  icon: Icon(
-                    Icons.help_outline_rounded,
-                    size: 19,
-                    color: theme.colorScheme.outline,
+                  IconButton(
+                    tooltip: isZh
+                        ? '难度和词频说明'
+                        : 'About difficulty and frequency',
+                    onPressed: () => _showMetricsHelp(context),
+                    icon: Icon(
+                      Icons.help_outline_rounded,
+                      size: 19,
+                      color: theme.colorScheme.outline,
+                    ),
                   ),
-                ),
-              ],
-            );
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(child: title),
-                    const SizedBox(width: 12),
-                    IconButton.filledTonal(
-                      tooltip: added
-                          ? (isZh ? '从词汇书移除' : 'Remove from Vocabulary Book')
-                          : (isZh ? '添加到词汇书' : 'Add to Vocabulary Book'),
-                      onPressed: onToggleVocabulary,
-                      icon: AnimatedSwitcher(
-                        duration: MediaQuery.disableAnimationsOf(context)
-                            ? const Duration(milliseconds: 100)
-                            : const Duration(milliseconds: 180),
-                        switchInCurve: const Cubic(.22, 1, .36, 1),
-                        child: Icon(
-                          added ? Icons.check_rounded : Icons.add_rounded,
-                          key: ValueKey(added),
+                ],
+              );
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(child: title),
+                      const SizedBox(width: 12),
+                      IconButton.filledTonal(
+                        tooltip: added
+                            ? (isZh ? '从词汇书移除' : 'Remove from Vocabulary Book')
+                            : (isZh ? '添加到词汇书' : 'Add to Vocabulary Book'),
+                        onPressed: onToggleVocabulary,
+                        icon: AnimatedSwitcher(
+                          duration: MediaQuery.disableAnimationsOf(context)
+                              ? const Duration(milliseconds: 100)
+                              : const Duration(milliseconds: 180),
+                          switchInCurve: const Cubic(.22, 1, .36, 1),
+                          child: Icon(
+                            added ? Icons.check_rounded : Icons.add_rounded,
+                            key: ValueKey(added),
+                          ),
                         ),
                       ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  metrics,
+                ],
+              );
+            },
+          ),
+          const SizedBox(height: 20),
+          for (final sense in senses)
+            if (sense.definitions.isNotEmpty)
+              _section(
+                context,
+                title: sense.partOfSpeech.isEmpty
+                    ? (isZh ? '释义' : 'Definitions')
+                    : _partOfSpeechLabel(sense.partOfSpeech, isZh),
+                children: [
+                  for (final definition in sense.definitions)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(definition.definition),
+                          if (definition.definitionZh.isNotEmpty)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 3),
+                              child: Text(
+                                definition.definitionZh,
+                                style: TextStyle(
+                                  color: theme.colorScheme.primary,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
                     ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                metrics,
-              ],
-            );
-          },
-        ),
-        const SizedBox(height: 20),
-        for (final sense in senses)
-          if (sense.definitions.isNotEmpty)
+                ],
+              ),
+          if (entry.relatedWords.isNotEmpty)
             _section(
               context,
-              title: sense.partOfSpeech.isEmpty
-                  ? (isZh ? '释义' : 'Definitions')
-                  : sense.partOfSpeech,
+              title: isZh ? '联想词' : 'Related words',
               children: [
-                for (final definition in sense.definitions)
+                for (final related in entry.relatedWords)
+                  _LinkedDefinition(
+                    word: related.word,
+                    meaning: related.meaning,
+                    meaningZh: related.meaningZh,
+                    onTap: onSearch,
+                    onDoubleTap: onPreview,
+                  ),
+              ],
+            ),
+          if (entry.synonyms.isNotEmpty)
+            _WordLinks(
+              title: isZh ? '近义词' : 'Synonyms',
+              words: entry.synonyms,
+              translation: entry.synonymsZh,
+              translations: entry.synonymTranslations,
+              onSearch: onSearch,
+              onPreview: onPreview,
+            ),
+          if (entry.antonyms.isNotEmpty)
+            _WordLinks(
+              title: isZh ? '反义词' : 'Antonyms',
+              words: entry.antonyms,
+              translation: entry.antonymsZh,
+              translations: entry.antonymTranslations,
+              onSearch: onSearch,
+              onPreview: onPreview,
+            ),
+          if (entry.examples.isNotEmpty)
+            _section(
+              context,
+              title: isZh ? '例句' : 'Examples',
+              children: [
+                for (var index = 0; index < entry.examples.length; index++)
                   Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
+                    padding: const EdgeInsets.only(bottom: 13),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(definition.definition),
-                        if (definition.definitionZh.isNotEmpty)
-                          Padding(
-                            padding: const EdgeInsets.only(top: 3),
-                            child: Text(
-                              definition.definitionZh,
-                              style: TextStyle(
-                                color: theme.colorScheme.primary,
-                                fontWeight: FontWeight.w600,
-                              ),
+                        _HighlightedText(
+                          text: entry.examples[index],
+                          term: searchedTerm,
+                        ),
+                        if (index < entry.examplesZh.length)
+                          Text(
+                            entry.examplesZh[index],
+                            style: TextStyle(
+                              color: theme.colorScheme.onSurfaceVariant,
                             ),
                           ),
                       ],
@@ -624,89 +756,36 @@ class _ResultView extends StatelessWidget {
                   ),
               ],
             ),
-        if (entry.relatedWords.isNotEmpty)
-          _section(
-            context,
-            title: isZh ? '联想词' : 'Related words',
-            children: [
-              for (final related in entry.relatedWords)
-                _LinkedDefinition(
-                  word: related.word,
-                  meaning: related.meaning,
-                  meaningZh: related.meaningZh,
-                  onTap: onSearch,
-                ),
-            ],
-          ),
-        if (entry.synonyms.isNotEmpty)
-          _WordLinks(
-            title: isZh ? '近义词' : 'Synonyms',
-            words: entry.synonyms,
-            translation: entry.synonymsZh,
-            translations: entry.synonymTranslations,
-            onSearch: onSearch,
-          ),
-        if (entry.antonyms.isNotEmpty)
-          _WordLinks(
-            title: isZh ? '反义词' : 'Antonyms',
-            words: entry.antonyms,
-            translation: entry.antonymsZh,
-            translations: entry.antonymTranslations,
-            onSearch: onSearch,
-          ),
-        if (entry.examples.isNotEmpty)
-          _section(
-            context,
-            title: isZh ? '例句' : 'Examples',
-            children: [
-              for (var index = 0; index < entry.examples.length; index++)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 13),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _HighlightedText(
-                        text: entry.examples[index],
-                        term: searchedTerm,
-                      ),
-                      if (index < entry.examplesZh.length)
-                        Text(
-                          entry.examplesZh[index],
-                          style: TextStyle(
-                            color: theme.colorScheme.onSurfaceVariant,
-                          ),
+          if (entry.phrases.isNotEmpty)
+            _section(
+              context,
+              title: isZh ? '短语与常用搭配' : 'Phrases & collocations',
+              children: [
+                for (final phrase in entry.phrases)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 13),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _HighlightedText(
+                          text: phrase.phrase,
+                          term: searchedTerm,
                         ),
-                    ],
-                  ),
-                ),
-            ],
-          ),
-        if (entry.phrases.isNotEmpty)
-          _section(
-            context,
-            title: isZh ? '短语与常用搭配' : 'Phrases & collocations',
-            children: [
-              for (final phrase in entry.phrases)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 13),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _HighlightedText(text: phrase.phrase, term: searchedTerm),
-                      if (phrase.meaning.isNotEmpty) Text(phrase.meaning),
-                      if (phrase.meaningZh.isNotEmpty)
-                        Text(
-                          phrase.meaningZh,
-                          style: TextStyle(
-                            color: theme.colorScheme.onSurfaceVariant,
+                        if (phrase.meaning.isNotEmpty) Text(phrase.meaning),
+                        if (phrase.meaningZh.isNotEmpty)
+                          Text(
+                            phrase.meaningZh,
+                            style: TextStyle(
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
                           ),
-                        ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
-            ],
-          ),
-      ],
+              ],
+            ),
+        ],
+      ),
     );
   }
 
@@ -757,12 +836,14 @@ class _LinkedDefinition extends StatelessWidget {
     required this.meaning,
     required this.meaningZh,
     required this.onTap,
+    required this.onDoubleTap,
   });
 
   final String word;
   final String meaning;
   final String meaningZh;
   final ValueChanged<String> onTap;
+  final ValueChanged<String> onDoubleTap;
 
   @override
   Widget build(BuildContext context) => Padding(
@@ -772,6 +853,7 @@ class _LinkedDefinition extends StatelessWidget {
       children: [
         InkWell(
           onTap: () => onTap(word),
+          onDoubleTap: () => onDoubleTap(word),
           child: Text(
             word,
             style: TextStyle(
@@ -802,6 +884,7 @@ class _WordLinks extends StatelessWidget {
     required this.translation,
     required this.translations,
     required this.onSearch,
+    required this.onPreview,
   });
 
   final String title;
@@ -809,6 +892,7 @@ class _WordLinks extends StatelessWidget {
   final String translation;
   final Map<String, String> translations;
   final ValueChanged<String> onSearch;
+  final ValueChanged<String> onPreview;
 
   @override
   Widget build(BuildContext context) => Padding(
@@ -834,6 +918,7 @@ class _WordLinks extends StatelessWidget {
                 children: [
                   InkWell(
                     onTap: () => onSearch(word),
+                    onDoubleTap: () => onPreview(word),
                     child: Text(
                       word,
                       style: TextStyle(
@@ -867,6 +952,157 @@ class _WordLinks extends StatelessWidget {
       ],
     ),
   );
+}
+
+String _partOfSpeechLabel(String value, bool isZh) {
+  if (!isZh) return value;
+  const translations = {
+    'noun': '名词',
+    'verb': '动词',
+    'adjective': '形容词',
+    'adverb': '副词',
+    'pronoun': '代词',
+    'preposition': '介词',
+    'conjunction': '连词',
+    'interjection': '感叹词',
+    'determiner': '限定词',
+    'article': '冠词',
+    'numeral': '数词',
+    'auxiliary verb': '助动词',
+    'modal verb': '情态动词',
+    'phrase': '短语',
+  };
+  final normalized = value.trim().toLowerCase();
+  final translated = translations[normalized];
+  return translated == null ? value : '$value · $translated';
+}
+
+class _WordPreviewSheet extends StatefulWidget {
+  const _WordPreviewSheet({
+    required this.term,
+    required this.wordService,
+    required this.isZh,
+    required this.vocabularyTerms,
+    required this.onToggleVocabulary,
+    required this.onSearch,
+  });
+
+  final String term;
+  final WordService wordService;
+  final bool isZh;
+  final List<String> vocabularyTerms;
+  final ValueChanged<WordEntry> onToggleVocabulary;
+  final ValueChanged<String> onSearch;
+
+  @override
+  State<_WordPreviewSheet> createState() => _WordPreviewSheetState();
+}
+
+class _WordPreviewSheetState extends State<_WordPreviewSheet> {
+  late final Future<WordEntry> _entry = _load();
+  bool? _addedOverride;
+
+  Future<WordEntry> _load() async {
+    final result = await widget.wordService.lookupAll(
+      [widget.term],
+      exampleCount: 3,
+      maxConcurrency: 1,
+    );
+    if (result.entries.isEmpty) {
+      throw WordLookupException(
+        widget.isZh ? '没有找到可靠的词典结果。' : 'No reliable result was found.',
+      );
+    }
+    return result.entries.first;
+  }
+
+  bool _isAdded(WordEntry entry) =>
+      _addedOverride ??
+      widget.vocabularyTerms.any(
+        (item) => item.trim().toLowerCase() == entry.word.trim().toLowerCase(),
+      );
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return DraggableScrollableSheet(
+      initialChildSize: .54,
+      minChildSize: .28,
+      maxChildSize: .96,
+      snap: true,
+      snapSizes: const [.54, .96],
+      shouldCloseOnMinExtent: true,
+      expand: false,
+      builder: (context, scrollController) => Material(
+        color: theme.colorScheme.surface,
+        elevation: 12,
+        clipBehavior: Clip.antiAlias,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+        child: Stack(
+          children: [
+            FutureBuilder<WordEntry>(
+              future: _entry,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState != ConnectionState.done) {
+                  return CustomScrollView(
+                    controller: scrollController,
+                    slivers: const [
+                      SliverFillRemaining(
+                        child: Center(child: CircularProgressIndicator()),
+                      ),
+                    ],
+                  );
+                }
+                if (snapshot.hasError || snapshot.data == null) {
+                  return CustomScrollView(
+                    controller: scrollController,
+                    slivers: [
+                      SliverFillRemaining(
+                        child: _SearchError(
+                          message: snapshot.error?.toString() ?? '',
+                        ),
+                      ),
+                    ],
+                  );
+                }
+                final entry = snapshot.data!;
+                return Padding(
+                  padding: const EdgeInsets.fromLTRB(22, 10, 22, 0),
+                  child: _ResultView(
+                    entry: entry,
+                    searchedTerm: widget.term,
+                    isZh: widget.isZh,
+                    added: _isAdded(entry),
+                    onToggleVocabulary: () {
+                      widget.onToggleVocabulary(entry);
+                      setState(() => _addedOverride = !_isAdded(entry));
+                    },
+                    onSearch: widget.onSearch,
+                    onPreview: widget.onSearch,
+                    scrollController: scrollController,
+                  ),
+                );
+              },
+            ),
+            Align(
+              alignment: Alignment.topCenter,
+              child: IgnorePointer(
+                child: Container(
+                  width: 38,
+                  height: 5,
+                  margin: const EdgeInsets.only(top: 8),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.outlineVariant,
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 class _HighlightedText extends StatelessWidget {

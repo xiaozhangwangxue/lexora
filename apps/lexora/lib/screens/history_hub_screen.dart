@@ -44,43 +44,12 @@ class _HistoryHubScreenState extends State<HistoryHubScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                LayoutBuilder(
-                  builder: (context, constraints) {
-                    final selector = SegmentedButton<int>(
-                      segments: [
-                        ButtonSegment(
-                          value: 0,
-                          icon: const Icon(Icons.auto_stories_outlined),
-                          label: Text(_isZh ? '生成历史' : 'Generated'),
-                        ),
-                        ButtonSegment(
-                          value: 1,
-                          icon: const Icon(Icons.manage_search_rounded),
-                          label: Text(_isZh ? '搜索历史' : 'Search'),
-                        ),
-                      ],
-                      selected: {_tab},
-                      onSelectionChanged: (value) =>
-                          setState(() => _tab = value.first),
-                    );
-                    if (constraints.maxWidth < 720) {
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            _isZh ? '历史' : 'History',
-                            style: theme.textTheme.headlineMedium?.copyWith(
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          Center(child: selector),
-                        ],
-                      );
-                    }
-                    return SizedBox(
-                      height: 48,
-                      child: Stack(
+                SizedBox(
+                  height: 48,
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      final compact = constraints.maxWidth < 560;
+                      return Stack(
                         alignment: Alignment.center,
                         children: [
                           Align(
@@ -92,11 +61,33 @@ class _HistoryHubScreenState extends State<HistoryHubScreen> {
                               ),
                             ),
                           ),
-                          Center(child: selector),
+                          Center(
+                            child: SegmentedButton<int>(
+                              segments: [
+                                ButtonSegment(
+                                  value: 0,
+                                  icon: compact
+                                      ? null
+                                      : const Icon(Icons.auto_stories_outlined),
+                                  label: Text(_isZh ? '生成历史' : 'Generated'),
+                                ),
+                                ButtonSegment(
+                                  value: 1,
+                                  icon: compact
+                                      ? null
+                                      : const Icon(Icons.manage_search_rounded),
+                                  label: Text(_isZh ? '搜索历史' : 'Search'),
+                                ),
+                              ],
+                              selected: {_tab},
+                              onSelectionChanged: (value) =>
+                                  setState(() => _tab = value.first),
+                            ),
+                          ),
                         ],
-                      ),
-                    );
-                  },
+                      );
+                    },
+                  ),
                 ),
                 const SizedBox(height: 8),
                 Expanded(

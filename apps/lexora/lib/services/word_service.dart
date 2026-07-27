@@ -49,9 +49,10 @@ class WordService {
   final Map<String, Future<List<String>>> _inFlightSuggestions = {};
   final Map<String, String> _translationCache = {};
   final Map<String, Future<String>> _inFlightTranslations = {};
+  String? _retainedLookupKey;
   // Bump the cache when provider/fallback semantics change so incomplete
   // results from older releases do not keep causing exact words to fail.
-  static const _cachePrefix = 'lexora.word.v6';
+  static const _cachePrefix = 'lexora.word.v7';
   static const _cacheLifetime = Duration(days: 14);
 
   /// Looks up several words concurrently while preserving their input order.
@@ -174,6 +175,55 @@ class WordService {
     }
   }
 
+  /// Warms every visible suggestion with a bounded network worker pool.
+  Future<void> prefetchAll(
+    Iterable<String> rawTerms, {
+    int exampleCount = 3,
+    int maxConcurrency = 4,
+  }) async {
+    final terms = rawTerms
+        .map(_normalizeTerm)
+        .where((term) => term.isNotEmpty)
+        .toSet()
+        .toList(growable: false);
+    var next = 0;
+
+    Future<void> worker() async {
+      while (next < terms.length) {
+        final term = terms[next++];
+        await prefetch(term, exampleCount: exampleCount);
+      }
+    }
+
+    final workers = min(max(1, maxConcurrency), terms.length);
+    await Future.wait(List.generate(workers, (_) => worker()));
+  }
+
+  /// Starts a new suggestion session in which candidates may be cached.
+  void allowSuggestionCaching() {
+    _retainedLookupKey = null;
+  }
+
+  /// Keeps only the selected result after an explicit search.
+  ///
+  /// In-flight suggestion requests check the retained key before writing, so a
+  /// late candidate cannot silently repopulate the cache after this cleanup.
+  Future<void> retainOnly(String rawWord, {int exampleCount = 3}) async {
+    final word = _normalizeTerm(rawWord);
+    final lookupKey = '$exampleCount|$word';
+    final persistentKey = '$_cachePrefix.$exampleCount.$word';
+    _retainedLookupKey = lookupKey;
+    _memoryCache.removeWhere((key, _) => key != lookupKey);
+    _suggestionCache.clear();
+    _translationCache.clear();
+
+    final preferences = await SharedPreferences.getInstance();
+    final obsolete = preferences.getKeys().where(
+      (key) => key.startsWith('lexora.word.') && key != persistentKey,
+    );
+    await Future.wait(obsolete.map(preferences.remove));
+  }
+
   Future<_FuzzyLookupResult?> _lookupFuzzy(
     String rawTerm, {
     required int exampleCount,
@@ -255,8 +305,14 @@ class WordService {
     if (memoryEntry != null) return memoryEntry;
     return _inFlightLookups.putIfAbsent(key, () async {
       try {
-        final entry = await _lookupUncached(word, exampleCount: exampleCount);
-        _memoryCache[key] = entry;
+        final entry = await _lookupUncached(
+          word,
+          exampleCount: exampleCount,
+          lookupKey: key,
+        );
+        if (_retainedLookupKey == null || _retainedLookupKey == key) {
+          _memoryCache[key] = entry;
+        }
         return entry;
       } finally {
         _inFlightLookups.remove(key);
@@ -267,6 +323,7 @@ class WordService {
   Future<WordEntry> _lookupUncached(
     String word, {
     required int exampleCount,
+    required String lookupKey,
   }) async {
     final preferences = await SharedPreferences.getInstance();
     final cacheKey = '$_cachePrefix.$exampleCount.$word';
@@ -369,10 +426,14 @@ class WordService {
     final phonetics = (dictionary?['phonetics'] as List? ?? const [])
         .cast<Map<String, dynamic>>();
     final phonetic = dictionary?['phonetic'] as String? ?? '';
-    final datamusePhonetic = _metadataTag(exact, 'pron:');
+    final datamusePhonetic = _arpabetToIpa(_metadataTag(exact, 'pron:'));
     final fallbackPhonetic = phonetic.isEmpty ? datamusePhonetic : phonetic;
-    final usPhonetic = _phoneticFor(phonetics, '-us') ?? fallbackPhonetic;
-    final ukPhonetic = _phoneticFor(phonetics, '-uk') ?? fallbackPhonetic;
+    final usPhonetic = _arpabetToIpa(
+      _phoneticFor(phonetics, '-us') ?? fallbackPhonetic,
+    );
+    final ukPhonetic = _arpabetToIpa(
+      _phoneticFor(phonetics, '-uk') ?? fallbackPhonetic,
+    );
 
     final sameMeaning = meanings
         .expand((meaning) => (meaning['synonyms'] as List? ?? const []))
@@ -503,13 +564,15 @@ class WordService {
       senses: senses,
       relatedWords: relatedWords,
     );
-    await preferences.setString(
-      cacheKey,
-      jsonEncode({
-        'cachedAt': DateTime.now().toUtc().toIso8601String(),
-        'entry': entry.toJson(),
-      }),
-    );
+    if (_retainedLookupKey == null || _retainedLookupKey == lookupKey) {
+      await preferences.setString(
+        cacheKey,
+        jsonEncode({
+          'cachedAt': DateTime.now().toUtc().toIso8601String(),
+          'entry': entry.toJson(),
+        }),
+      );
+    }
     return entry;
   }
 
@@ -575,6 +638,76 @@ class WordService {
       if (tag.startsWith(prefix)) return tag.substring(prefix.length).trim();
     }
     return '';
+  }
+
+  String _arpabetToIpa(String value) {
+    final source = value.trim();
+    if (source.isEmpty) return '';
+    if (source.contains('/') ||
+        RegExp(r'[əɪʊæʌɔɑɛɜɝɚŋθðʃʒ]').hasMatch(source)) {
+      return source;
+    }
+    const vowels = {
+      'AA': 'ɑ',
+      'AE': 'æ',
+      'AO': 'ɔ',
+      'AW': 'aʊ',
+      'AY': 'aɪ',
+      'EH': 'ɛ',
+      'EY': 'eɪ',
+      'IH': 'ɪ',
+      'IY': 'i',
+      'OW': 'oʊ',
+      'OY': 'ɔɪ',
+      'UH': 'ʊ',
+      'UW': 'u',
+    };
+    const consonants = {
+      'B': 'b',
+      'CH': 'tʃ',
+      'D': 'd',
+      'DH': 'ð',
+      'F': 'f',
+      'G': 'ɡ',
+      'HH': 'h',
+      'JH': 'dʒ',
+      'K': 'k',
+      'L': 'l',
+      'M': 'm',
+      'N': 'n',
+      'NG': 'ŋ',
+      'P': 'p',
+      'R': 'ɹ',
+      'S': 's',
+      'SH': 'ʃ',
+      'T': 't',
+      'TH': 'θ',
+      'V': 'v',
+      'W': 'w',
+      'Y': 'j',
+      'Z': 'z',
+      'ZH': 'ʒ',
+    };
+    final output = StringBuffer();
+    for (final rawToken in source.toUpperCase().split(RegExp(r'\s+'))) {
+      final match = RegExp(r'^([A-Z]+)([012])?$').firstMatch(rawToken);
+      if (match == null) return source;
+      final token = match.group(1)!;
+      final stress = match.group(2);
+      String? sound;
+      if (token == 'AH') {
+        sound = stress == '0' ? 'ə' : 'ʌ';
+      } else if (token == 'ER') {
+        sound = stress == '0' ? 'ɚ' : 'ɝ';
+      } else {
+        sound = vowels[token] ?? consonants[token];
+      }
+      if (sound == null) return source;
+      if (stress == '1') output.write('ˈ');
+      if (stress == '2') output.write('ˌ');
+      output.write(sound);
+    }
+    return '/$output/';
   }
 
   double _frequencyFromDatamuse(Map<String, dynamic>? item) =>

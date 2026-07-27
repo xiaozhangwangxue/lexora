@@ -574,57 +574,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ),
                       const SizedBox(height: 18),
                       _SettingsSection(
-                        title: strings.developerMode,
-                        icon: Icons.terminal_rounded,
-                        child: Column(
-                          children: [
-                            SwitchListTile.adaptive(
-                              contentPadding: EdgeInsets.zero,
-                              title: Text(strings.developerLogging),
-                              subtitle: Text(strings.developerLoggingHint),
-                              value: DeveloperLogService.instance.enabled,
-                              onChanged: _setDeveloperMode,
-                            ),
-                            AnimatedSwitcher(
-                              duration: const Duration(milliseconds: 180),
-                              switchInCurve: const Cubic(.23, 1, .32, 1),
-                              switchOutCurve: Curves.easeOut,
-                              child: DeveloperLogService.instance.enabled
-                                  ? Column(
-                                      key: const ValueKey('developer-actions'),
-                                      children: [
-                                        const Divider(height: 20),
-                                        ListTile(
-                                          contentPadding: EdgeInsets.zero,
-                                          leading: const Icon(
-                                            Icons.ios_share_rounded,
-                                          ),
-                                          title: Text(strings.exportLogs),
-                                          subtitle: Text(
-                                            strings.exportLogsHint,
-                                          ),
-                                          onTap: () => _exportLogs(context),
-                                        ),
-                                        ListTile(
-                                          contentPadding: EdgeInsets.zero,
-                                          leading: Icon(
-                                            Icons.delete_outline_rounded,
-                                            color: theme.colorScheme.error,
-                                          ),
-                                          title: Text(strings.deleteLogs),
-                                          onTap: () => _deleteLogs(context),
-                                        ),
-                                      ],
-                                    )
-                                  : const SizedBox.shrink(
-                                      key: ValueKey('developer-actions-hidden'),
-                                    ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 18),
-                      _SettingsSection(
                         title: strings.isZh ? '搜索结果字体' : 'Search result text',
                         icon: Icons.text_fields_rounded,
                         child: Column(
@@ -674,6 +623,57 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                       settings.copyWith(searchTextScale: 1),
                                     ),
                               child: Text(strings.isZh ? '恢复默认' : 'Reset'),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 18),
+                      _SettingsSection(
+                        title: strings.developerMode,
+                        icon: Icons.terminal_rounded,
+                        child: Column(
+                          children: [
+                            SwitchListTile.adaptive(
+                              contentPadding: EdgeInsets.zero,
+                              title: Text(strings.developerLogging),
+                              subtitle: Text(strings.developerLoggingHint),
+                              value: DeveloperLogService.instance.enabled,
+                              onChanged: _setDeveloperMode,
+                            ),
+                            AnimatedSwitcher(
+                              duration: const Duration(milliseconds: 180),
+                              switchInCurve: const Cubic(.23, 1, .32, 1),
+                              switchOutCurve: Curves.easeOut,
+                              child: DeveloperLogService.instance.enabled
+                                  ? Column(
+                                      key: const ValueKey('developer-actions'),
+                                      children: [
+                                        const Divider(height: 20),
+                                        ListTile(
+                                          contentPadding: EdgeInsets.zero,
+                                          leading: const Icon(
+                                            Icons.ios_share_rounded,
+                                          ),
+                                          title: Text(strings.exportLogs),
+                                          subtitle: Text(
+                                            strings.exportLogsHint,
+                                          ),
+                                          onTap: () => _exportLogs(context),
+                                        ),
+                                        ListTile(
+                                          contentPadding: EdgeInsets.zero,
+                                          leading: Icon(
+                                            Icons.delete_outline_rounded,
+                                            color: theme.colorScheme.error,
+                                          ),
+                                          title: Text(strings.deleteLogs),
+                                          onTap: () => _deleteLogs(context),
+                                        ),
+                                      ],
+                                    )
+                                  : const SizedBox.shrink(
+                                      key: ValueKey('developer-actions-hidden'),
+                                    ),
                             ),
                           ],
                         ),

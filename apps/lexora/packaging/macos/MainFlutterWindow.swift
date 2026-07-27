@@ -51,6 +51,7 @@ private final class LexoraNavigationModel: ObservableObject {
   @Published var customization: LexoraCustomization?
   private let channel: FlutterMethodChannel
   private var customizationResult: FlutterResult?
+  private var lastSearchTap = Date.distantPast
 
   init(channel: FlutterMethodChannel) {
     self.channel = channel
@@ -138,7 +139,17 @@ private final class LexoraNavigationModel: ObservableObject {
   }
 
   func select(_ page: Int) {
-    guard page != selectedPage else { return }
+    let now = Date()
+    if page == selectedPage {
+      if page == 0 && now.timeIntervalSince(lastSearchTap) <= 0.45 {
+        channel.invokeMethod("resetSearch", arguments: nil)
+        lastSearchTap = .distantPast
+      } else if page == 0 {
+        lastSearchTap = now
+      }
+      return
+    }
+    lastSearchTap = page == 0 ? now : .distantPast
     withAnimation(.timingCurve(0.23, 1, 0.32, 1, duration: 0.24)) {
       selectedPage = page
     }
@@ -277,7 +288,7 @@ private struct LexoraNativeShell: View {
         .help(expanded ? localized("收起边栏", "Collapse sidebar") : localized("展开边栏", "Expand sidebar"))
       }
 
-      Text("3.2.2")
+      Text("3.2.3")
         .font(.caption2.monospacedDigit())
         .foregroundStyle(.tertiary)
         .frame(maxWidth: .infinity, alignment: expanded ? .leading : .center)

@@ -111,6 +111,10 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
   }
 
   Future<void> _handleNativeNavigation(MethodCall call) async {
+    if (call.method == 'resetSearch') {
+      if (mounted) _resetSearchHome();
+      return;
+    }
     if (call.method != 'selectPage') return;
     final page = call.arguments as int?;
     if (page == null || page < 0 || page > 4 || !mounted) return;
@@ -281,6 +285,15 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
       'navigation.page_changed',
       data: {'from': previous, 'to': value, 'animated': animate},
     );
+  }
+
+  void _resetSearchHome() {
+    _searchController.reset();
+    if (_index != 0) {
+      _selectPage(0);
+    } else if (_searchShowingResult) {
+      setState(() => _searchShowingResult = false);
+    }
   }
 
   void _dismissAndroidHomeKeyboard(int destination) {
@@ -940,6 +953,7 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
                 selectedIndex: _index,
                 destinations: destinations,
                 onSelected: _selectPage,
+                onSearchDoubleTap: _resetSearchHome,
                 expanded: expandedNavigation,
                 canToggle: autoExpandedNavigation,
                 isMacOS: Platform.isMacOS,
@@ -1034,6 +1048,7 @@ class _DesktopSidebar extends StatelessWidget {
     required this.selectedIndex,
     required this.destinations,
     required this.onSelected,
+    required this.onSearchDoubleTap,
     required this.expanded,
     required this.canToggle,
     required this.isMacOS,
@@ -1043,6 +1058,7 @@ class _DesktopSidebar extends StatelessWidget {
   final int selectedIndex;
   final List<NavigationRailDestination> destinations;
   final ValueChanged<int> onSelected;
+  final VoidCallback onSearchDoubleTap;
   final bool expanded;
   final bool canToggle;
   final bool isMacOS;
@@ -1097,6 +1113,7 @@ class _DesktopSidebar extends StatelessWidget {
                         : destinations[index].icon,
                     label: destinations[index].label,
                     onTap: () => onSelected(index),
+                    onDoubleTap: index == 0 ? onSearchDoubleTap : null,
                     expanded: showLabels,
                   ),
                   const SizedBox(height: 4),
@@ -1153,6 +1170,7 @@ class _DesktopSidebarItem extends StatelessWidget {
     required this.icon,
     required this.label,
     required this.onTap,
+    this.onDoubleTap,
     required this.expanded,
   });
 
@@ -1160,6 +1178,7 @@ class _DesktopSidebarItem extends StatelessWidget {
   final Widget icon;
   final Widget label;
   final VoidCallback onTap;
+  final VoidCallback? onDoubleTap;
   final bool expanded;
 
   @override
@@ -1172,6 +1191,7 @@ class _DesktopSidebarItem extends StatelessWidget {
       borderRadius: BorderRadius.circular(9),
       child: InkWell(
         onTap: onTap,
+        onDoubleTap: onDoubleTap,
         borderRadius: BorderRadius.circular(9),
         child: SizedBox(
           height: 42,
