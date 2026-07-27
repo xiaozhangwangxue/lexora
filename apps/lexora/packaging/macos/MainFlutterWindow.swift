@@ -159,6 +159,7 @@ private struct FlutterControllerContainer: NSViewControllerRepresentable {
 
 private struct LexoraNativeShell: View {
   let flutterViewController: FlutterViewController
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @StateObject private var navigation: LexoraNavigationModel
   @State private var prefersExpandedSidebar = true
 
@@ -212,7 +213,11 @@ private struct LexoraNativeShell: View {
         if expanded {
           Text("Lexora")
             .font(.system(size: 20, weight: .bold, design: .rounded))
-            .transition(.opacity.combined(with: .move(edge: .leading)))
+            .transition(
+              reduceMotion
+                ? .opacity
+                : .opacity.combined(with: .move(edge: .leading))
+            )
         }
       }
       .frame(maxWidth: .infinity, alignment: expanded ? .leading : .center)
@@ -250,7 +255,7 @@ private struct LexoraNativeShell: View {
         .help(expanded ? localized("收起边栏", "Collapse sidebar") : localized("展开边栏", "Expand sidebar"))
       }
 
-      Text("3.1.0")
+      Text("3.2.0")
         .font(.caption2.monospacedDigit())
         .foregroundStyle(.tertiary)
         .frame(maxWidth: .infinity, alignment: expanded ? .leading : .center)
@@ -280,7 +285,7 @@ private struct LexoraNativeShell: View {
     expanded: Bool
   ) -> some View {
     let selected = navigation.selectedPage == index
-    Button {
+    let button = Button {
       navigation.select(index)
     } label: {
       HStack(spacing: 12) {
@@ -291,26 +296,39 @@ private struct LexoraNativeShell: View {
           Text(localized(item.zh, item.en))
             .font(.system(size: 13.5, weight: selected ? .semibold : .medium))
             .lineLimit(1)
-            .transition(.opacity.combined(with: .move(edge: .leading)))
+            .transition(
+              reduceMotion
+                ? .opacity
+                : .opacity.combined(with: .move(edge: .leading))
+            )
         }
       }
       .foregroundStyle(selected ? Color.accentColor : Color.secondary)
       .frame(maxWidth: .infinity, alignment: expanded ? .leading : .center)
       .frame(height: 42)
       .padding(.horizontal, expanded ? 12 : 0)
-      .background {
+      .background(
         RoundedRectangle(cornerRadius: 10, style: .continuous)
-          .fill(selected ? Color.accentColor.opacity(0.14) : Color.clear)
-      }
+          .fill(selected ? Color.accentColor.opacity(0.12) : Color.clear)
+      )
       .contentShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
     }
     .buttonStyle(.plain)
     .help(localized(item.zh, item.en))
+    if #available(macOS 26.0, *), selected {
+      button.glassEffect(
+        .clear.interactive(),
+        in: RoundedRectangle(cornerRadius: 10, style: .continuous)
+      )
+    } else {
+      button
+    }
   }
 
   private var items: [NavigationItem] {
     [
-      NavigationItem(zh: "单词", en: "Words", symbol: "book.closed", selectedSymbol: "book.closed.fill"),
+      NavigationItem(zh: "单词", en: "Words", symbol: "magnifyingglass", selectedSymbol: "text.magnifyingglass"),
+      NavigationItem(zh: "词汇书", en: "Vocabulary Book", symbol: "book.closed", selectedSymbol: "book.closed.fill"),
       NavigationItem(zh: "生成记录", en: "Generated", symbol: "doc.text", selectedSymbol: "doc.text.fill"),
       NavigationItem(zh: "历史", en: "History", symbol: "clock.arrow.circlepath", selectedSymbol: "clock.arrow.circlepath"),
       NavigationItem(zh: "设置", en: "Settings", symbol: "gearshape", selectedSymbol: "gearshape.fill"),

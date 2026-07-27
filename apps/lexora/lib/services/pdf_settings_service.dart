@@ -19,6 +19,7 @@ class PdfSettings {
     this.format = BookFormat.pdf,
     this.pageSize = BookPageSize.a4,
     this.smartReorder = false,
+    this.searchTextScale = 1,
     this.typography = const PdfTypography(
       word: 18,
       phonetic: 9,
@@ -34,6 +35,7 @@ class PdfSettings {
   final BookFormat format;
   final BookPageSize pageSize;
   final bool smartReorder;
+  final double searchTextScale;
   final PdfTypography typography;
 
   PdfSettings copyWith({
@@ -42,6 +44,7 @@ class PdfSettings {
     BookFormat? format,
     BookPageSize? pageSize,
     bool? smartReorder,
+    double? searchTextScale,
     PdfTypography? typography,
   }) => PdfSettings(
     fontSize: fontSize ?? this.fontSize,
@@ -49,6 +52,7 @@ class PdfSettings {
     format: format ?? this.format,
     pageSize: pageSize ?? this.pageSize,
     smartReorder: smartReorder ?? this.smartReorder,
+    searchTextScale: searchTextScale ?? this.searchTextScale,
     typography: typography ?? this.typography,
   );
 
@@ -62,6 +66,7 @@ class PdfSettingsService {
   static const _formatKey = 'lexora.document.format.v1';
   static const _pageSizeKey = 'lexora.document.page-size.v1';
   static const _smartReorderKey = 'lexora.document.smart-reorder.v1';
+  static const _searchTextScaleKey = 'lexora.search.text-scale.v1';
   static const _typographyPrefix = 'lexora.pdf.typography.v1';
 
   Future<PdfSettings> load() async {
@@ -90,6 +95,10 @@ class PdfSettingsService {
         BookPageSize.a4,
       ),
       smartReorder: preferences.getBool(_smartReorderKey) ?? false,
+      searchTextScale: (preferences.getDouble(_searchTextScaleKey) ?? 1).clamp(
+        .8,
+        1.5,
+      ),
       typography: PdfTypography(
         word: preferences.getDouble('$_typographyPrefix.word') ?? defaults.word,
         phonetic:
@@ -118,6 +127,10 @@ class PdfSettingsService {
     await preferences.setString(_formatKey, settings.format.name);
     await preferences.setString(_pageSizeKey, settings.pageSize.name);
     await preferences.setBool(_smartReorderKey, settings.smartReorder);
+    await preferences.setDouble(
+      _searchTextScaleKey,
+      settings.searchTextScale.clamp(.8, 1.5),
+    );
     await Future.wait([
       preferences.setDouble(
         '$_typographyPrefix.word',

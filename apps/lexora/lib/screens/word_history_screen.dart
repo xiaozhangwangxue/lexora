@@ -18,12 +18,14 @@ class WordHistoryScreen extends StatefulWidget {
     required this.onRegenerate,
     required this.onCustomizePdf,
     this.historyService,
+    this.embedded = false,
   });
 
   final bool generationRunning;
   final ValueChanged<List<String>> onRegenerate;
   final Future<void> Function() onCustomizePdf;
   final HistoryService? historyService;
+  final bool embedded;
 
   @override
   State<WordHistoryScreen> createState() => _WordHistoryScreenState();
@@ -196,21 +198,48 @@ class _WordHistoryScreenState extends State<WordHistoryScreen> {
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 980),
           child: Padding(
-            padding: const EdgeInsets.all(24),
+            padding: widget.embedded
+                ? EdgeInsets.zero
+                : const EdgeInsets.all(24),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        strings.history,
-                        style: theme.textTheme.headlineMedium?.copyWith(
-                          fontWeight: FontWeight.w800,
+                if (!widget.embedded) ...[
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          strings.history,
+                          style: theme.textTheme.headlineMedium?.copyWith(
+                            fontWeight: FontWeight.w800,
+                          ),
                         ),
                       ),
+                      TextButton.icon(
+                        onPressed: _toggleSelecting,
+                        icon: Icon(
+                          _selecting
+                              ? Icons.close_rounded
+                              : Icons.library_add_check_outlined,
+                        ),
+                        label: Text(
+                          _selecting ? strings.finishSelecting : strings.select,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    strings.wordHistorySubtitle,
+                    style: theme.textTheme.bodyLarge?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
                     ),
-                    TextButton.icon(
+                  ),
+                  const SizedBox(height: 16),
+                ] else ...[
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton.icon(
                       onPressed: _toggleSelecting,
                       icon: Icon(
                         _selecting
@@ -221,16 +250,9 @@ class _WordHistoryScreenState extends State<WordHistoryScreen> {
                         _selecting ? strings.finishSelecting : strings.select,
                       ),
                     ),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  strings.wordHistorySubtitle,
-                  style: theme.textTheme.bodyLarge?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
                   ),
-                ),
-                const SizedBox(height: 16),
+                  const SizedBox(height: 4),
+                ],
                 LayoutBuilder(
                   builder: (context, constraints) {
                     final sortField = DropdownButtonFormField<WordHistorySort>(

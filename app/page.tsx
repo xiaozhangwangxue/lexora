@@ -19,7 +19,8 @@ const donationCodes = {
   alipay: "https://photo.12323456.xyz/api/rfile/%E6%94%AF%E4%BB%98%E5%AE%9D.jpg",
 };
 
-const currentVersion = "v3.1.0";
+const currentVersion = "v3.2.0";
+const previousVersion = "v3.1.0";
 const platforms: Array<{ key: PlatformKey; name: string; noteZh: string; noteEn: string; Icon: IconType; file: string }> = [
   { key: "macos", name: "macOS", noteZh: "macOS 12+ · 拖动安装 DMG", noteEn: "macOS 12+ · Drag-to-install DMG", Icon: FaApple, file: `lexora-macos-${currentVersion}.dmg` },
   { key: "windows", name: "Windows", noteZh: "Windows 10 / 11 · 安装程序", noteEn: "Windows 10 / 11 · Installer", Icon: FaWindows, file: `lexora-windows-${currentVersion}-setup.exe` },
@@ -53,8 +54,8 @@ const installGuides: Record<PlatformKey, { zh: string[]; en: string[] }> = {
     en: ["Extract the tar.gz archive.", "If needed, allow the lexora file to run as a program or use chmod +x.", "Launch the lexora executable."],
   },
   android: {
-    zh: ["从 v0.3.0 或更高版本可直接覆盖安装 v3.1.0；只有 v0.2.0 需先卸载一次。", "下载 APK，系统询问时允许浏览器安装未知来源应用。", "确认文件来自本官网后，选择“仍要安装”；安装后可关闭该权限。"],
-    en: ["v0.3.0 and newer can update directly to v3.1.0. Only v0.2.0 requires one uninstall first.", "Download the APK and allow your browser to install unknown apps when Android asks.", "After verifying this official site, choose Install anyway. You can revoke that permission afterward."],
+    zh: ["从 v0.3.0 或更高版本可直接覆盖安装 v3.2.0；只有 v0.2.0 需先卸载一次。", "下载 APK，系统询问时允许浏览器安装未知来源应用。", "确认文件来自本官网后，选择“仍要安装”；安装后可关闭该权限。"],
+    en: ["v0.3.0 and newer can update directly to v3.2.0. Only v0.2.0 requires one uninstall first.", "Download the APK and allow your browser to install unknown apps when Android asks.", "After verifying this official site, choose Install anyway. You can revoke that permission afterward."],
   },
 };
 
@@ -246,12 +247,12 @@ export default function Home() {
       <section className="hero wrap" id="top">
         <LexoraWordmark hero />
         <p className="lexoraPronunciation" aria-label="Lexora pronunciation">/lɛkˈsɔːrə/</p>
-        <div className="eyebrow"><span /> {zh ? "你的词汇，终于井然有序" : "Your vocabulary, finally organized"}</div>
-        <h1>{zh ? <><span className="heroLine">把零散单词，变成</span><br /><em className="heroLine">真正想读的词汇书。</em></> : <>Turn loose words into a<br /><em>book worth reading.</em></>}</h1>
+        <div className="eyebrow"><span /> {zh ? "能生成个人词汇书的双语词典" : "The bilingual dictionary that becomes your book"}</div>
+        <h1>{zh ? <><span className="heroLine">每一次查词，都在写</span><br /><em className="heroLine">你自己的词汇书。</em></> : <>Every lookup builds<br /><em>your own vocabulary book.</em></>}</h1>
         <p className="heroCopy">
           {zh
-            ? "输入或批量导入单词，Lexora 自动补全难度、词频、英美音标、近反义词、例句与中文翻译，再生成紧凑的 PDF、EPUB、可编辑 DOCX、分页图片或长图。"
-            : "Type or import a word list. Lexora adds difficulty, frequency, US & UK phonetics, related words, examples, and Chinese translations—then creates PDF, EPUB, editable DOCX, page images, or one long image."}
+            ? "实时联想并查看按词性整理的双语释义、相关词、近反义词、例句与搭配；喜欢的词一键加入词汇书，再导出为紧凑的 PDF、EPUB、可编辑 DOCX、分页图片或长图。"
+            : "Get live suggestions and bilingual senses by part of speech, related words, synonyms, antonyms, examples, and collocations. Save what matters, then export PDF, EPUB, editable DOCX, page images, or one long image."}
         </p>
         <div className="heroActions">
           <a className="primaryButton" href="#download">{zh ? "免费下载" : "Download free"} <span>↓</span></a>
@@ -266,7 +267,9 @@ export default function Home() {
           </div>
           <div className="appBody">
             <aside>
-              <button className="active"><span>◫</span> {zh ? "单词" : "Words"}</button>
+              <button><span>⌕</span> {zh ? "单词" : "Words"}</button>
+              <button className="active"><span>◫</span> {zh ? "词汇书" : "Vocabulary Book"}</button>
+              <button><span>▤</span> {zh ? "生成记录" : "Generated"}</button>
               <button><span>↺</span> {zh ? "历史" : "History"}</button>
               <div className="asideFoot">{currentVersion} · Open source</div>
             </aside>
@@ -372,8 +375,8 @@ export default function Home() {
       <section className="statement" id="how" data-reveal>
         <div className="wrap statementGrid">
           <p className="sectionLabel">{zh ? "从列表到词汇书" : "From list to lexicon"}</p>
-          <h2>{zh ? "查词应该是过程，阅读才是结果。" : "Lookup is the process. Reading is the point."}</h2>
-          <p>{zh ? "从 TXT、PDF、DOC 或 DOCX 批量导入后，Lexora 会整理可靠的词典与语料数据；智能排版还能重新安排长短词条，让纸张空间被真正利用起来。" : "Import from TXT, PDF, DOC, or DOCX, then let Lexora organize trusted dictionary and corpus data. Smart layout balances long and short entries so the page is genuinely used."}</p>
+          <h2>{zh ? "词典不该止步于查完即走。" : "A dictionary should remember what mattered."}</h2>
+          <p>{zh ? "Lexora 把搜索、收藏、整理与排版连成一条完整路径。你可以逐个查词，也可以从 TXT、PDF、DOC 或 DOCX 批量导入，最后得到真正属于自己的词汇书。" : "Lexora connects lookup, saving, organization, and typesetting. Search one word at a time or import TXT, PDF, DOC, or DOCX, then leave with a vocabulary book that is genuinely yours."}</p>
         </div>
       </section>
 
@@ -381,9 +384,9 @@ export default function Home() {
         <article className="feature featureLarge" data-reveal>
           <span className="featureNumber">01</span>
           <div>
-            <p className="sectionLabel">{zh ? "快速整理" : "Fast capture"}</p>
-            <h3>{zh ? "像搜索一样简单，像播放列表一样灵活。" : "As simple as search. As flexible as a playlist."}</h3>
-            <p>{zh ? "按回车添加，长按调整顺序，滑动删除，或按字母、长度与难度自动排序。" : "Press Enter to add, long-press to reorder, swipe to delete, or sort by alphabet, length, and difficulty."}</p>
+            <p className="sectionLabel">{zh ? "查词并收藏" : "Look up & save"}</p>
+            <h3>{zh ? "像搜索引擎一样快，比普通词典多走一步。" : "As fast as search, one step beyond a dictionary."}</h3>
+            <p>{zh ? "历史优先的实时联想、按词性整理的双语释义和可点击相关词，让每次搜索都能顺手加入个人词汇书。" : "History-first live suggestions, bilingual senses by part of speech, and linked related words let every useful lookup flow into your personal book."}</p>
           </div>
           <div className="stackVisual"><span>serendipity</span><span>resilient</span><span>lucid</span></div>
         </article>
@@ -453,6 +456,23 @@ export default function Home() {
               );
             })}
           </div>
+          <details className="historicalDownloads">
+            <summary>{zh ? "历史版本" : "Previous versions"}</summary>
+            <p>{zh ? "需要回退时，可继续下载稳定版 3.1.0。安装前请先备份重要生成文件。" : "Need to roll back? Stable 3.1.0 remains available. Back up important generated files before installing."}</p>
+            <div className="historicalGrid">
+              {platforms.map((platform) => {
+                const PlatformIcon = platform.Icon;
+                const file = platform.file.replace(currentVersion, previousVersion);
+                return (
+                  <a key={`history-${platform.key}`} href={`/downloads/${file}`} download>
+                    <PlatformIcon aria-hidden="true" />
+                    <span>{platform.name}<small>Lexora 3.1.0</small></span>
+                    <b>↓</b>
+                  </a>
+                );
+              })}
+            </div>
+          </details>
         </div>
       </section>
 

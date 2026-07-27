@@ -1,9 +1,9 @@
 <div align="center">
   <img src="public/lexora-icon-192.png" alt="Lexora 图标" width="128" height="128">
 
-  # Lexora · 双语词汇书
+  # Lexora · 能生成个人词汇书的双语词典
 
-  **输入单词，得到一本值得阅读的双语词汇书。**
+  **每一次查词，都在写你自己的词汇书。**
 
   [![Release](https://img.shields.io/github/v/release/xiaozhangwangxue/lexora?style=flat-square&color=2444c8)](https://github.com/xiaozhangwangxue/lexora/releases/latest)
   [![Build](https://img.shields.io/github/actions/workflow/status/xiaozhangwangxue/lexora/build-release.yml?branch=main&style=flat-square&label=4-platform%20build)](https://github.com/xiaozhangwangxue/lexora/actions/workflows/build-release.yml)
@@ -19,20 +19,22 @@
 
 ---
 
-Lexora 是一款面向 Android、macOS、Windows 与 Linux 的英语单词整理软件。把零散的单词按顺序输入后，它会联网补全难度、词频、英美音标、近义词、反义词、例句与完整中文翻译，再排版成紧凑、清晰、适合阅读和打印的双语 PDF、EPUB 或可编辑 DOCX。
+Lexora 是一款面向 Android、macOS、Windows 与 Linux、可以生成个人词汇书的双语词典。搜索时会实时联想，并按词性展示英文释义、中文释义、相关词、近义词、反义词、例句与常用搭配；有价值的词可以一键加入词汇书，再排版为紧凑、清晰、适合阅读和打印的 PDF、EPUB、可编辑 DOCX、分页图片或长图。
 
 > [!IMPORTANT]
 > Lexora 不要求账号。单词列表、历史记录和生成的 PDF 默认保存在设备本地；只有点击“开始生成”后，待查询的单词、释义和例句才会发送给公开词典与翻译服务。
 
 ## 为什么选择 Lexora
 
-| ✍️ 像搜索一样输入 | ↕️ 像播放列表一样整理 | ✦ 自动补全语境 | 📖 直接得到成品 |
+| 🔎 像搜索引擎一样查词 | ＋ 一键收藏到词汇书 | ↕️ 像播放列表一样整理 | 📖 直接得到成品 |
 | --- | --- | --- | --- |
-| 输入单词后按回车即可添加 | 长按拖动、滑动删除、四种排序 | 音标、词频、难度、近反义词与双语例句 | 自动生成美观紧凑的 PDF 词汇书 |
+| 历史优先的实时联想与完整双语结果 | 加号变为对勾，随时加入或取消 | 长按拖动、滑动删除、四种排序 | 自动生成五种格式的个人词汇书 |
 
 ## 核心功能
 
-- **快速收集**：搜索式主页，按回车添加单词，自动阻止重复和无效输入。
+- **完整双语词典**：独立搜索页提供历史优先的实时联想、按词性分组的多条中英文释义、相关词、近反义词、例句和常用搭配。
+- **搜索即收藏**：搜索结果中的英文相关词可点击继续查询；右上角加号可一键加入词汇书，并用轻量动画和自动消失提示即时反馈。
+- **快速收集**：在词汇书页按回车添加单词，自动阻止重复和无效输入。
 - **文档批量导入**：从 DOC、DOCX、PDF、TXT、RTF、ODT 等文件按换行提取大量单词或短语，一次加入列表。
 - **自由整理**：长按调整顺序、向左滑动删除，支持自定义、A–Z、长度和估算难度排序。
 - **完整查词**：获取英文定义、公开语料词频信号、美式与英式音标、近义词、反义词和例句。
@@ -40,7 +42,9 @@ Lexora 是一款面向 Android、macOS、Windows 与 Linux 的英语单词整理
 - **更快批量生成**：最多四路并发查询，查询结果在本机缓存 14 天；长词表和重复生成都更快。
 - **完整中译**：释义、例句及近反义词均带中文结果；PDF 标签也采用中英双语。
 - **中英界面**：自动识别设备语言；中文设备默认显示简体中文，其他设备显示英文。
-- **首次引导**：第一次打开应用时，用三步教程说明添加、排序、生成与分享流程。
+- **双历史记录**：历史页可在生成历史和搜索历史间切换，曾经查过的词可一键再次搜索。
+- **搜索字号**：设置页可精细调节搜索结果字号，默认针对手机阅读优化。
+- **首次引导**：第一次打开应用时会介绍搜索、收藏、整理、生成与历史功能。
 - **独立设置**：文档格式、字号与例句数量集中在设置页，并提供官网快捷入口与捐赠二维码。
 - **三种导出格式**：可生成适合打印的 PDF、适合电子书阅读器的 EPUB，以及保留结构且方便继续编辑的 DOCX。
 - **自定义排版**：可选小、中、大三档字号与 0、1 或 2–3 句例句；中号使用紧凑双栏，字号足够小时自动使用三栏，并以独立分栏消除高矮卡片之间的空洞。
@@ -57,10 +61,10 @@ Lexora 是一款面向 Android、macOS、Windows 与 Linux 的英语单词整理
 
 | 平台 | 安装包 | 系统要求 | 下载 |
 | --- | --- | --- | --- |
-| Android | APK | Android 8.0+ | [官网下载](https://lexora.12323456.xyz/downloads/lexora-android-v3.1.0.apk) |
-| macOS | 拖动安装 DMG | macOS 12+ | [官网下载](https://lexora.12323456.xyz/downloads/lexora-macos-v3.1.0.dmg) |
-| Windows | 安装程序 EXE（默认安装后启动） | Windows 10 / 11 | [官网下载](https://lexora.12323456.xyz/downloads/lexora-windows-v3.1.0-setup.exe) |
-| Linux | tar.gz | 64 位 Linux | [官网下载](https://lexora.12323456.xyz/downloads/lexora-linux-v3.1.0.tar.gz) |
+| Android | APK | Android 8.0+ | [官网下载](https://lexora.12323456.xyz/downloads/lexora-android-v3.2.0.apk) |
+| macOS | 拖动安装 DMG | macOS 12+ | [官网下载](https://lexora.12323456.xyz/downloads/lexora-macos-v3.2.0.dmg) |
+| Windows | 安装程序 EXE（默认安装后启动） | Windows 10 / 11 | [官网下载](https://lexora.12323456.xyz/downloads/lexora-windows-v3.2.0-setup.exe) |
+| Linux | tar.gz | 64 位 Linux | [官网下载](https://lexora.12323456.xyz/downloads/lexora-linux-v3.2.0.tar.gz) |
 
 <details>
 <summary><strong>首次安装被系统拦截怎么办？</strong></summary>
@@ -75,11 +79,11 @@ Lexora 是一款面向 Android、macOS、Windows 与 Linux 的英语单词整理
 > [!IMPORTANT]
 > Android v0.2.0 使用了临时构建签名，旧私钥无法恢复，因此升级到采用稳定签名的 v0.3.0 时需要先卸载旧版再安装一次。自 v0.3.0 起，后续版本继续使用同一发布签名，可直接覆盖更新。请先按需导出旧版中的 PDF。
 
-所有发行文件名都包含版本号，例如 `lexora-android-v3.1.0.apk`。这样可以避免浏览器或下载目录把新旧安装包混淆。应用内更新优先使用 Cloudflare R2，并在打开安装包前校验下载完整性与 SHA-256。
+所有发行文件名都包含版本号，例如 `lexora-android-v3.2.0.apk`。官网的“历史版本”中继续提供 3.1.0，不会从 R2 删除。应用内更新优先使用 Cloudflare R2，并在打开安装包前校验下载完整性与 SHA-256。
 
 ## 三步生成词汇书
 
-1. 输入一个英文单词并按回车，或导入按换行整理的文档，一次添加大量单词和短语。
+1. 在“单词”中搜索并一键收藏，或在“词汇书”中输入、批量导入单词和短语。
 2. 长按调整顺序或选择排序方式，在“设置”中选好字号与例句数量，然后点击“开始生成”。
 3. 选择 PDF、EPUB、DOCX、分页图片或长图，在“生成记录”阅读、导出或分享，在“历史”查看所有生成过的单词。
 

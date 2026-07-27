@@ -8,5 +8,10 @@ Audit baseline: commit `0a6327a` (2026-07-19).
 | [002](002-navigation-and-dialogs.md) | Android navigation and PDF customization dialog | DONE |
 | [003](003-website-motion-and-story.md) | Website motion hierarchy and product story | DONE |
 | [004](004-document-customization-performance.md) | Native glass and cross-platform dialog performance | DONE |
+| [005](005-search-feedback-motion.md) | Search add/remove feedback and reduced motion | DONE |
 
 These plans intentionally avoid springy or decorative motion. Lexora's motion should clarify hierarchy, preserve focus, and remain fast enough for repeated navigation.
+
+Plan 005 is the only new high-leverage motion item introduced by the 3.2.0
+dictionary experience. Execute it after the search flow is functionally stable;
+suggestion rows intentionally remain animation-free.

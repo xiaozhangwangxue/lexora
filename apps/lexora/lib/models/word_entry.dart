@@ -22,6 +22,72 @@ class PhraseEntry {
   );
 }
 
+class BilingualDefinition {
+  const BilingualDefinition({
+    required this.definition,
+    required this.definitionZh,
+  });
+
+  final String definition;
+  final String definitionZh;
+
+  Map<String, dynamic> toJson() => {
+    'definition': definition,
+    'definitionZh': definitionZh,
+  };
+
+  factory BilingualDefinition.fromJson(Map<String, dynamic> json) =>
+      BilingualDefinition(
+        definition: json['definition'] as String? ?? '',
+        definitionZh: json['definitionZh'] as String? ?? '',
+      );
+}
+
+class WordSense {
+  const WordSense({required this.partOfSpeech, required this.definitions});
+
+  final String partOfSpeech;
+  final List<BilingualDefinition> definitions;
+
+  Map<String, dynamic> toJson() => {
+    'partOfSpeech': partOfSpeech,
+    'definitions': definitions.map((item) => item.toJson()).toList(),
+  };
+
+  factory WordSense.fromJson(Map<String, dynamic> json) => WordSense(
+    partOfSpeech: json['partOfSpeech'] as String? ?? '',
+    definitions: (json['definitions'] as List? ?? const [])
+        .map(
+          (item) => BilingualDefinition.fromJson(item as Map<String, dynamic>),
+        )
+        .toList(),
+  );
+}
+
+class RelatedWord {
+  const RelatedWord({
+    required this.word,
+    required this.meaning,
+    required this.meaningZh,
+  });
+
+  final String word;
+  final String meaning;
+  final String meaningZh;
+
+  Map<String, dynamic> toJson() => {
+    'word': word,
+    'meaning': meaning,
+    'meaningZh': meaningZh,
+  };
+
+  factory RelatedWord.fromJson(Map<String, dynamic> json) => RelatedWord(
+    word: json['word'] as String? ?? '',
+    meaning: json['meaning'] as String? ?? '',
+    meaningZh: json['meaningZh'] as String? ?? '',
+  );
+}
+
 class WordEntry {
   const WordEntry({
     required this.word,
@@ -33,11 +99,15 @@ class WordEntry {
     required this.definitionZh,
     required this.synonyms,
     required this.synonymsZh,
+    this.synonymTranslations = const {},
     required this.antonyms,
     required this.antonymsZh,
+    this.antonymTranslations = const {},
     required this.examples,
     required this.examplesZh,
     this.phrases = const [],
+    this.senses = const [],
+    this.relatedWords = const [],
     this.originalTerm,
   });
 
@@ -50,11 +120,15 @@ class WordEntry {
   final String definitionZh;
   final List<String> synonyms;
   final String synonymsZh;
+  final Map<String, String> synonymTranslations;
   final List<String> antonyms;
   final String antonymsZh;
+  final Map<String, String> antonymTranslations;
   final List<String> examples;
   final List<String> examplesZh;
   final List<PhraseEntry> phrases;
+  final List<WordSense> senses;
+  final List<RelatedWord> relatedWords;
 
   /// The term supplied by the user when [word] is a validated fuzzy match.
   /// It stays null for exact matches and for records saved by older versions.
@@ -74,11 +148,15 @@ class WordEntry {
     definitionZh: definitionZh,
     synonyms: synonyms,
     synonymsZh: synonymsZh,
+    synonymTranslations: synonymTranslations,
     antonyms: antonyms,
     antonymsZh: antonymsZh,
+    antonymTranslations: antonymTranslations,
     examples: examples,
     examplesZh: examplesZh,
     phrases: phrases,
+    senses: senses,
+    relatedWords: relatedWords,
     originalTerm: value,
   );
 
@@ -92,11 +170,15 @@ class WordEntry {
     'definitionZh': definitionZh,
     'synonyms': synonyms,
     'synonymsZh': synonymsZh,
+    'synonymTranslations': synonymTranslations,
     'antonyms': antonyms,
     'antonymsZh': antonymsZh,
+    'antonymTranslations': antonymTranslations,
     'examples': examples,
     'examplesZh': examplesZh,
     'phrases': phrases.map((item) => item.toJson()).toList(),
+    'senses': senses.map((item) => item.toJson()).toList(),
+    'relatedWords': relatedWords.map((item) => item.toJson()).toList(),
     if (originalTerm != null) 'originalTerm': originalTerm,
   };
 
@@ -110,12 +192,26 @@ class WordEntry {
     definitionZh: json['definitionZh'] as String,
     synonyms: (json['synonyms'] as List).cast<String>(),
     synonymsZh: json['synonymsZh'] as String,
+    synonymTranslations:
+        (json['synonymTranslations'] as Map<String, dynamic>? ?? const {}).map(
+          (key, value) => MapEntry(key, value.toString()),
+        ),
     antonyms: (json['antonyms'] as List).cast<String>(),
     antonymsZh: json['antonymsZh'] as String,
+    antonymTranslations:
+        (json['antonymTranslations'] as Map<String, dynamic>? ?? const {}).map(
+          (key, value) => MapEntry(key, value.toString()),
+        ),
     examples: (json['examples'] as List).cast<String>(),
     examplesZh: (json['examplesZh'] as List).cast<String>(),
     phrases: (json['phrases'] as List? ?? const [])
         .map((item) => PhraseEntry.fromJson(item as Map<String, dynamic>))
+        .toList(),
+    senses: (json['senses'] as List? ?? const [])
+        .map((item) => WordSense.fromJson(item as Map<String, dynamic>))
+        .toList(),
+    relatedWords: (json['relatedWords'] as List? ?? const [])
+        .map((item) => RelatedWord.fromJson(item as Map<String, dynamic>))
         .toList(),
     originalTerm: json['originalTerm'] as String?,
   );

@@ -1,9 +1,9 @@
 <div align="center">
   <img src="public/lexora-icon-192.png" alt="Lexora icon" width="128" height="128">
 
-  # Lexora · Bilingual Vocabulary Books
+  # Lexora · The Dictionary That Builds Your Vocabulary Book
 
-  **Words in. A beautiful bilingual book out.**
+  **Every lookup builds your own vocabulary book.**
 
   [![Release](https://img.shields.io/github/v/release/xiaozhangwangxue/lexora?style=flat-square&color=2444c8)](https://github.com/xiaozhangwangxue/lexora/releases/latest)
   [![Build](https://img.shields.io/github/actions/workflow/status/xiaozhangwangxue/lexora/build-release.yml?branch=main&style=flat-square&label=4-platform%20build)](https://github.com/xiaozhangwangxue/lexora/actions/workflows/build-release.yml)
@@ -19,20 +19,22 @@
 
 ---
 
-Lexora is an English vocabulary organizer for Android, macOS, Windows, and Linux. Enter a loose word list and it enriches every item with difficulty, frequency, US and UK phonetics, synonyms, antonyms, examples, and complete Chinese translations, then typesets the result as a compact bilingual PDF, EPUB, or editable DOCX.
+Lexora is a bilingual dictionary for Android, macOS, Windows, and Linux that turns useful lookups into a personal vocabulary book. It offers live suggestions, bilingual senses grouped by part of speech, related words, synonyms, antonyms, examples, and collocations. Save what matters in one tap, then export a compact PDF, EPUB, editable DOCX, page images, or one long image.
 
 > [!IMPORTANT]
 > Lexora needs no account. Word lists, history, and generated PDFs stay on the device by default. Only after **Start generating** is selected are words, definitions, and examples sent to public dictionary and translation services.
 
 ## Why Lexora
 
-| ✍️ Search-like capture | ↕️ Playlist-like ordering | ✦ Complete context | 📖 A finished result |
+| 🔎 Search-engine-speed lookup | ＋ One-tap saving | ↕️ Playlist-like ordering | 📖 A finished result |
 | --- | --- | --- | --- |
-| Type a word and press Enter | Long-press, swipe, or use four sort modes | Phonetics, frequency, difficulty, related words, and bilingual examples | A polished PDF ready for screens or paper |
+| History-first live suggestions and full bilingual results | Add or remove a result without a confirmation dialog | Long-press, swipe, or use four sort modes | Five polished output formats |
 
 ## Features
 
-- **Fast capture:** focused search-style home, Enter to add, duplicate and input validation.
+- **Full bilingual dictionary:** a dedicated search workspace with history-first live suggestions, multiple bilingual definitions grouped by part of speech, related words, synonyms, antonyms, examples, and collocations.
+- **Search and save:** linked English terms launch a new search, while the + button adds a result to Vocabulary Book with immediate, self-dismissing feedback.
+- **Fast capture:** Enter to add in Vocabulary Book, with duplicate and input validation.
 - **Bulk document import:** add newline-delimited words or phrases from DOC, DOCX, PDF, TXT, RTF, ODT, and other document files.
 - **Flexible ordering:** long-press to reorder, swipe left to delete, and sort by custom order, A–Z, length, or estimated difficulty.
 - **Full lookup:** English definition, corpus frequency signal, US and UK phonetics, synonyms, antonyms, and examples.
@@ -40,7 +42,9 @@ Lexora is an English vocabulary organizer for Android, macOS, Windows, and Linux
 - **Faster batches:** up to four concurrent lookups plus a 14-day on-device cache speed up long lists and repeated generation.
 - **Complete Chinese layer:** definitions, examples, and related words receive Chinese translations; PDF labels are bilingual too.
 - **Automatic language:** follows the device language, using Simplified Chinese on Chinese devices and English elsewhere.
-- **First-run guidance:** a concise three-step tutorial introduces capture, ordering, generation, and sharing.
+- **Dual history:** switch History between generated words and past searches, then reopen any searched term in one tap.
+- **Search text sizing:** precisely tune result typography in Settings; the default is optimized for phone reading.
+- **First-run guidance:** introduces lookup, saving, organization, generation, and both history modes.
 - **Dedicated settings:** document format, type, and example count live in Settings alongside quick website access and donation QR codes.
 - **Five export formats:** print-ready PDF, standards-based EPUB, editable DOCX, page images, and one continuous long image.
 - **Custom layout:** small, medium, and large type plus 0, 1, or 2–3 examples; medium uses two compact columns, sufficiently small typography switches to three, and independent column flow removes gaps between uneven cards.
@@ -57,19 +61,19 @@ Use the [official download section](https://lexora.12323456.xyz/#download) for b
 
 | Platform | Package | Requirement | Download |
 | --- | --- | --- | --- |
-| Android | APK | Android 8.0+ | [Official mirror](https://lexora.12323456.xyz/downloads/lexora-android-v3.1.0.apk) |
-| macOS | Drag-to-install DMG | macOS 12+ | [Official mirror](https://lexora.12323456.xyz/downloads/lexora-macos-v3.1.0.dmg) |
-| Windows | Setup EXE (launch option checked by default) | Windows 10 / 11 | [Official mirror](https://lexora.12323456.xyz/downloads/lexora-windows-v3.1.0-setup.exe) |
-| Linux | tar.gz | 64-bit Linux | [Official mirror](https://lexora.12323456.xyz/downloads/lexora-linux-v3.1.0.tar.gz) |
+| Android | APK | Android 8.0+ | [Official mirror](https://lexora.12323456.xyz/downloads/lexora-android-v3.2.0.apk) |
+| macOS | Drag-to-install DMG | macOS 12+ | [Official mirror](https://lexora.12323456.xyz/downloads/lexora-macos-v3.2.0.dmg) |
+| Windows | Setup EXE (launch option checked by default) | Windows 10 / 11 | [Official mirror](https://lexora.12323456.xyz/downloads/lexora-windows-v3.2.0-setup.exe) |
+| Linux | tar.gz | 64-bit Linux | [Official mirror](https://lexora.12323456.xyz/downloads/lexora-linux-v3.2.0.tar.gz) |
 
 > [!IMPORTANT]
 > Android v0.2.0 used an ephemeral build signature whose private key cannot be recovered. Moving to the stable v0.3.0 signing key therefore requires one uninstall and reinstall. From v0.3.0 onward, future APKs use the same release key and install directly over the existing app. Export any PDFs you need before removing v0.2.0.
 
-Every release filename contains its version, such as `lexora-android-v3.1.0.apk`, so old and new installers remain easy to distinguish. In-app updates prefer Cloudflare R2 and verify download completeness plus SHA-256 before opening an installer.
+Every release filename contains its version, such as `lexora-android-v3.2.0.apk`, so old and new installers remain easy to distinguish. The website keeps 3.1.0 under Previous versions and it will remain in R2. In-app updates prefer Cloudflare R2 and verify download completeness plus SHA-256 before opening an installer.
 
 ## Three steps to a vocabulary book
 
-1. Type an English word and press Enter, or import a newline-delimited document to add a large batch of words and phrases.
+1. Search in **Words** and save useful results, or type/import a large batch in **Vocabulary Book**.
 2. Long-press to reorder or select a sort mode, choose type and examples in **Settings**, then select **Start generating**.
 3. Choose PDF, EPUB, or DOCX; read, export, or share the result in **Generated**, and browse every generated word in **History**.
 

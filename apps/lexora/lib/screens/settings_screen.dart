@@ -680,6 +680,61 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           ],
                         ),
                       ),
+                      const SizedBox(height: 18),
+                      _SettingsSection(
+                        title: strings.isZh ? '搜索结果字体' : 'Search result text',
+                        icon: Icons.text_fields_rounded,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              strings.isZh
+                                  ? '精细调整释义、例句和联想词的显示大小。默认值已针对手机阅读优化。'
+                                  : 'Fine-tune definitions, examples, and related-word text. The default is optimized for phone reading.',
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                color: theme.colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            Row(
+                              children: [
+                                const Icon(Icons.text_decrease_rounded),
+                                Expanded(
+                                  child: Slider(
+                                    value: settings.searchTextScale,
+                                    min: .8,
+                                    max: 1.5,
+                                    divisions: 14,
+                                    label:
+                                        '${(settings.searchTextScale * 100).round()}%',
+                                    onChanged: (value) => onChanged(
+                                      settings.copyWith(searchTextScale: value),
+                                    ),
+                                  ),
+                                ),
+                                const Icon(Icons.text_increase_rounded),
+                                const SizedBox(width: 8),
+                                SizedBox(
+                                  width: 48,
+                                  child: Text(
+                                    '${(settings.searchTextScale * 100).round()}%',
+                                    textAlign: TextAlign.right,
+                                    style: theme.textTheme.labelLarge,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            TextButton(
+                              onPressed: settings.searchTextScale == 1
+                                  ? null
+                                  : () => onChanged(
+                                      settings.copyWith(searchTextScale: 1),
+                                    ),
+                              child: Text(strings.isZh ? '恢复默认' : 'Reset'),
+                            ),
+                          ],
+                        ),
+                      ),
                     ],
                   ),
                 ),
