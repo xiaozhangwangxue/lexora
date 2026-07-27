@@ -61,6 +61,7 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
   PdfSettings? _settings;
   bool _releaseNotesPending = false;
   bool _releaseNotesShowing = false;
+  bool _searchShowingResult = false;
   bool? _desktopSidebarExpandedPreference;
   bool? _nativeMacShellAvailable;
   Completer<void>? _resumeCompleter;
@@ -753,7 +754,7 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
     final autoExpandedNavigation = windowWidth >= 820;
     final expandedNavigation =
         autoExpandedNavigation && (_desktopSidebarExpandedPreference ?? true);
-    final showGitHub = _index == 0 || _index == 1;
+    final showGitHub = _index == 1 || (_index == 0 && !_searchShowingResult);
     final pages = [
       SearchScreen(
         active: _index == 0,
@@ -762,6 +763,10 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
         onVocabularyChanged: (terms) =>
             setState(() => _vocabularyTerms = [...terms]),
         onHistoryChanged: () => setState(() => _wordHistoryRevision++),
+        onResultVisibilityChanged: (visible) {
+          if (_searchShowingResult == visible || !mounted) return;
+          setState(() => _searchShowingResult = visible);
+        },
         textScale: _settings!.searchTextScale,
       ),
       HomeScreen(

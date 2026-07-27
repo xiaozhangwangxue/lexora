@@ -1,20 +1,18 @@
-const appVersion = '3.2.0';
-const appBuildNumber = 19;
+const appVersion = '3.2.1';
+const appBuildNumber = 20;
 
 const releaseNotesZh = <String>[
-  '新增独立单词搜索页：实时联想、按词性整理的双语释义、例句、搭配和可点击相关词。',
-  '搜索结果可一键加入或移出词汇书，并用轻量动画和自动消失提示即时反馈。',
-  '历史页新增“生成历史 / 搜索历史”切换，曾经查过的单词可直接再次搜索。',
-  '设置新增搜索结果字号精细调节，默认针对手机阅读优化。',
-  '导航升级为单词、词汇书、生成记录、历史和设置五个清晰工作区。',
-  '官网、README 和首次教程全面更新，并保留 3.1.0 历史版本下载。',
+  '修复 macOS 导出图片时因相册权限说明缺失而闪退的问题。',
+  '快速调整桌面窗口宽度时暂停高成本毛玻璃和侧栏动画，松手后自动恢复，明显减少卡顿。',
+  '搜索结果显示后自动隐藏 GitHub 按钮，避免遮挡内容。',
+  '修复窄窗口下搜索结果挤压错位，并限制桌面窗口最小尺寸。',
+  '重新居中 macOS 收起侧栏后的红绿灯按钮，并适当加宽收起状态。',
 ];
 
 const releaseNotesEn = <String>[
-  'Added a dedicated dictionary search with live suggestions, bilingual senses by part of speech, examples, collocations, and linked related words.',
-  'Add or remove a result from Vocabulary Book in one tap with immediate motion and a self-dismissing confirmation.',
-  'History now switches between generated-word and search history, with one-tap repeat searches.',
-  'Added precise search-result text sizing, optimized by default for phone reading.',
-  'Reorganized navigation into Words, Vocabulary Book, Generated, History, and Settings.',
-  'Updated the website, README, and onboarding while retaining the 3.1.0 historical download.',
+  'Fixed a macOS crash when exporting images caused by missing Photos permission descriptions.',
+  'Reduced desktop resize jank by pausing expensive glass effects and sidebar animation during live resizing, then restoring them afterward.',
+  'The GitHub button now hides when a search result is shown so it cannot cover content.',
+  'Fixed compressed search-result layouts and enforced a safe minimum desktop window size.',
+  'Recentered macOS traffic-light controls in the wider collapsed sidebar.',
 ];

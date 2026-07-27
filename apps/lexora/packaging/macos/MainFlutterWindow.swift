@@ -15,7 +15,7 @@ class MainFlutterWindow: NSWindow {
     isOpaque = false
     titlebarAppearsTransparent = true
     styleMask.insert(.fullSizeContentView)
-    minSize = NSSize(width: 640, height: 540)
+    minSize = NSSize(width: 980, height: 680)
     isMovableByWindowBackground = false
     acceptsMouseMovedEvents = true
 
@@ -36,7 +36,9 @@ class MainFlutterWindow: NSWindow {
         navigation: navigation
       )
     )
-    let windowFrame = frame
+    var windowFrame = frame
+    windowFrame.size.width = max(windowFrame.size.width, minSize.width)
+    windowFrame.size.height = max(windowFrame.size.height, minSize.height)
     contentViewController = host
     setFrame(windowFrame, display: true)
 
@@ -162,6 +164,7 @@ private struct LexoraNativeShell: View {
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @StateObject private var navigation: LexoraNavigationModel
   @State private var prefersExpandedSidebar = true
+  @State private var isLiveResizing = false
 
   init(
     flutterViewController: FlutterViewController,
@@ -175,11 +178,14 @@ private struct LexoraNativeShell: View {
     GeometryReader { proxy in
       let canExpand = proxy.size.width >= 850
       let expanded = canExpand && prefersExpandedSidebar
+      let sidebarWidth: CGFloat = expanded ? 218 : 112
       HStack(spacing: 0) {
         nativeSidebar(expanded: expanded, canExpand: canExpand)
-          .frame(width: expanded ? 218 : 96)
+          .frame(width: sidebarWidth)
           .animation(
-            .timingCurve(0.77, 0, 0.175, 1, duration: 0.26),
+            isLiveResizing || reduceMotion
+              ? nil
+              : .timingCurve(0.77, 0, 0.175, 1, duration: 0.26),
             value: expanded
           )
 
@@ -189,7 +195,20 @@ private struct LexoraNativeShell: View {
           .background(Color(nsColor: .windowBackgroundColor).opacity(0.72))
           .clipShape(Rectangle())
       }
-      .background(LexoraBackdrop())
+      .background(LexoraBackdrop(simplified: isLiveResizing))
+      .overlay(alignment: .topLeading) {
+        WindowChromeBridge(
+          sidebarWidth: sidebarWidth,
+          expanded: expanded,
+          onLiveResizeChanged: { resizing in
+            if isLiveResizing != resizing {
+              isLiveResizing = resizing
+            }
+          }
+        )
+        .frame(width: 1, height: 1)
+        .allowsHitTesting(false)
+      }
     }
     .ignoresSafeArea(edges: .top)
     .sheet(item: $navigation.customization) { customization in
@@ -255,7 +274,7 @@ private struct LexoraNativeShell: View {
         .help(expanded ? localized("收起边栏", "Collapse sidebar") : localized("展开边栏", "Expand sidebar"))
       }
 
-      Text("3.2.0")
+      Text("3.2.1")
         .font(.caption2.monospacedDigit())
         .foregroundStyle(.tertiary)
         .frame(maxWidth: .infinity, alignment: expanded ? .leading : .center)
@@ -603,20 +622,148 @@ private struct NavigationItem {
 }
 
 private struct LexoraBackdrop: View {
+  var simplified = false
+
+  @ViewBuilder
   var body: some View {
-    ZStack {
-      LegacyVisualEffect(material: .underWindowBackground)
+    if simplified {
+      Color(nsColor: .windowBackgroundColor)
         .ignoresSafeArea()
-      LinearGradient(
-        colors: [
-          Color.accentColor.opacity(0.08),
-          Color(nsColor: .windowBackgroundColor).opacity(0.58),
-          Color.cyan.opacity(0.035),
-        ],
-        startPoint: .topLeading,
-        endPoint: .bottomTrailing
+    } else {
+      ZStack {
+        LegacyVisualEffect(material: .underWindowBackground)
+          .ignoresSafeArea()
+        LinearGradient(
+          colors: [
+            Color.accentColor.opacity(0.08),
+            Color(nsColor: .windowBackgroundColor).opacity(0.58),
+            Color.cyan.opacity(0.035),
+          ],
+          startPoint: .topLeading,
+          endPoint: .bottomTrailing
+        )
+        .ignoresSafeArea()
+      }
+    }
+  }
+}
+
+private struct WindowChromeBridge: NSViewRepresentable {
+  let sidebarWidth: CGFloat
+  let expanded: Bool
+  let onLiveResizeChanged: (Bool) -> Void
+
+  func makeCoordinator() -> Coordinator {
+    Coordinator(onLiveResizeChanged: onLiveResizeChanged)
+  }
+
+  func makeNSView(context: Context) -> NSView {
+    let view = NSView(frame: .zero)
+    DispatchQueue.main.async {
+      context.coordinator.update(
+        view: view,
+        sidebarWidth: sidebarWidth,
+        expanded: expanded,
+        onLiveResizeChanged: onLiveResizeChanged
       )
-      .ignoresSafeArea()
+    }
+    return view
+  }
+
+  func updateNSView(_ nsView: NSView, context: Context) {
+    DispatchQueue.main.async {
+      context.coordinator.update(
+        view: nsView,
+        sidebarWidth: sidebarWidth,
+        expanded: expanded,
+        onLiveResizeChanged: onLiveResizeChanged
+      )
+    }
+  }
+
+  static func dismantleNSView(_ nsView: NSView, coordinator: Coordinator) {
+    coordinator.detach()
+  }
+
+  final class Coordinator {
+    private weak var window: NSWindow?
+    private var observers: [NSObjectProtocol] = []
+    private var onLiveResizeChanged: (Bool) -> Void
+
+    init(onLiveResizeChanged: @escaping (Bool) -> Void) {
+      self.onLiveResizeChanged = onLiveResizeChanged
+    }
+
+    func update(
+      view: NSView,
+      sidebarWidth: CGFloat,
+      expanded: Bool,
+      onLiveResizeChanged: @escaping (Bool) -> Void
+    ) {
+      self.onLiveResizeChanged = onLiveResizeChanged
+      if window !== view.window {
+        attach(to: view.window)
+      }
+      positionTrafficLights(sidebarWidth: sidebarWidth, expanded: expanded)
+    }
+
+    func detach() {
+      for observer in observers {
+        NotificationCenter.default.removeObserver(observer)
+      }
+      observers.removeAll()
+      window = nil
+    }
+
+    private func attach(to window: NSWindow?) {
+      detach()
+      guard let window else { return }
+      self.window = window
+      observers.append(
+        NotificationCenter.default.addObserver(
+          forName: NSWindow.willStartLiveResizeNotification,
+          object: window,
+          queue: .main
+        ) { [weak self] _ in
+          self?.onLiveResizeChanged(true)
+        }
+      )
+      observers.append(
+        NotificationCenter.default.addObserver(
+          forName: NSWindow.didEndLiveResizeNotification,
+          object: window,
+          queue: .main
+        ) { [weak self] _ in
+          self?.onLiveResizeChanged(false)
+        }
+      )
+    }
+
+    private func positionTrafficLights(
+      sidebarWidth: CGFloat,
+      expanded: Bool
+    ) {
+      guard let window else { return }
+      let buttons = [
+        window.standardWindowButton(.closeButton),
+        window.standardWindowButton(.miniaturizeButton),
+        window.standardWindowButton(.zoomButton),
+      ].compactMap { $0 }
+      guard
+        let firstSuperview = buttons.first?.superview,
+        buttons.allSatisfy({ $0.superview === firstSuperview })
+      else { return }
+      let minimumX = buttons.map(\.frame.minX).min() ?? 0
+      let maximumX = buttons.map(\.frame.maxX).max() ?? 0
+      let groupWidth = maximumX - minimumX
+      let targetX = expanded ? 14 : max(10, (sidebarWidth - groupWidth) / 2)
+      let delta = targetX - minimumX
+      guard abs(delta) > 0.5 else { return }
+      for button in buttons {
+        button.setFrameOrigin(
+          NSPoint(x: button.frame.origin.x + delta, y: button.frame.origin.y)
+        )
+      }
     }
   }
 }

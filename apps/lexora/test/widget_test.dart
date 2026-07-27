@@ -10,16 +10,53 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:lexora/app_version.dart';
 import 'package:lexora/l10n/app_localizations.dart';
 import 'package:lexora/main.dart';
+import 'package:lexora/models/word_entry.dart';
 import 'package:lexora/screens/history_screen.dart';
+import 'package:lexora/screens/search_screen.dart';
 import 'package:lexora/screens/word_history_screen.dart';
 import 'package:lexora/services/generation_progress.dart';
 import 'package:lexora/services/history_service.dart';
+import 'package:lexora/services/word_service.dart';
 import 'package:lexora/widgets/lexora_wordmark.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 Future<void> pumpUi(WidgetTester tester) async {
   await tester.pump();
   await tester.pump(const Duration(milliseconds: 600));
+}
+
+class _ImmediateWordService extends WordService {
+  @override
+  Future<List<String>> suggest(String rawTerm, {int maxResults = 12}) async =>
+      const [];
+
+  @override
+  Future<LookupBatchResult> lookupAll(
+    List<String> terms, {
+    int exampleCount = 1,
+    int maxConcurrency = 4,
+    void Function(int completed, int total, String term)? onProgress,
+  }) async => const LookupBatchResult(
+    entries: [
+      WordEntry(
+        word: 'word',
+        difficulty: 'A1–A2',
+        frequency: 147.7,
+        usPhonetic: '/wɜːd/',
+        ukPhonetic: '/wɜːd/',
+        definition: 'A unit of language.',
+        definitionZh: '语言单位。',
+        synonyms: [],
+        synonymsZh: '',
+        antonyms: [],
+        antonymsZh: '',
+        examples: [],
+        examplesZh: [],
+      ),
+    ],
+    failures: [],
+    fuzzyMatches: [],
+  );
 }
 
 void main() {
@@ -169,6 +206,53 @@ void main() {
     expect(find.text('Lexora 官网'), findsOneWidget);
     expect(find.text('支持 Lexora'), findsOneWidget);
     expect(find.text('GitHub'), findsOneWidget);
+  });
+
+  testWidgets('search result hides shell chrome and stays responsive', (
+    tester,
+  ) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(540, 760);
+    addTearDown(() {
+      tester.view.resetDevicePixelRatio();
+      tester.view.resetPhysicalSize();
+    });
+    SharedPreferences.setMockInitialValues({});
+    final controller = SearchScreenController();
+    bool? resultVisible;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('zh', 'CN'),
+        localizationsDelegates: const [
+          AppLocalizationsDelegate(),
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        supportedLocales: const [Locale('en'), Locale('zh')],
+        home: Scaffold(
+          body: SearchScreen(
+            active: true,
+            controller: controller,
+            vocabularyTerms: const [],
+            onVocabularyChanged: (_) {},
+            onHistoryChanged: () {},
+            onResultVisibilityChanged: (visible) => resultVisible = visible,
+            wordService: _ImmediateWordService(),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    controller.search('word');
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 200));
+
+    expect(resultVisible, isTrue);
+    expect(find.text('word'), findsWidgets);
+    expect(find.text('freq 147.7'), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets(

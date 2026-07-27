@@ -105,6 +105,8 @@ jobs:
           dart run tool/configure_macos_lipo.dart
           /usr/libexec/PlistBuddy -c "Add :com.apple.security.network.client bool true" macos/Runner/Release.entitlements || /usr/libexec/PlistBuddy -c "Set :com.apple.security.network.client true" macos/Runner/Release.entitlements
           /usr/libexec/PlistBuddy -c "Add :com.apple.security.files.user-selected.read-write bool true" macos/Runner/Release.entitlements || /usr/libexec/PlistBuddy -c "Set :com.apple.security.files.user-selected.read-write true" macos/Runner/Release.entitlements
+          /usr/libexec/PlistBuddy -c "Add :NSPhotoLibraryUsageDescription string Lexora needs photo library access only when you export vocabulary-book pages as images." macos/Runner/Info.plist || /usr/libexec/PlistBuddy -c "Set :NSPhotoLibraryUsageDescription Lexora needs photo library access only when you export vocabulary-book pages as images." macos/Runner/Info.plist
+          /usr/libexec/PlistBuddy -c "Add :NSPhotoLibraryAddUsageDescription string Lexora saves exported vocabulary-book pages to your photo library when you choose an image format." macos/Runner/Info.plist || /usr/libexec/PlistBuddy -c "Set :NSPhotoLibraryAddUsageDescription Lexora saves exported vocabulary-book pages to your photo library when you choose an image format." macos/Runner/Info.plist
       - run: flutter pub get
       - run: dart run flutter_launcher_icons
       - run: flutter analyze

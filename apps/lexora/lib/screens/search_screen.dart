@@ -22,6 +22,7 @@ class SearchScreen extends StatefulWidget {
     required this.vocabularyTerms,
     required this.onVocabularyChanged,
     required this.onHistoryChanged,
+    this.onResultVisibilityChanged,
     this.textScale = 1,
     this.wordService,
     this.historyService,
@@ -32,6 +33,7 @@ class SearchScreen extends StatefulWidget {
   final List<String> vocabularyTerms;
   final ValueChanged<List<String>> onVocabularyChanged;
   final VoidCallback onHistoryChanged;
+  final ValueChanged<bool>? onResultVisibilityChanged;
   final double textScale;
   final WordService? wordService;
   final SearchHistoryService? historyService;
@@ -166,6 +168,7 @@ class _SearchScreenState extends State<SearchScreen> {
             ? '没有找到“$term”的可靠词典结果。请检查拼写后重试。'
             : 'No reliable dictionary result was found for “$term”. Check the spelling and try again.';
       });
+      widget.onResultVisibilityChanged?.call(false);
       return;
     }
     final entry = result.entries.first;
@@ -176,6 +179,7 @@ class _SearchScreenState extends State<SearchScreen> {
       _loading = false;
       _entry = entry;
     });
+    widget.onResultVisibilityChanged?.call(true);
     widget.onHistoryChanged();
   }
 
@@ -466,42 +470,41 @@ class _ResultView extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.only(top: 22, bottom: 40),
       children: [
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    entry.word,
-                    style: theme.textTheme.displaySmall?.copyWith(
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: -1.2,
-                    ),
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final compact = constraints.maxWidth < 650;
+            final title = Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  entry.word,
+                  style: theme.textTheme.displaySmall?.copyWith(
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: -1.2,
                   ),
-                  if (entry.isFuzzyMatch)
-                    Text(
-                      isZh
-                          ? '由“${entry.originalTerm}”匹配'
-                          : 'Matched from “${entry.originalTerm}”',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                  const SizedBox(height: 5),
+                ),
+                if (entry.isFuzzyMatch)
                   Text(
-                    'US ${entry.usPhonetic}   ·   UK ${entry.ukPhonetic}',
-                    style: theme.textTheme.bodyMedium?.copyWith(
+                    isZh
+                        ? '由“${entry.originalTerm}”匹配'
+                        : 'Matched from “${entry.originalTerm}”',
+                    style: theme.textTheme.bodySmall?.copyWith(
                       color: theme.colorScheme.onSurfaceVariant,
                     ),
                   ),
-                ],
-              ),
-            ),
-            Wrap(
+                const SizedBox(height: 5),
+                Text(
+                  'US ${entry.usPhonetic}   ·   UK ${entry.ukPhonetic}',
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            );
+            final metrics = Wrap(
               crossAxisAlignment: WrapCrossAlignment.center,
               spacing: 6,
+              runSpacing: 6,
               children: [
                 Chip(label: Text(entry.difficulty)),
                 Chip(label: Text('freq ${entry.frequency.toStringAsFixed(1)}')),
@@ -545,8 +548,22 @@ class _ResultView extends StatelessWidget {
                   ),
                 ),
               ],
-            ),
-          ],
+            );
+            if (compact) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [title, const SizedBox(height: 12), metrics],
+              );
+            }
+            return Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(child: title),
+                const SizedBox(width: 18),
+                Flexible(child: metrics),
+              ],
+            );
+          },
         ),
         const SizedBox(height: 20),
         for (final sense in senses)

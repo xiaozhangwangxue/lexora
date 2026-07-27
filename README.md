@@ -61,10 +61,10 @@ Lexora 是一款面向 Android、macOS、Windows 与 Linux、可以生成个人�
 
 | 平台 | 安装包 | 系统要求 | 下载 |
 | --- | --- | --- | --- |
-| Android | APK | Android 8.0+ | [官网下载](https://lexora.12323456.xyz/downloads/lexora-android-v3.2.0.apk) |
-| macOS | 拖动安装 DMG | macOS 12+ | [官网下载](https://lexora.12323456.xyz/downloads/lexora-macos-v3.2.0.dmg) |
-| Windows | 安装程序 EXE（默认安装后启动） | Windows 10 / 11 | [官网下载](https://lexora.12323456.xyz/downloads/lexora-windows-v3.2.0-setup.exe) |
-| Linux | tar.gz | 64 位 Linux | [官网下载](https://lexora.12323456.xyz/downloads/lexora-linux-v3.2.0.tar.gz) |
+| Android | APK | Android 8.0+ | [官网下载](https://lexora.12323456.xyz/downloads/lexora-android-v3.2.1.apk) |
+| macOS | 拖动安装 DMG | macOS 12+ | [官网下载](https://lexora.12323456.xyz/downloads/lexora-macos-v3.2.1.dmg) |
+| Windows | 安装程序 EXE（默认安装后启动） | Windows 10 / 11 | [官网下载](https://lexora.12323456.xyz/downloads/lexora-windows-v3.2.1-setup.exe) |
+| Linux | tar.gz | 64 位 Linux | [官网下载](https://lexora.12323456.xyz/downloads/lexora-linux-v3.2.1.tar.gz) |
 
 <details>
 <summary><strong>首次安装被系统拦截怎么办？</strong></summary>
@@ -79,7 +79,7 @@ Lexora 是一款面向 Android、macOS、Windows 与 Linux、可以生成个人�
 > [!IMPORTANT]
 > Android v0.2.0 使用了临时构建签名，旧私钥无法恢复，因此升级到采用稳定签名的 v0.3.0 时需要先卸载旧版再安装一次。自 v0.3.0 起，后续版本继续使用同一发布签名，可直接覆盖更新。请先按需导出旧版中的 PDF。
 
-所有发行文件名都包含版本号，例如 `lexora-android-v3.2.0.apk`。官网的“历史版本”中继续提供 3.1.0，不会从 R2 删除。应用内更新优先使用 Cloudflare R2，并在打开安装包前校验下载完整性与 SHA-256。
+所有发行文件名都包含版本号，例如 `lexora-android-v3.2.1.apk`。官网的“历史版本”中继续提供 3.1.0，不会从 R2 删除。应用内更新优先使用 Cloudflare R2，并在打开安装包前校验下载完整性与 SHA-256。
 
 ## 三步生成词汇书
 
