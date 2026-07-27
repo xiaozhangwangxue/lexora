@@ -22,12 +22,13 @@ import '../services/pdf_settings_service.dart';
 import '../services/word_service.dart';
 import '../widgets/github_button.dart';
 import 'history_screen.dart';
+import 'history_hub_screen.dart';
 import 'home_screen.dart';
 import 'onboarding_screen.dart';
 import 'pdf_customization_dialog.dart';
 import 'pdf_reader_screen.dart';
 import 'settings_screen.dart';
-import 'word_history_screen.dart';
+import 'search_screen.dart';
 
 enum _GenerationCompleteAction { ignore, open, share }
 
@@ -50,6 +51,8 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
   final _historyService = HistoryService();
   final _haptics = const HapticService();
   final _notifications = NotificationService.instance;
+  final _searchController = SearchScreenController();
+  List<String> _vocabularyTerms = [];
   int _index = 0;
   int _recordsRevision = 0;
   int _wordHistoryRevision = 0;
@@ -108,7 +111,7 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
   Future<void> _handleNativeNavigation(MethodCall call) async {
     if (call.method != 'selectPage') return;
     final page = call.arguments as int?;
-    if (page == null || page < 0 || page > 3 || !mounted) return;
+    if (page == null || page < 0 || page > 4 || !mounted) return;
     _selectPage(page, animate: false);
   }
 
@@ -273,7 +276,7 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
   }
 
   void _dismissAndroidHomeKeyboard(int destination) {
-    if (!_isAndroid || destination == 0) return;
+    if (!_isAndroid) return;
     FocusManager.instance.primaryFocus?.unfocus();
     unawaited(SystemChannels.textInput.invokeMethod<void>('TextInput.hide'));
   }
@@ -360,6 +363,7 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
         fallback.exampleAmount,
       ),
       smartReorder: values['smartReorder'] as bool? ?? fallback.smartReorder,
+      searchTextScale: fallback.searchTextScale,
       typography: PdfTypography(
         word: number('word', fallback.typography.word),
         phonetic: number('phonetic', fallback.typography.phonetic),
@@ -492,7 +496,7 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
       'reader.opened',
       data: {'id': book.id, 'format': book.format.name, 'path': book.path},
     );
-    const recordsPage = 1;
+    const recordsPage = 2;
     _selectPage(recordsPage, animate: false);
     final isPdf = book.format == BookFormat.pdf;
     await Navigator.of(context).push(
@@ -749,12 +753,26 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
     final autoExpandedNavigation = windowWidth >= 820;
     final expandedNavigation =
         autoExpandedNavigation && (_desktopSidebarExpandedPreference ?? true);
-    final showGitHub = _index == 0;
+    final showGitHub = _index == 0 || _index == 1;
     final pages = [
-      HomeScreen(
+      SearchScreen(
         active: _index == 0,
+        controller: _searchController,
+        vocabularyTerms: _vocabularyTerms,
+        onVocabularyChanged: (terms) =>
+            setState(() => _vocabularyTerms = [...terms]),
+        onHistoryChanged: () => setState(() => _wordHistoryRevision++),
+        textScale: _settings!.searchTextScale,
+      ),
+      HomeScreen(
+        active: _index == 1,
         settings: _settings!,
         generationRunning: _generationProgress.isRunning,
+        words: _vocabularyTerms,
+        onWordsChanged: (terms) {
+          if (listEquals(terms, _vocabularyTerms)) return;
+          setState(() => _vocabularyTerms = [...terms]);
+        },
         onStartGeneration: _startGeneration,
         onCustomizePdf: _showPdfCustomizer,
       ),
@@ -763,11 +781,17 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
         progress: _generationProgress,
         onOpenBook: _openBook,
       ),
-      WordHistoryScreen(
+      HistoryHubScreen(
         key: ValueKey(_wordHistoryRevision),
         generationRunning: _generationProgress.isRunning,
         onRegenerate: _startGeneration,
         onCustomizePdf: _showPdfCustomizer,
+        onSearch: (term) {
+          _selectPage(0, animate: false);
+          WidgetsBinding.instance.addPostFrameCallback(
+            (_) => _searchController.search(term),
+          );
+        },
       ),
       SettingsScreen(
         settings: _settings!,
@@ -838,9 +862,14 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
 
     final destinations = [
       NavigationRailDestination(
+        icon: const Icon(Icons.search_rounded),
+        selectedIcon: const Icon(Icons.manage_search_rounded),
+        label: Text(strings.words),
+      ),
+      NavigationRailDestination(
         icon: const Icon(Icons.auto_stories_outlined),
         selectedIcon: const Icon(Icons.auto_stories_rounded),
-        label: Text(strings.words),
+        label: Text(strings.vocabularyBookLabel),
       ),
       NavigationRailDestination(
         icon: const Icon(Icons.receipt_long_outlined),
@@ -944,16 +973,21 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
             NavigationDestination(
               icon: destinations[1].icon,
               selectedIcon: destinations[1].selectedIcon,
-              label: strings.generationRecords,
+              label: strings.vocabularyBookLabel,
             ),
             NavigationDestination(
               icon: destinations[2].icon,
               selectedIcon: destinations[2].selectedIcon,
-              label: strings.history,
+              label: strings.generationRecords,
             ),
             NavigationDestination(
               icon: destinations[3].icon,
               selectedIcon: destinations[3].selectedIcon,
+              label: strings.history,
+            ),
+            NavigationDestination(
+              icon: destinations[4].icon,
+              selectedIcon: destinations[4].selectedIcon,
               label: strings.settings,
             ),
           ],

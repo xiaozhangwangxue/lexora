@@ -4,11 +4,11 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://lexora.12323456.xyz"),
-  title: "Lexora — Words in. A beautiful bilingual book out.",
-  description: "Import and organize English words, then create a compact bilingual PDF, EPUB, editable DOCX, page images, or a long image with smart layout.",
+  title: "Lexora — The dictionary that builds your vocabulary book.",
+  description: "Search bilingual definitions, examples, collocations, and related words, save what matters, then create your personal PDF, EPUB, DOCX, page images, or long image.",
   openGraph: {
-    title: "Lexora — Make your words worth keeping.",
-    description: "From a loose word list to five polished bilingual formats with smart compact layout.",
+    title: "Lexora — Every lookup builds your vocabulary book.",
+    description: "A bilingual dictionary with live suggestions, one-tap saving, and five polished personal vocabulary-book formats.",
     type: "website",
     locale: "en_US",
     alternateLocale: "zh_CN",

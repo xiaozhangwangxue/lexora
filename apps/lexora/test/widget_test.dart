@@ -27,7 +27,7 @@ void main() {
     SharedPreferences.setMockInitialValues({});
     await tester.pumpWidget(const LexoraApp());
     await pumpUi(tester);
-    expect(find.text('Type, or import a whole word list'), findsOneWidget);
+    expect(find.text('Look it up before you save it'), findsOneWidget);
     expect(find.text('Skip'), findsOneWidget);
   });
 
@@ -94,7 +94,7 @@ void main() {
       ),
     );
     await pumpUi(tester);
-    expect(find.text('Type, or import a whole word list'), findsOneWidget);
+    expect(find.text('Look it up before you save it'), findsOneWidget);
 
     await tester.runAsync(() async {
       final boundary = tester.renderObject<RenderRepaintBoundary>(
@@ -108,7 +108,9 @@ void main() {
     });
   });
 
-  testWidgets('Lexora opens the localized word composer', (tester) async {
+  testWidgets('Lexora opens search and navigates to the vocabulary book', (
+    tester,
+  ) async {
     SharedPreferences.setMockInitialValues({
       'lexora.onboarding.completed.v1': true,
       'lexora.release-notes.seen.$appVersion': true,
@@ -116,6 +118,9 @@ void main() {
     await tester.pumpWidget(const LexoraApp(locale: Locale('zh', 'CN')));
     await pumpUi(tester);
     expect(find.byType(LexoraWordmark), findsOneWidget);
+    expect(find.text('搜索英文单词或短语'), findsOneWidget);
+    await tester.tap(find.byIcon(Icons.auto_stories_outlined));
+    await pumpUi(tester);
     expect(find.text('开始生成'), findsOneWidget);
     expect(find.textContaining('文档自定义'), findsOneWidget);
     expect(find.text('GitHub'), findsOneWidget);

@@ -12,12 +12,13 @@ class AppLocalizations {
       Localizations.of<AppLocalizations>(context, AppLocalizations)!;
 
   String get words => isZh ? '单词' : 'Words';
+  String get vocabularyBookLabel => isZh ? '词汇书' : 'Vocabulary Book';
   String get generationRecords => isZh ? '生成记录' : 'Generated';
   String get history => isZh ? '历史' : 'History';
   String get settings => isZh ? '设置' : 'Settings';
   String get tagline => isZh
-      ? '输入单词或短语，生成精美的双语词汇书。'
-      : 'Words and phrases in. A beautiful bilingual book out.';
+      ? '把查到的单词随手收好，生成属于你的双语词汇书。'
+      : 'Look it up, save it, and turn it into your personal bilingual vocabulary book.';
   String get inputHint =>
       isZh ? '输入英文单词或短语后按回车' : 'Type an English word or phrase and press Enter';
   String get addWord => isZh ? '添加词条' : 'Add entry';
@@ -274,15 +275,15 @@ class AppLocalizations {
   String get onboardingNext => isZh ? '下一步' : 'Next';
   String get onboardingStart => isZh ? '开始使用' : 'Get started';
   String get onboardingOneTitle =>
-      isZh ? '输入，或一次导入整份词表' : 'Type, or import a whole word list';
+      isZh ? '先查清楚，再决定是否收藏' : 'Look it up before you save it';
   String get onboardingOneBody => isZh
-      ? '输入单词或短语后按回车，也可以从 TXT、PDF、DOC、DOCX 等文件按行批量导入。长按排序，左滑删除。'
-      : 'Press Enter after a word or phrase, or import line-separated entries from TXT, PDF, DOC, DOCX, and more. Long-press to reorder and swipe to delete.';
+      ? '“单词”页会实时联想并按词性展示双语释义、例句、搭配和相关词。点击加号即可收藏到词汇书。'
+      : 'Words offers live suggestions and bilingual senses, examples, collocations, and related terms. Tap + to save a result to Vocabulary Book.';
   String get onboardingTwoTitle =>
-      isZh ? '准确补全，也能识别相近拼写' : 'Accurate lookup with careful fuzzy matching';
+      isZh ? '整理你的个人词汇书' : 'Build your personal vocabulary book';
   String get onboardingTwoBody => isZh
-      ? 'Lexora 会补全音标、词频、难度、例句、常用短语和中文翻译。拼写接近时会标明原词与匹配结果，不会悄悄替换。'
-      : 'Lexora adds phonetics, frequency, difficulty, examples, phrases, and Chinese translations. Similar spellings are clearly marked instead of silently replaced.';
+      ? '在“词汇书”页继续输入，或从 TXT、PDF、DOC、DOCX 等文件批量导入。长按调整顺序，左滑删除。'
+      : 'Keep typing in Vocabulary Book, or import line-separated entries from TXT, PDF, DOC, DOCX, and more. Long-press to reorder and swipe to delete.';
   String get onboardingThreeTitle =>
       isZh ? '让每本词汇书适合它的用途' : 'Shape every book for its purpose';
   String get onboardingThreeBody => isZh
@@ -291,8 +292,8 @@ class AppLocalizations {
   String get onboardingFourTitle =>
       isZh ? '在生成记录中阅读，在历史中重用' : 'Read in Generated, reuse from History';
   String get onboardingFourBody => isZh
-      ? '生成完成后可在应用内缩放阅读、分享或导出；历史会保存生成过的词条，方便星标、排序和再次生成。'
-      : 'When ready, read with zoom, share, or export in the app. History keeps generated entries for starring, sorting, and generating again.';
+      ? '生成完成后可在应用内缩放阅读、分享或导出；历史可切换生成历史和搜索历史，随时回到查过的单词。'
+      : 'When ready, read with zoom, share, or export in the app. History switches between generated words and past searches.';
 }
 
 class AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

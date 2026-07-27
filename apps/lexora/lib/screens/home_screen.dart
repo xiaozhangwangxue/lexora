@@ -22,6 +22,8 @@ class HomeScreen extends StatefulWidget {
     this.active = true,
     required this.settings,
     required this.generationRunning,
+    this.words = const [],
+    this.onWordsChanged,
     required this.onStartGeneration,
     required this.onCustomizePdf,
     this.importService = const DocumentImportService(),
@@ -31,6 +33,8 @@ class HomeScreen extends StatefulWidget {
   final PdfSettings settings;
   final bool active;
   final bool generationRunning;
+  final List<String> words;
+  final ValueChanged<List<String>>? onWordsChanged;
   final ValueChanged<List<String>> onStartGeneration;
   final VoidCallback onCustomizePdf;
   final DocumentImportService importService;
@@ -43,10 +47,16 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   final _controller = TextEditingController();
   final _focusNode = FocusNode();
-  final _words = <String>[];
+  late List<String> _words;
   final _haptics = const HapticService();
   WordSort _sort = WordSort.custom;
   bool _importing = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _words = [...widget.words];
+  }
 
   @override
   void didUpdateWidget(covariant HomeScreen oldWidget) {
@@ -58,6 +68,9 @@ class _HomeScreenState extends State<HomeScreen> {
           SystemChannels.textInput.invokeMethod<void>('TextInput.hide'),
         );
       }
+    }
+    if (!_sameWords(widget.words, _words)) {
+      _words = [...widget.words];
     }
   }
 
@@ -87,6 +100,7 @@ class _HomeScreenState extends State<HomeScreen> {
       _controller.clear();
       _sort = WordSort.custom;
     });
+    _emitWords();
     _focusNode.requestFocus();
   }
 
@@ -110,6 +124,7 @@ class _HomeScreenState extends State<HomeScreen> {
           break;
       }
     });
+    _emitWords();
   }
 
   Future<List<XFile>> _pickImportFiles() => openFiles(
@@ -181,6 +196,7 @@ class _HomeScreenState extends State<HomeScreen> {
         _words.addAll(imported);
         _sort = WordSort.custom;
       });
+      _emitWords();
       _message(strings.importSummary(imported.length, duplicates, invalid));
     } else if (errors.isNotEmpty) {
       _message(strings.importFailed(errors.first));
@@ -226,6 +242,7 @@ class _HomeScreenState extends State<HomeScreen> {
       _words.clear();
       _sort = WordSort.custom;
     });
+    _emitWords();
     widget.onStartGeneration(terms);
   }
 
@@ -451,6 +468,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               _words.insert(newIndex, word);
                               _sort = WordSort.custom;
                             });
+                            _emitWords();
                             unawaited(_haptics.itemReordered());
                           },
                           itemBuilder: (context, index) {
@@ -458,8 +476,10 @@ class _HomeScreenState extends State<HomeScreen> {
                             return Dismissible(
                               key: ValueKey(word),
                               direction: DismissDirection.endToStart,
-                              onDismissed: (_) =>
-                                  setState(() => _words.remove(word)),
+                              onDismissed: (_) {
+                                setState(() => _words.remove(word));
+                                _emitWords();
+                              },
                               background: Container(
                                 margin: const EdgeInsets.only(bottom: 8),
                                 padding: const EdgeInsets.only(right: 24),
@@ -525,6 +545,16 @@ class _HomeScreenState extends State<HomeScreen> {
         ExampleAmount.one => strings.oneExample,
         ExampleAmount.upToThree => strings.upToThreeExamples,
       };
+
+  void _emitWords() => widget.onWordsChanged?.call(List.unmodifiable(_words));
+
+  bool _sameWords(List<String> left, List<String> right) {
+    if (left.length != right.length) return false;
+    for (var index = 0; index < left.length; index++) {
+      if (left[index] != right[index]) return false;
+    }
+    return true;
+  }
 }
 
 class _EmptyList extends StatelessWidget {

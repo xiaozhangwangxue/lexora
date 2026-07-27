@@ -45,7 +45,7 @@ class WordService {
   final http.Client _client;
   // Bump the cache when provider/fallback semantics change so incomplete
   // results from older releases do not keep causing exact words to fail.
-  static const _cachePrefix = 'lexora.word.v5';
+  static const _cachePrefix = 'lexora.word.v6';
   static const _cacheLifetime = Duration(days: 14);
 
   /// Looks up several words concurrently while preserving their input order.
@@ -118,6 +118,25 @@ class WordService {
       failures: failures.whereType<LookupFailure>().toList(),
       fuzzyMatches: fuzzyMatches.whereType<FuzzyMatch>().toList(),
     );
+  }
+
+  Future<List<String>> suggest(String rawTerm, {int maxResults = 12}) async {
+    final term = _normalizeTerm(rawTerm);
+    if (term.isEmpty) return const [];
+    final response = await _getWithRetry(
+      Uri.https('api.datamuse.com', '/sug', {
+        's': term,
+        'max': '${max(1, min(maxResults, 24))}',
+      }),
+      timeout: const Duration(seconds: 8),
+    );
+    if (response == null) return const [];
+    return _decodeDatamuse(response)
+        .map((item) => _normalizeTerm(item['word'] as String? ?? ''))
+        .where((item) => item.isNotEmpty)
+        .toSet()
+        .take(maxResults)
+        .toList(growable: false);
   }
 
   Future<_FuzzyLookupResult?> _lookupFuzzy(
@@ -262,6 +281,19 @@ class WordService {
               .cast<Map<String, dynamic>>(),
         )
         .toList();
+    final senseDrafts = <MapEntry<String, List<String>>>[];
+    for (final meaning in meanings.take(6)) {
+      final partOfSpeech = (meaning['partOfSpeech'] as String? ?? '').trim();
+      final items = (meaning['definitions'] as List? ?? const [])
+          .cast<Map<String, dynamic>>()
+          .map((item) => (item['definition'] as String? ?? '').trim())
+          .where((item) => item.isNotEmpty)
+          .take(3)
+          .toList(growable: false);
+      if (items.isNotEmpty) {
+        senseDrafts.add(MapEntry(partOfSpeech, items));
+      }
+    }
     final primary = definitions.firstWhere(
       (item) => (item['definition'] as String? ?? '').trim().isNotEmpty,
       orElse: () => <String, dynamic>{},
@@ -312,7 +344,9 @@ class WordService {
 
     var frequency = _frequencyFromDatamuse(exact);
     final phraseDrafts = <MapEntry<String, String>>[];
+    final relatedDrafts = <MapEntry<String, String>>[];
     final seenPhrases = <String>{};
+    final seenRelated = <String>{word};
     for (final item in related) {
       final relatedWord = _normalizeTerm(item['word'] as String? ?? '');
       if (relatedWord.isEmpty) continue;
@@ -326,17 +360,29 @@ class WordService {
         if (meaning.isNotEmpty) {
           phraseDrafts.add(MapEntry(relatedWord, meaning));
         }
+      } else if (!relatedWord.contains(' ') &&
+          seenRelated.add(relatedWord) &&
+          relatedDrafts.length < 8) {
+        final meaning = _definitionFromDatamuse(item);
+        if (meaning.isNotEmpty) {
+          relatedDrafts.add(MapEntry(relatedWord, meaning));
+        }
       }
     }
 
     final synonyms = sameMeaning.toSet().take(6).toList();
     final antonyms = opposites.toSet().take(6).toList();
+    final richDefinitions = senseDrafts
+        .expand((sense) => sense.value)
+        .toList(growable: false);
     final translations = await Future.wait([
       _translate(definition),
       ...examples.map(_translate),
-      if (synonyms.isNotEmpty) _translate(synonyms.join(', ')),
-      if (antonyms.isNotEmpty) _translate(antonyms.join(', ')),
+      ...synonyms.map(_translate),
+      ...antonyms.map(_translate),
       ...phraseDrafts.take(3).map((item) => _translate(item.value)),
+      ...richDefinitions.map(_translate),
+      ...relatedDrafts.map((item) => _translate(item.value)),
     ]);
     var translationIndex = 0;
     final definitionZh = translations[translationIndex++];
@@ -344,13 +390,42 @@ class WordService {
       for (var i = 0; i < examples.length; i++)
         translations[translationIndex++],
     ];
-    final synonymsZh = synonyms.isEmpty ? '' : translations[translationIndex++];
-    final antonymsZh = antonyms.isEmpty ? '' : translations[translationIndex++];
+    final synonymTranslations = <String, String>{
+      for (final synonym in synonyms) synonym: translations[translationIndex++],
+    };
+    final antonymTranslations = <String, String>{
+      for (final antonym in antonyms) antonym: translations[translationIndex++],
+    };
+    final synonymsZh = synonymTranslations.values.join('、');
+    final antonymsZh = antonymTranslations.values.join('、');
     final phrases = <PhraseEntry>[
       for (final phrase in phraseDrafts.take(3))
         PhraseEntry(
           phrase: phrase.key,
           meaning: phrase.value,
+          meaningZh: translations[translationIndex++],
+        ),
+    ];
+    final senses = <WordSense>[];
+    for (final sense in senseDrafts) {
+      senses.add(
+        WordSense(
+          partOfSpeech: sense.key,
+          definitions: [
+            for (final definition in sense.value)
+              BilingualDefinition(
+                definition: definition,
+                definitionZh: translations[translationIndex++],
+              ),
+          ],
+        ),
+      );
+    }
+    final relatedWords = <RelatedWord>[
+      for (final related in relatedDrafts)
+        RelatedWord(
+          word: related.key,
+          meaning: related.value,
           meaningZh: translations[translationIndex++],
         ),
     ];
@@ -365,11 +440,15 @@ class WordService {
       definitionZh: definitionZh,
       synonyms: synonyms,
       synonymsZh: synonymsZh,
+      synonymTranslations: synonymTranslations,
       antonyms: antonyms,
       antonymsZh: antonymsZh,
+      antonymTranslations: antonymTranslations,
       examples: examples,
       examplesZh: examplesZh,
       phrases: phrases,
+      senses: senses,
+      relatedWords: relatedWords,
     );
     await preferences.setString(
       cacheKey,

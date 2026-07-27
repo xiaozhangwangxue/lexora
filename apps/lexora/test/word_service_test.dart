@@ -34,6 +34,7 @@ void main() {
                   'phonetics': const [],
                   'meanings': [
                     {
+                      'partOfSpeech': 'noun',
                       'synonyms': const [],
                       'antonyms': const [],
                       'definitions': [
@@ -164,6 +165,7 @@ void main() {
                   'phonetics': const [],
                   'meanings': [
                     {
+                      'partOfSpeech': 'noun',
                       'synonyms': const [],
                       'antonyms': const [],
                       'definitions': [
@@ -242,6 +244,7 @@ void main() {
                   'phonetics': const [],
                   'meanings': [
                     {
+                      'partOfSpeech': 'noun',
                       'synonyms': const [],
                       'antonyms': const [],
                       'definitions': [
@@ -280,8 +283,32 @@ void main() {
       expect(entry.word, 'word');
       expect(entry.definition, 'a unit of language');
       expect(entry.definitionZh, '单词');
+      expect(entry.senses.single.partOfSpeech, 'noun');
+      expect(
+        entry.senses.single.definitions.single.definition,
+        'a unit of language',
+      );
+      expect(entry.senses.single.definitions.single.definitionZh, '单词');
     },
   );
+
+  test('suggest returns normalized unique candidates', () async {
+    final client = MockClient((request) async {
+      expect(request.url.path, '/sug');
+      return http.Response(
+        jsonEncode([
+          {'word': 'Word'},
+          {'word': 'word'},
+          {'word': 'word play'},
+        ]),
+        200,
+      );
+    });
+    final suggestions = await WordService(
+      client: client,
+    ).suggest('  WOR ', maxResults: 8);
+    expect(suggestions, ['word', 'word play']);
+  });
 
   test('Datamuse exact definition survives dictionary outage', () async {
     SharedPreferences.setMockInitialValues({});
