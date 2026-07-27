@@ -51,6 +51,7 @@ class UpdateService {
   UpdateService({
     http.Client? client,
     Uri? manifestUri,
+    List<Uri>? manifestUris,
     String? platformKey,
     CacheDirectoryProvider? cacheDirectory,
     InstallerOpener? openInstaller,
@@ -58,8 +59,11 @@ class UpdateService {
     MacInstallerPreparer? prepareMacInstaller,
     ExternalUriLauncher? launchExternal,
     bool? isMacOS,
-  }) : _client = client ?? http.Client(),
-       _manifestUri = manifestUri ?? _defaultManifestUri,
+  }) : assert(manifestUri == null || manifestUris == null),
+       _client = client ?? http.Client(),
+       _manifestUris =
+           manifestUris ??
+           (manifestUri == null ? _defaultManifestUris : [manifestUri]),
        _platformKeyOverride = platformKey,
        _cacheDirectoryOverride = cacheDirectory,
        _openInstaller = openInstaller ?? _defaultOpenInstaller,
@@ -67,15 +71,31 @@ class UpdateService {
        _prepareMacInstaller =
            prepareMacInstaller ?? _defaultPrepareMacInstaller,
        _launchExternal = launchExternal ?? _defaultLaunchExternal,
-       _isMacOS = isMacOS ?? Platform.isMacOS;
+       _isMacOS = isMacOS ?? Platform.isMacOS {
+    if (_manifestUris.isEmpty) {
+      throw ArgumentError.value(
+        manifestUris,
+        'manifestUris',
+        'must not be empty',
+      );
+    }
+    _activeManifestUri = _manifestUris.first;
+  }
 
-  static final Uri _defaultManifestUri = Uri.parse(
-    'https://lexora.12323456.xyz/version.json',
-  );
+  static final List<Uri> _defaultManifestUris = [
+    Uri.parse('https://lexora.12323456.xyz/version.json'),
+    Uri.parse(
+      'https://lexora-official.xiaozhangwangxue.workers.dev/version.json',
+    ),
+    Uri.parse(
+      'https://raw.githubusercontent.com/xiaozhangwangxue/lexora/main/public/version.json',
+    ),
+  ];
   static const _cacheFolderName = 'lexora_update_installers';
   static const _nativeMacUpdate = MethodChannel('lexora/native-navigation');
   final http.Client _client;
-  final Uri _manifestUri;
+  final List<Uri> _manifestUris;
+  late Uri _activeManifestUri;
   final String? _platformKeyOverride;
   final CacheDirectoryProvider? _cacheDirectoryOverride;
   final InstallerOpener _openInstaller;
@@ -85,18 +105,37 @@ class UpdateService {
   final bool _isMacOS;
 
   Future<UpdateInfo?> check() async {
-    final uri = _manifestUri.replace(
-      queryParameters: {'t': DateTime.now().millisecondsSinceEpoch.toString()},
-    );
+    final stamp = DateTime.now().millisecondsSinceEpoch.toString();
     DeveloperLogService.instance.log(
       'update.check_started',
-      data: {'manifest': _manifestUri.toString()},
+      data: {'manifests': _manifestUris.map((uri) => uri.host).toList()},
     );
-    final response = await _client
-        .get(uri)
-        .timeout(const Duration(seconds: 15));
-    if (response.statusCode != 200) {
-      throw HttpException('Update server returned ${response.statusCode}.');
+    http.Response? response;
+    Object? lastError;
+    for (final manifest in _manifestUris) {
+      final uri = manifest.replace(queryParameters: {'t': stamp});
+      try {
+        final candidate = await _client
+            .get(uri)
+            .timeout(const Duration(seconds: 12));
+        if (candidate.statusCode != 200) {
+          lastError = HttpException(
+            'Update server returned ${candidate.statusCode}.',
+            uri: uri,
+          );
+          continue;
+        }
+        response = candidate;
+        _activeManifestUri = manifest;
+        break;
+      } catch (error) {
+        lastError = error;
+      }
+    }
+    if (response == null) {
+      throw HttpException(
+        'All update manifests failed. ${lastError ?? ''}'.trim(),
+      );
     }
     // R2 objects may not carry a charset. response.body would then use
     // Latin-1 and corrupt Chinese release notes, so always decode JSON bytes
@@ -199,9 +238,7 @@ class UpdateService {
     if (!_isMacOS) {
       throw UnsupportedError('The browser update flow is macOS-only.');
     }
-    final downloadPage = _manifestUri.resolve(
-      '/downloads/${Uri.encodeComponent(info.download.filename)}',
-    );
+    final downloadPage = info.download.urls.first;
     DeveloperLogService.instance.log(
       'update.mac_browser_download',
       data: {'version': info.version, 'url': downloadPage.toString()},
@@ -362,7 +399,7 @@ class UpdateService {
 
   UpdateDownload _parseDownload(dynamic raw) {
     if (raw is String && raw.isNotEmpty) {
-      final uri = _manifestUri.resolve(raw);
+      final uri = _activeManifestUri.resolve(raw);
       return UpdateDownload(urls: [uri], filename: uri.pathSegments.last);
     }
     if (raw is! Map<String, dynamic>) {
@@ -373,13 +410,13 @@ class UpdateService {
     if (rawSources is List) {
       for (final source in rawSources.whereType<String>()) {
         if (source.isNotEmpty) {
-          urls.add(_manifestUri.resolve(source));
+          urls.add(_activeManifestUri.resolve(source));
         }
       }
     }
     final rawUrl = raw['url'];
     if (urls.isEmpty && rawUrl is String && rawUrl.isNotEmpty) {
-      urls.add(_manifestUri.resolve(rawUrl));
+      urls.add(_activeManifestUri.resolve(rawUrl));
     }
     if (urls.isEmpty) {
       throw const FormatException('The update has no usable download source.');

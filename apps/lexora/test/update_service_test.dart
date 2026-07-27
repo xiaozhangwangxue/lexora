@@ -31,10 +31,37 @@ void main() {
         notesEn: const [],
       ),
     );
-    expect(events, [
-      'https://lexora.12323456.xyz/downloads/lexora-macos-v99.0.0.dmg',
-      'finish',
-    ]);
+    expect(events, ['https://example.invalid/lexora.dmg', 'finish']);
+  });
+
+  test('falls back to the next update manifest source', () async {
+    await _withServer(
+      (request, origin) async {
+        if (request.uri.path == '/blocked-version.json') {
+          request.response.statusCode = HttpStatus.forbidden;
+          await request.response.close();
+        } else if (request.uri.path == '/version.json') {
+          await _json(
+            request.response,
+            _manifest(origin, apkBytes, sources: ['/updates/lexora.apk']),
+          );
+        }
+      },
+      (origin, cache) async {
+        final service = UpdateService(
+          manifestUris: [
+            origin.resolve('/blocked-version.json'),
+            origin.resolve('/version.json'),
+          ],
+          platformKey: 'android',
+          cacheDirectory: () async => cache,
+          isMacOS: false,
+        );
+        final update = await service.check();
+        expect(update, isNotNull);
+        expect(update!.download.urls.first.path, '/updates/lexora.apk');
+      },
+    );
   });
 
   test(
