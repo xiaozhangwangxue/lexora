@@ -3,15 +3,17 @@ import { readFile, writeFile } from "node:fs/promises";
 const metadata = JSON.parse(await readFile("public/version.json", "utf8"));
 const version = `v${metadata.version}`;
 const bullets = (items) => items.map((item) => `- ${item}`).join("\n");
+const sections = (items) =>
+  items.map((section) => `### ${section.title}\n\n${bullets(section.items)}`).join("\n\n");
 const body = `# Lexora ${version}
 
 ## 中文更新说明
 
-${bullets(metadata.releaseNotes.zh)}
+${sections(metadata.releaseNoteSections.zh)}
 
 ## What's new
 
-${bullets(metadata.releaseNotes.en)}
+${sections(metadata.releaseNoteSections.en)}
 
 ## 下载与安装 / Download
 

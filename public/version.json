@@ -1,71 +1,262 @@
 {
-  "version": "3.2.5",
+  "version": "4.0.0",
+  "build": 25,
   "releaseNotes": {
     "zh": [
-      "搜索提交后立即进入结果页，核心释义目标在 2 秒内呈现，其余内容继续在后台补全。",
-      "新增 Cloudflare 边缘词典聚合，完整英文释义、音标、词性和关联内容会在第二阶段快速出现。",
-      "中文翻译改为边缘批量请求；联想与近反义词、例句、短语独立补齐，不再串行阻塞搜索。",
-      "搜索历史和结果中的关联词统一使用可拖拽浮层；上滑全屏、下滑关闭，系统返回可回到上一个词。",
-      "开发者模式记录输入、导航、搜索、网络响应、耗时、生成和阅读器等完整诊断信息。"
+      "更快的词典搜索和联想预加载，常用单词可更快显示核心结果。",
+      "新增完整词典页面、搜索历史和一键加入个人词汇书。",
+      "优化词汇书生成、文档预览、历史管理与跨页面操作。",
+      "全面改善 Android、macOS、Windows 和 Linux 端的稳定性。",
+      "重新优化软件和官网动画，拖拽、搜索和窗口缩放更加流畅。",
+      "修复已发现的崩溃、更新、音标、键盘和界面显示问题。"
     ],
     "en": [
-      "Search now enters the result immediately, targets the core definition within two seconds, and completes the rest in the background.",
-      "Cloudflare edge aggregation brings in the complete English dictionary, pronunciation, parts of speech, and related content as a fast second stage.",
-      "Chinese translation now uses edge batching while related words, examples, and phrases fill independently without serially blocking search.",
-      "Search history and linked words now share a draggable sheet that expands, dismisses, and returns through linked results naturally.",
-      "Developer mode captures detailed input, navigation, search, backend response, timing, generation, and reader diagnostics."
+      "Faster dictionary search and suggestion preloading for quicker core results.",
+      "A complete dictionary experience with search history and one-tap vocabulary-book saving.",
+      "Improved vocabulary-book generation, document viewing, history management, and navigation.",
+      "Better stability across Android, macOS, Windows, and Linux.",
+      "Smoother animations for search, dragging, navigation, and desktop resizing.",
+      "Fixes for crashes, updates, phonetics, keyboards, and interface issues."
+    ]
+  },
+  "inAppReleaseNotes": {
+    "zh": [
+      "更快的词典搜索和联想预加载，常用单词可更快显示核心结果。",
+      "新增完整词典页面、搜索历史和一键加入个人词汇书。",
+      "优化词汇书生成、文档预览、历史管理与跨页面操作。",
+      "全面改善 Android、macOS、Windows 和 Linux 端的稳定性。",
+      "重新优化软件和官网动画，拖拽、搜索和窗口缩放更加流畅。",
+      "修复已发现的崩溃、更新、音标、键盘和界面显示问题。"
+    ],
+    "en": [
+      "Faster dictionary search and suggestion preloading for quicker core results.",
+      "A complete dictionary experience with search history and one-tap vocabulary-book saving.",
+      "Improved vocabulary-book generation, document viewing, history management, and navigation.",
+      "Better stability across Android, macOS, Windows, and Linux.",
+      "Smoother animations for search, dragging, navigation, and desktop resizing.",
+      "Fixes for crashes, updates, phonetics, keyboards, and interface issues."
+    ]
+  },
+  "releaseNoteSections": {
+    "zh": [
+      {
+        "title": "字典与个人词汇书",
+        "items": [
+          "新增独立单词搜索页：实时联想、按词性整理的双语释义、例句、搭配和可点击相关词。",
+          "搜索结果可一键加入或移出词汇书，并用轻量动画和自动消失提示即时反馈。",
+          "历史页新增“生成历史 / 搜索历史”切换，曾经查过的单词可直接再次搜索。",
+          "设置新增搜索结果字号精细调节，默认针对手机阅读优化。",
+          "导航升级为单词、词汇书、生成记录、历史和设置五个清晰工作区。",
+          "结果文字支持选择复制，关联词可双击打开可拖拽的快速预览。",
+          "词性在中英文界面中都同时显示中文说明。"
+        ]
+      },
+      {
+        "title": "搜索速度与准确性",
+        "items": [
+          "搜索提交后立即进入结果页，核心释义目标在 2 秒内呈现，其余内容继续在后台补全。",
+          "新增 Cloudflare 边缘词典聚合，完整英文释义、音标、词性和关联内容会在第二阶段快速出现。",
+          "中文翻译改为边缘批量请求；联想与近反义词、例句、短语独立补齐，不再串行阻塞搜索。",
+          "联想输入时仅预取前三个候选的英文词典数据，并只预热首项释义翻译，避免翻译服务限流。",
+          "翻译请求限制为两路并发，遇到限流会渐进重试；失败结果不再污染缓存。",
+          "确认查询后保留已完成的翻译缓存，重复查看释义更快、更稳定。",
+          "修复部分词条显示原始音标编码的问题，音标统一转换为可读 IPA。",
+          "4.0.0 将联想列表改为独立悬浮层，输入和内容补全不再反复推动页面布局。"
+        ]
+      },
+      {
+        "title": "历史、预览与交互",
+        "items": [
+          "搜索历史支持多种排序、多选删除和批量加入词汇书。",
+          "搜索历史和结果中的关联词统一使用可拖拽浮层；上滑全屏、下滑关闭，系统返回可回到上一个词。",
+          "双击桌面侧栏“单词”可返回搜索主页，联想出现时立即隐藏 GitHub 按钮。",
+          "历史页顶栏和搜索历史列表使用统一布局。",
+          "重新优化软件中的搜索、拖拽、状态反馈、页面切换和桌面边栏动画。",
+          "完善减少动态效果支持，保留必要的状态反馈并移除不必要的位移动画。"
+        ]
+      },
+      {
+        "title": "跨平台稳定性与更新",
+        "items": [
+          "修复 macOS 导出图片时因相册权限说明缺失而闪退的问题。",
+          "快速调整桌面窗口宽度时暂停高成本侧栏动画，松手后自然恢复，明显减少卡顿。",
+          "搜索结果显示后自动隐藏 GitHub 按钮，避免遮挡内容。",
+          "修复窄窗口下搜索结果挤压错位，并限制桌面窗口最小尺寸。",
+          "重新居中 macOS 收起侧栏后的红绿灯按钮，并适当加宽收起状态。",
+          "macOS 更新改为跳转官网下载安装，并自动退出应用及打开“隐私与安全”。",
+          "修复阅读器无法通过桌面侧栏退出、安卓切换词汇书时误弹键盘的问题。",
+          "更新检查增加官网、Cloudflare Worker 与 GitHub 三路清单容错，单个入口受网络限制时会自动切换。",
+          "macOS 侧栏改为贴边原生半透明材质，并把交互式液态玻璃限制在选中项以降低缩放开销。",
+          "全面复核 Android、macOS、Windows 和 Linux 的构建、安装、升级及下载完整性。"
+        ]
+      },
+      {
+        "title": "官网、文档与诊断",
+        "items": [
+          "官网演示会按设备显示移动端或桌面端外观，并可切换多个功能页面。",
+          "官网、README 和首次教程全面更新，并继续提供历史版本下载。",
+          "开发者模式记录输入、导航、搜索、网络响应、耗时、生成和阅读器等完整诊断信息。",
+          "4.0.0 将高频滚动日志合并并移出界面主线程，同时增加 P50、P95、最差帧和慢帧统计。",
+          "GitHub、官网和 README 使用同一份完整更新说明，应用内使用适合小屏幕阅读的精简版。"
+        ]
+      },
+      {
+        "title": "4.0.0 性能、安全与动画",
+        "items": [
+          "官网拖拽预览改为逐帧更新 GPU 合成变换，不再在每次指针移动时重新渲染整个页面。",
+          "单词换位使用可中断的 FLIP 动画，首页标志和演示页面使用更短、更自然的非线性过渡。",
+          "移除动态阴影滤镜、背景位置、top 和 transition: all 等高开销或不可控动画。",
+          "统一版本号、构建号、下载文件名、校验值和发布说明，发布前自动检查各处是否一致。",
+          "更新网页运行与构建依赖，修复已知高危安全漏洞。",
+          "新增小屏更新说明、快速输入、桌面实时缩放、减少动态效果和发布清单兼容测试。"
+        ]
+      }
+    ],
+    "en": [
+      {
+        "title": "Dictionary and personal vocabulary books",
+        "items": [
+          "Added a dedicated dictionary search with live suggestions, bilingual senses by part of speech, examples, collocations, and linked related words.",
+          "Add or remove a result from Vocabulary Book in one tap with immediate motion and a self-dismissing confirmation.",
+          "History now switches between generated-word and search history, with one-tap repeat searches.",
+          "Added precise search-result text sizing, optimized by default for phone reading.",
+          "Reorganized navigation into Words, Vocabulary Book, Generated, History, and Settings.",
+          "Result text is selectable, and related words open in a draggable preview on double-click.",
+          "Parts of speech include Chinese labels in both interface languages."
+        ]
+      },
+      {
+        "title": "Search speed and accuracy",
+        "items": [
+          "Search now enters the result immediately, targets the core definition within two seconds, and completes the rest in the background.",
+          "Cloudflare edge aggregation brings in the complete English dictionary, pronunciation, parts of speech, and related content as a fast second stage.",
+          "Chinese translation now uses edge batching while related words, examples, and phrases fill independently without serially blocking search.",
+          "Typing prefetches English dictionary data for only the top three suggestions and warms just the first definition translation.",
+          "Translation work is capped at two concurrent requests with progressive retries; failed responses are no longer cached.",
+          "Completed translation cache survives a confirmed search for faster, more reliable repeat viewing.",
+          "Fixed raw pronunciation codes by converting fallback phonetics into readable IPA.",
+          "4.0.0 moves suggestions into an independent overlay so typing and result completion no longer relayout the page."
+        ]
+      },
+      {
+        "title": "History, previews, and interaction",
+        "items": [
+          "Search history supports sorting, multi-select deletion, and batch book creation.",
+          "Search history and linked words share a draggable sheet that expands, dismisses, and returns through linked results naturally.",
+          "Double-click Words in the desktop sidebar to return home; GitHub hides as suggestions appear.",
+          "The history header and search-history list now share a consistent layout.",
+          "Search, dragging, state feedback, navigation, and desktop sidebar motion have been retuned throughout the app.",
+          "Reduced-motion support keeps meaningful feedback while removing unnecessary spatial movement."
+        ]
+      },
+      {
+        "title": "Cross-platform stability and updates",
+        "items": [
+          "Fixed a macOS crash when exporting images caused by missing Photos permission descriptions.",
+          "Reduced desktop resize jank by suspending costly sidebar motion during live resizing and restoring it naturally afterward.",
+          "The GitHub button hides when a search result is shown so it cannot cover content.",
+          "Fixed compressed search-result layouts and enforced a safe minimum desktop window size.",
+          "Recentered macOS traffic-light controls in the wider collapsed sidebar.",
+          "macOS updates open the official download, quit Lexora, and reveal Privacy & Security.",
+          "Fixed desktop sidebar reader exit and unwanted Android keyboard popups.",
+          "Update checks fail over across the official site, direct Cloudflare Worker, and GitHub.",
+          "The macOS sidebar uses flush native material while interactive Liquid Glass is limited to selected controls for cheaper resizing.",
+          "Android, macOS, Windows, and Linux builds, installation, upgrades, and download integrity are revalidated."
+        ]
+      },
+      {
+        "title": "Website, documentation, and diagnostics",
+        "items": [
+          "The website demo adapts to mobile or desktop and includes multiple interactive pages.",
+          "The website, README, and onboarding are updated while historical downloads remain available.",
+          "Developer mode captures detailed input, navigation, search, backend response, timing, generation, and reader diagnostics.",
+          "4.0.0 coalesces high-frequency scroll diagnostics off the UI thread and adds P50, P95, worst-frame, and slow-frame summaries.",
+          "GitHub, the website, and README share the complete release notes while the app uses a concise phone-friendly version."
+        ]
+      },
+      {
+        "title": "4.0.0 performance, security, and motion",
+        "items": [
+          "Website dragging now updates a GPU-composited transform per frame instead of rerendering the page on every pointer move.",
+          "FLIP reordering is interruptible, while the wordmark and demo use shorter, more natural nonlinear transitions.",
+          "Removed animated filters, background positions, top changes, and transition: all patterns that caused unnecessary work.",
+          "Version, build, filenames, checksums, and release notes are generated from one manifest and checked before publishing.",
+          "Updated website runtime and build dependencies to address known high-severity vulnerabilities.",
+          "Added coverage for small-screen notes, rapid typing, live desktop resizing, reduced motion, and manifest compatibility."
+        ]
+      }
     ]
   },
   "downloads": {
-    "android": "/downloads/lexora-android-v3.2.5.apk",
-    "macos": "/downloads/lexora-macos-v3.2.5.dmg",
-    "windows": "/downloads/lexora-windows-v3.2.5-setup.exe",
-    "linux": "/downloads/lexora-linux-v3.2.5.tar.gz"
+    "android": "/downloads/lexora-android-v4.0.0.apk",
+    "macos": "/downloads/lexora-macos-v4.0.0.dmg",
+    "windows": "/downloads/lexora-windows-v4.0.0-setup.exe",
+    "linux": "/downloads/lexora-linux-v4.0.0.tar.gz"
   },
   "verifiedDownloads": {
     "android": {
-      "filename": "lexora-android-v3.2.5.apk",
-      "url": "/updates/lexora-android-v3.2.5.apk",
+      "filename": "lexora-android-v4.0.0.apk",
+      "url": "/updates/lexora-android-v4.0.0.apk",
       "sources": [
-        "/updates/lexora-android-v3.2.5.apk",
-        "https://lexora-official.xiaozhangwangxue.workers.dev/updates/lexora-android-v3.2.5.apk",
-        "https://github.com/xiaozhangwangxue/lexora/releases/download/v3.2.5/lexora-android-v3.2.5.apk"
+        "/updates/lexora-android-v4.0.0.apk",
+        "https://lexora-official.xiaozhangwangxue.workers.dev/updates/lexora-android-v4.0.0.apk",
+        "https://github.com/xiaozhangwangxue/lexora/releases/download/v4.0.0/lexora-android-v4.0.0.apk"
       ],
-      "sha256": "758355fdd657ce727e55c382ab4c79e6e7702bff67cd0cb3c4d33f4607a92f69",
-      "size": 99667095
+      "sha256": null,
+      "size": null
     },
     "macos": {
-      "filename": "lexora-macos-v3.2.5.dmg",
-      "url": "/updates/lexora-macos-v3.2.5.dmg",
+      "filename": "lexora-macos-v4.0.0.dmg",
+      "url": "/updates/lexora-macos-v4.0.0.dmg",
       "sources": [
-        "/updates/lexora-macos-v3.2.5.dmg",
-        "https://lexora-official.xiaozhangwangxue.workers.dev/updates/lexora-macos-v3.2.5.dmg",
-        "https://github.com/xiaozhangwangxue/lexora/releases/download/v3.2.5/lexora-macos-v3.2.5.dmg"
+        "/updates/lexora-macos-v4.0.0.dmg",
+        "https://lexora-official.xiaozhangwangxue.workers.dev/updates/lexora-macos-v4.0.0.dmg",
+        "https://github.com/xiaozhangwangxue/lexora/releases/download/v4.0.0/lexora-macos-v4.0.0.dmg"
       ],
-      "sha256": "795ad6c5eb90eba9595d98b60c3c4a5ae0bc66e6b68aa92239e1e2c75c128701",
-      "size": 47289935
+      "sha256": null,
+      "size": null
     },
     "windows": {
-      "filename": "lexora-windows-v3.2.5-setup.exe",
-      "url": "/updates/lexora-windows-v3.2.5-setup.exe",
+      "filename": "lexora-windows-v4.0.0-setup.exe",
+      "url": "/updates/lexora-windows-v4.0.0-setup.exe",
       "sources": [
-        "/updates/lexora-windows-v3.2.5-setup.exe",
-        "https://lexora-official.xiaozhangwangxue.workers.dev/updates/lexora-windows-v3.2.5-setup.exe",
-        "https://github.com/xiaozhangwangxue/lexora/releases/download/v3.2.5/lexora-windows-v3.2.5-setup.exe"
+        "/updates/lexora-windows-v4.0.0-setup.exe",
+        "https://lexora-official.xiaozhangwangxue.workers.dev/updates/lexora-windows-v4.0.0-setup.exe",
+        "https://github.com/xiaozhangwangxue/lexora/releases/download/v4.0.0/lexora-windows-v4.0.0-setup.exe"
       ],
-      "sha256": "f59aff1be312a1417e58dc259ec111f5b73cb4af2492f308a8e6289c79c18335",
-      "size": 27327457
+      "sha256": null,
+      "size": null
     },
     "linux": {
-      "filename": "lexora-linux-v3.2.5.tar.gz",
-      "url": "/updates/lexora-linux-v3.2.5.tar.gz",
+      "filename": "lexora-linux-v4.0.0.tar.gz",
+      "url": "/updates/lexora-linux-v4.0.0.tar.gz",
       "sources": [
-        "/updates/lexora-linux-v3.2.5.tar.gz",
-        "https://lexora-official.xiaozhangwangxue.workers.dev/updates/lexora-linux-v3.2.5.tar.gz",
-        "https://github.com/xiaozhangwangxue/lexora/releases/download/v3.2.5/lexora-linux-v3.2.5.tar.gz"
+        "/updates/lexora-linux-v4.0.0.tar.gz",
+        "https://lexora-official.xiaozhangwangxue.workers.dev/updates/lexora-linux-v4.0.0.tar.gz",
+        "https://github.com/xiaozhangwangxue/lexora/releases/download/v4.0.0/lexora-linux-v4.0.0.tar.gz"
       ],
-      "sha256": "5346ee61cbeeba810b5d368683e8154118aeebe33b9ed2d34c28a160c6fce623",
-      "size": 31507857
+      "sha256": null,
+      "size": null
     }
-  }
+  },
+  "historicalDownloads": [
+    {
+      "version": "3.2.5",
+      "downloads": {
+        "android": "/downloads/lexora-android-v3.2.5.apk",
+        "macos": "/downloads/lexora-macos-v3.2.5.dmg",
+        "windows": "/downloads/lexora-windows-v3.2.5-setup.exe",
+        "linux": "/downloads/lexora-linux-v3.2.5.tar.gz"
+      }
+    },
+    {
+      "version": "3.1.0",
+      "downloads": {
+        "android": "/downloads/lexora-android-v3.1.0.apk",
+        "macos": "/downloads/lexora-macos-v3.1.0.dmg",
+        "windows": "/downloads/lexora-windows-v3.1.0-setup.exe",
+        "linux": "/downloads/lexora-linux-v3.1.0.tar.gz"
+      }
+    }
+  ]
 }

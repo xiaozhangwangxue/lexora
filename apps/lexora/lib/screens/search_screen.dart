@@ -50,6 +50,8 @@ class _SearchScreenState extends State<SearchScreen> {
   late final SearchHistoryService _historyService;
   final _textController = TextEditingController();
   final _focusNode = FocusNode();
+  final _suggestionLayerLink = LayerLink();
+  final _suggestionOverlayController = OverlayPortalController();
   List<SearchHistoryRecord> _history = const [];
   List<String> _remoteSuggestions = const [];
   WordEntry? _entry;
@@ -99,6 +101,17 @@ class _SearchScreenState extends State<SearchScreen> {
     _textController.dispose();
     _focusNode.dispose();
     super.dispose();
+  }
+
+  void _syncSuggestionOverlay(bool visible) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (visible && !_suggestionOverlayController.isShowing) {
+        _suggestionOverlayController.show();
+      } else if (!visible && _suggestionOverlayController.isShowing) {
+        _suggestionOverlayController.hide();
+      }
+    });
   }
 
   Future<void> _reloadHistory() async {
@@ -477,9 +490,10 @@ class _SearchScreenState extends State<SearchScreen> {
     final reduceMotion = MediaQuery.disableAnimationsOf(context);
     final compactHeader =
         _entry != null || _loading || _error != null || showSuggestions;
+    _syncSuggestionOverlay(showSuggestions);
     final motionDuration = reduceMotion
         ? Duration.zero
-        : const Duration(milliseconds: 340);
+        : const Duration(milliseconds: 220);
     return SafeArea(
       child: Center(
         child: ConstrainedBox(
@@ -504,40 +518,42 @@ class _SearchScreenState extends State<SearchScreen> {
                           ),
                   ),
                 ),
-                _SearchField(
-                  controller: _textController,
-                  focusNode: _focusNode,
-                  hint: _isZh ? '搜索英文单词或短语' : 'Search a word or phrase',
-                  onChanged: _queryChanged,
-                  onSubmitted: _search,
-                ),
-                AnimatedSwitcher(
-                  duration: reduceMotion
-                      ? const Duration(milliseconds: 100)
-                      : const Duration(milliseconds: 260),
-                  switchInCurve: const Cubic(.22, 1, .36, 1),
-                  switchOutCurve: Curves.easeOut,
-                  transitionBuilder: (child, animation) {
-                    final fade = FadeTransition(
-                      opacity: animation,
-                      child: child,
-                    );
-                    if (reduceMotion) return fade;
-                    return SizeTransition(
-                      sizeFactor: animation,
-                      alignment: Alignment.topCenter,
-                      child: fade,
+                OverlayPortal(
+                  controller: _suggestionOverlayController,
+                  overlayChildBuilder: (overlayContext) {
+                    final viewportWidth = MediaQuery.sizeOf(
+                      overlayContext,
+                    ).width;
+                    return CompositedTransformFollower(
+                      link: _suggestionLayerLink,
+                      targetAnchor: Alignment.bottomLeft,
+                      followerAnchor: Alignment.topLeft,
+                      offset: const Offset(0, 6),
+                      showWhenUnlinked: false,
+                      child: SizedBox(
+                        width: (viewportWidth - 40).clamp(280, 880),
+                        child: _SuggestionPopover(
+                          reduceMotion: reduceMotion,
+                          child: _SuggestionPanel(
+                            history: _matchingHistory,
+                            fresh: _freshSuggestions,
+                            isZh: _isZh,
+                            onSelected: _search,
+                          ),
+                        ),
+                      ),
                     );
                   },
-                  child: showSuggestions
-                      ? _SuggestionPanel(
-                          key: const ValueKey('suggestions'),
-                          history: _matchingHistory,
-                          fresh: _freshSuggestions,
-                          isZh: _isZh,
-                          onSelected: _search,
-                        )
-                      : const SizedBox(key: ValueKey('no-suggestions')),
+                  child: CompositedTransformTarget(
+                    link: _suggestionLayerLink,
+                    child: _SearchField(
+                      controller: _textController,
+                      focusNode: _focusNode,
+                      hint: _isZh ? '搜索英文单词或短语' : 'Search a word or phrase',
+                      onChanged: _queryChanged,
+                      onSubmitted: _search,
+                    ),
+                  ),
                 ),
                 if (_entry == null && !_loading && _error == null)
                   const Spacer(flex: 3)
@@ -609,7 +625,6 @@ class _SearchField extends StatelessWidget {
 
 class _SuggestionPanel extends StatelessWidget {
   const _SuggestionPanel({
-    super.key,
     required this.history,
     required this.fresh,
     required this.isZh,
@@ -928,6 +943,24 @@ class _ResultView extends StatelessWidget {
                               ? const Duration(milliseconds: 100)
                               : const Duration(milliseconds: 180),
                           switchInCurve: const Cubic(.22, 1, .36, 1),
+                          transitionBuilder: (child, animation) {
+                            final fade = FadeTransition(
+                              opacity: animation,
+                              child: child,
+                            );
+                            if (MediaQuery.disableAnimationsOf(context)) {
+                              return fade;
+                            }
+                            return ScaleTransition(
+                              scale: Tween<double>(begin: .92, end: 1).animate(
+                                CurvedAnimation(
+                                  parent: animation,
+                                  curve: const Cubic(.23, 1, .32, 1),
+                                ),
+                              ),
+                              child: fade,
+                            );
+                          },
                           child: Icon(
                             added ? Icons.check_rounded : Icons.add_rounded,
                             key: ValueKey(added),
@@ -1153,6 +1186,54 @@ class _ResultView extends StatelessWidget {
         ),
       ],
     ),
+  );
+}
+
+class _SuggestionPopover extends StatefulWidget {
+  const _SuggestionPopover({required this.reduceMotion, required this.child});
+
+  final bool reduceMotion;
+  final Widget child;
+
+  @override
+  State<_SuggestionPopover> createState() => _SuggestionPopoverState();
+}
+
+class _SuggestionPopoverState extends State<_SuggestionPopover>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _opacity;
+  late final Animation<Offset> _offset;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: Duration(milliseconds: widget.reduceMotion ? 100 : 170),
+    );
+    final curve = CurvedAnimation(
+      parent: _controller,
+      curve: const Cubic(.23, 1, .32, 1),
+    );
+    _opacity = curve;
+    _offset = Tween<Offset>(
+      begin: widget.reduceMotion ? Offset.zero : const Offset(0, -.025),
+      end: Offset.zero,
+    ).animate(curve);
+    _controller.forward();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => FadeTransition(
+    opacity: _opacity,
+    child: SlideTransition(position: _offset, child: widget.child),
   );
 }
 

@@ -150,7 +150,7 @@ private final class LexoraNavigationModel: ObservableObject {
       return
     }
     lastSearchTap = page == 0 ? now : .distantPast
-    withAnimation(.timingCurve(0.23, 1, 0.32, 1, duration: 0.24)) {
+    withAnimation(.timingCurve(0.23, 1, 0.32, 1, duration: 0.16)) {
       selectedPage = page
     }
     channel.invokeMethod("selectPage", arguments: page)
@@ -285,7 +285,10 @@ private struct LexoraNativeShell: View {
         .help(expanded ? localized("收起边栏", "Collapse sidebar") : localized("展开边栏", "Expand sidebar"))
       }
 
-      Text("3.2.5")
+      Text(
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString")
+          as? String ?? ""
+      )
         .font(.caption2.monospacedDigit())
         .foregroundStyle(.tertiary)
         .frame(maxWidth: .infinity, alignment: expanded ? .leading : .center)
@@ -316,11 +319,7 @@ private struct LexoraNativeShell: View {
         .ignoresSafeArea()
     }
 
-    if #available(macOS 26.0, *) {
-      content.glassEffect(.clear, in: Rectangle())
-    } else {
-      content
-    }
+    content
   }
 
   @ViewBuilder
@@ -360,7 +359,14 @@ private struct LexoraNativeShell: View {
     }
     .buttonStyle(.plain)
     .help(localized(item.zh, item.en))
-    button
+    if #available(macOS 26.0, *), selected {
+      button.glassEffect(
+        .clear.interactive(),
+        in: RoundedRectangle(cornerRadius: 10, style: .continuous)
+      )
+    } else {
+      button
+    }
   }
 
   private var items: [NavigationItem] {

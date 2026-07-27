@@ -13,6 +13,7 @@ import '../services/pdf_settings_service.dart';
 import '../services/update_service.dart';
 import '../widgets/github_button.dart';
 import '../widgets/lexora_wordmark.dart';
+import '../widgets/release_notes_content.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({
@@ -237,34 +238,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
         builder: (dialogContext) => AlertDialog(
           icon: const Icon(Icons.system_update_alt_rounded),
           title: Text(strings.updateAvailable(update.version)),
-          content: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 460),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  strings.whatsNew,
-                  style: Theme.of(context).textTheme.titleSmall,
-                ),
-                const SizedBox(height: 10),
-                for (final note in notes) ...[
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Padding(
-                        padding: EdgeInsets.only(top: 7),
-                        child: Icon(Icons.circle, size: 5),
-                      ),
-                      const SizedBox(width: 9),
-                      Expanded(child: Text(note)),
-                    ],
-                  ),
-                  const SizedBox(height: 7),
-                ],
-                if (Platform.isMacOS) ...[
-                  const SizedBox(height: 8),
-                  DecoratedBox(
+          content: ReleaseNotesContent(
+            notes: notes,
+            isZh: strings.isZh,
+            extra: Platform.isMacOS
+                ? DecoratedBox(
                     decoration: BoxDecoration(
                       color: Theme.of(
                         context,
@@ -282,10 +260,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         ],
                       ),
                     ),
-                  ),
-                ],
-              ],
-            ),
+                  )
+                : null,
           ),
           actions: [
             TextButton(

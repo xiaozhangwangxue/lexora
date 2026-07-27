@@ -25,6 +25,12 @@ void main() {
     expect(source, contains('isLiveResizing || reduceMotion'));
     expect(source, contains('.background(LexoraBackdrop())'));
     expect(source, contains('LegacyVisualEffect(material: .sidebar)'));
+    expect(source, contains('CFBundleShortVersionString'));
+    expect(source, contains('.clear.interactive()'));
+    expect(
+      source,
+      isNot(contains('content.glassEffect(.clear, in: Rectangle())')),
+    );
     expect(source, isNot(contains('.padding(5)')));
     expect(source, isNot(contains('simplified: isLiveResizing')));
   });

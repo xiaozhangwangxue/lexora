@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import type { IconType } from "react-icons";
 import { FaAndroid, FaApple, FaDownload, FaLinux, FaWindows } from "react-icons/fa6";
+import releaseManifest from "../public/version.json";
 import { LexoraWordmark } from "./lexora-wordmark";
 import { useSiteLanguage } from "./use-site-language";
 
@@ -19,8 +20,7 @@ const donationCodes = {
   alipay: "https://photo.12323456.xyz/api/rfile/%E6%94%AF%E4%BB%98%E5%AE%9D.jpg",
 };
 
-const currentVersion = "v3.2.5";
-const previousVersion = "v3.1.0";
+const currentVersion = `v${releaseManifest.version}`;
 const platforms: Array<{ key: PlatformKey; name: string; noteZh: string; noteEn: string; Icon: IconType; file: string }> = [
   { key: "macos", name: "macOS", noteZh: "macOS 12+ · 拖动安装 DMG", noteEn: "macOS 12+ · Drag-to-install DMG", Icon: FaApple, file: `lexora-macos-${currentVersion}.dmg` },
   { key: "windows", name: "Windows", noteZh: "Windows 10 / 11 · 安装程序", noteEn: "Windows 10 / 11 · Installer", Icon: FaWindows, file: `lexora-windows-${currentVersion}-setup.exe` },
@@ -54,8 +54,8 @@ const installGuides: Record<PlatformKey, { zh: string[]; en: string[] }> = {
     en: ["Extract the tar.gz archive.", "If needed, allow the lexora file to run as a program or use chmod +x.", "Launch the lexora executable."],
   },
   android: {
-    zh: ["从 v0.3.0 或更高版本可直接覆盖安装 v3.2.5；只有 v0.2.0 需先卸载一次。", "下载 APK，系统询问时允许浏览器安装未知来源应用。", "确认文件来自本官网后，选择“仍要安装”；安装后可关闭该权限。"],
-    en: ["v0.3.0 and newer can update directly to v3.2.5. Only v0.2.0 requires one uninstall first.", "Download the APK and allow your browser to install unknown apps when Android asks.", "After verifying this official site, choose Install anyway. You can revoke that permission afterward."],
+    zh: [`从 v0.3.0 或更高版本可直接覆盖安装 ${currentVersion}；只有 v0.2.0 需先卸载一次。`, "下载 APK，系统询问时允许浏览器安装未知来源应用。", "确认文件来自本官网后，选择“仍要安装”；安装后可关闭该权限。"],
+    en: [`v0.3.0 and newer can update directly to ${currentVersion}. Only v0.2.0 requires one uninstall first.`, "Download the APK and allow your browser to install unknown apps when Android asks.", "After verifying this official site, choose Install anyway. You can revoke that permission afterward."],
   },
 };
 
@@ -70,11 +70,16 @@ export default function Home() {
   const { language, setLanguage, zh } = useSiteLanguage();
   const [progress, setProgress] = useState<number | null>(null);
   const [downloadChoice, setDownloadChoice] = useState<PlatformKey | null>(null);
+  const [installClosing, setInstallClosing] = useState(false);
   const [detectedPlatform, setDetectedPlatform] = useState<DetectedPlatform | null>(null);
   const [demoPage, setDemoPage] = useState<"search" | "book" | "history">("book");
   const draggedWord = useRef<string | null>(null);
   const listRef = useRef<HTMLOListElement | null>(null);
   const dragPreviewRef = useRef<DragPreview | null>(null);
+  const dragPreviewElementRef = useRef<HTMLDivElement | null>(null);
+  const dragFrameRef = useRef<number | null>(null);
+  const dropTargetRef = useRef<string | null>(null);
+  const installDialogRef = useRef<HTMLElement | null>(null);
   const [draggingWord, setDraggingWord] = useState<string | null>(null);
   const [dropTargetWord, setDropTargetWord] = useState<string | null>(null);
   const [dragPreview, setDragPreview] = useState<DragPreview | null>(null);
@@ -92,6 +97,44 @@ export default function Home() {
     });
     return () => window.cancelAnimationFrame(frame);
   }, []);
+
+  useEffect(() => {
+    if (!downloadChoice) return;
+    const previousFocus = document.activeElement as HTMLElement | null;
+    const dialog = installDialogRef.current;
+    const focusable = () => Array.from(
+      dialog?.querySelectorAll<HTMLElement>("a[href],button:not([disabled])") ?? [],
+    );
+    focusable()[0]?.focus();
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        setInstallClosing(true);
+        window.setTimeout(() => {
+          setDownloadChoice(null);
+          setInstallClosing(false);
+        }, 130);
+        return;
+      }
+      if (event.key !== "Tab") return;
+      const items = focusable();
+      if (!items.length) return;
+      const first = items[0];
+      const last = items[items.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      previousFocus?.focus();
+    };
+  }, [downloadChoice]);
 
   useEffect(() => {
     const root = document.documentElement;
@@ -180,6 +223,7 @@ export default function Home() {
       setSort("custom");
     }
     draggedWord.current = word;
+    dropTargetRef.current = null;
     dragPreviewRef.current = preview;
     setDraggingWord(word);
     setDropTargetWord(null);
@@ -188,8 +232,9 @@ export default function Home() {
 
   function reorderOver(targetWord: string) {
     const activeWord = draggedWord.current;
-    if (!activeWord || activeWord === targetWord) return;
+    if (!activeWord || activeWord === targetWord || dropTargetRef.current === targetWord) return;
     const previousPositions = captureListPositions();
+    dropTargetRef.current = targetWord;
     setDropTargetWord(targetWord);
     setWords((current) => {
       const next = [...current];
@@ -204,11 +249,40 @@ export default function Home() {
   }
 
   function finishReorder() {
+    if (dragFrameRef.current !== null) {
+      window.cancelAnimationFrame(dragFrameRef.current);
+      dragFrameRef.current = null;
+    }
     draggedWord.current = null;
+    dropTargetRef.current = null;
     dragPreviewRef.current = null;
     setDraggingWord(null);
     setDropTargetWord(null);
     setDragPreview(null);
+  }
+
+  function moveDragPreview(x: number, y: number) {
+    const preview = dragPreviewRef.current;
+    if (!preview) return;
+    dragPreviewRef.current = { ...preview, x, y };
+    if (dragFrameRef.current !== null) return;
+    dragFrameRef.current = window.requestAnimationFrame(() => {
+      dragFrameRef.current = null;
+      const next = dragPreviewRef.current;
+      const element = dragPreviewElementRef.current;
+      if (!next || !element) return;
+      element.style.transform =
+        `translate3d(${next.x}px, ${next.y}px, 0) scale(1.025) rotate(.25deg)`;
+    });
+  }
+
+  function closeInstallDialog() {
+    if (installClosing) return;
+    setInstallClosing(true);
+    window.setTimeout(() => {
+      setDownloadChoice(null);
+      setInstallClosing(false);
+    }, 130);
   }
 
   function moveWord(word: string, direction: -1 | 1) {
@@ -277,7 +351,7 @@ export default function Home() {
               <div className="asideFoot">{currentVersion} · Open source</div>
             </aside>
             {demoPage === "search" && (
-              <section className="demoSearchPage">
+              <section className="demoSearchPage demoPagePanel" key="search">
                 <LexoraWordmark hero />
                 <div className="demoSearchBox">⌕ <span>serendipity</span><kbd>↵</kbd></div>
                 <article className="demoResult">
@@ -290,7 +364,7 @@ export default function Home() {
                 </article>
               </section>
             )}
-            {demoPage === "book" && <section className="composer">
+            {demoPage === "book" && <section className="composer demoPagePanel" key="book">
               <div className="composerHead">
                 <h2>{zh ? "创建词汇书" : "Create a vocabulary book"}</h2>
                 <p>{zh ? "输入一个英文单词并按下回车键" : "Type an English word and press Enter"}</p>
@@ -348,9 +422,10 @@ export default function Home() {
                         if (!draggedWord.current) return;
                         const preview = dragPreviewRef.current;
                         if (preview) {
-                          const nextPreview = { ...preview, y: event.clientY - preview.grabOffsetY };
-                          dragPreviewRef.current = nextPreview;
-                          setDragPreview(nextPreview);
+                          moveDragPreview(
+                            preview.x,
+                            event.clientY - preview.grabOffsetY,
+                          );
                         }
                         const target = document.elementFromPoint(event.clientX, event.clientY)?.closest("[data-demo-word]") as HTMLElement | null;
                         const targetWord = target?.dataset.demoWord;
@@ -375,9 +450,13 @@ export default function Home() {
               </ol>
               {dragPreview && (
                 <div
+                  ref={dragPreviewElementRef}
                   className="dragPreview"
                   aria-hidden="true"
-                  style={{ left: dragPreview.x, top: dragPreview.y, width: dragPreview.width }}
+                  style={{
+                    width: dragPreview.width,
+                    transform: `translate3d(${dragPreview.x}px, ${dragPreview.y}px, 0) scale(1.025) rotate(.25deg)`,
+                  }}
                 >
                   <span className="wordIndex">{String(visibleWords.indexOf(dragPreview.word) + 1).padStart(2, "0")}</span>
                   <span className="wordName">{dragPreview.word}<small>{dragPreview.word.length} {zh ? "个字母" : "letters"}</small></span>
@@ -386,7 +465,7 @@ export default function Home() {
               )}
             </section>}
             {demoPage === "history" && (
-              <section className="demoHistoryPage">
+              <section className="demoHistoryPage demoPagePanel" key="history">
                 <div className="composerHead"><h2>{zh ? "生成记录" : "Generated"}</h2><p>{zh ? "随时打开、分享或导出你的词汇书" : "Open, share, or export your books anytime"}</p></div>
                 {["lexora-20260727-181245.pdf", "my-vocabulary-book.epub", "weekly-review.docx"].map((file, index) => (
                   <article key={file}><span>{index === 1 ? "EPUB" : index === 2 ? "DOCX" : "PDF"}</span><div><strong>{file}</strong><small>{12 + index * 8} {zh ? "个词条" : "entries"} · 2026-07-27</small></div><button>•••</button></article>
@@ -488,28 +567,30 @@ export default function Home() {
           </div>
           <details className="historicalDownloads">
             <summary>{zh ? "历史版本" : "Previous versions"}</summary>
-            <p>{zh ? "需要回退时，可继续下载稳定版 3.1.0。安装前请先备份重要生成文件。" : "Need to roll back? Stable 3.1.0 remains available. Back up important generated files before installing."}</p>
-            <div className="historicalGrid">
-              {platforms.map((platform) => {
-                const PlatformIcon = platform.Icon;
-                const file = platform.file.replace(currentVersion, previousVersion);
-                return (
-                  <a key={`history-${platform.key}`} href={`/downloads/${file}`} download>
-                    <PlatformIcon aria-hidden="true" />
-                    <span>{platform.name}<small>Lexora 3.1.0</small></span>
-                    <b>↓</b>
-                  </a>
-                );
-              })}
-            </div>
+            <p>{zh ? "需要回退时，可继续下载以前的稳定版本。安装前请先备份重要生成文件。" : "Need to roll back? Previous stable versions remain available. Back up important generated files before installing."}</p>
+            {releaseManifest.historicalDownloads.map((release) => (
+              <div className="historicalGrid" key={release.version}>
+                {platforms.map((platform) => {
+                  const PlatformIcon = platform.Icon;
+                  const href = release.downloads[platform.key];
+                  return (
+                    <a key={`${release.version}-${platform.key}`} href={href} download>
+                      <PlatformIcon aria-hidden="true" />
+                      <span>{platform.name}<small>Lexora {release.version}</small></span>
+                      <b>↓</b>
+                    </a>
+                  );
+                })}
+              </div>
+            ))}
           </details>
         </div>
       </section>
 
       {selectedPlatform && downloadChoice && (
-        <div className="installOverlay" role="presentation" onMouseDown={() => setDownloadChoice(null)}>
-          <section className="installDialog" role="dialog" aria-modal="true" aria-labelledby="install-title" onMouseDown={(event) => event.stopPropagation()}>
-            <button className="installClose" aria-label={zh ? "关闭" : "Close"} onClick={() => setDownloadChoice(null)}>×</button>
+        <div className={`installOverlay${installClosing ? " isClosing" : ""}`} role="presentation" onMouseDown={closeInstallDialog}>
+          <section ref={installDialogRef} className="installDialog" role="dialog" aria-modal="true" aria-labelledby="install-title" onMouseDown={(event) => event.stopPropagation()}>
+            <button className="installClose" aria-label={zh ? "关闭" : "Close"} onClick={closeInstallDialog}>×</button>
             <p className="sectionLabel">{zh ? "安装说明" : "Installation guide"}</p>
             <h2 id="install-title">{zh ? `安装 Lexora for ${selectedPlatform.name}` : `Install Lexora for ${selectedPlatform.name}`}</h2>
             <div className="riskNotice">
@@ -520,14 +601,30 @@ export default function Home() {
               {installGuides[downloadChoice][zh ? "zh" : "en"].map((step) => <li key={step}>{step}</li>)}
             </ol>
             <div className="installActions">
-              <button onClick={() => setDownloadChoice(null)}>{zh ? "取消" : "Cancel"}</button>
-              <a href={`/downloads/${selectedPlatform.file}`} download onClick={() => setDownloadChoice(null)}>
+              <button onClick={closeInstallDialog}>{zh ? "取消" : "Cancel"}</button>
+              <a href={`/downloads/${selectedPlatform.file}`} download onClick={closeInstallDialog}>
                 {zh ? "我已了解，继续下载" : "I understand, continue download"} <span>↓</span>
               </a>
             </div>
           </section>
         </div>
       )}
+
+      <section className="releaseNotes wrap" id="release-notes" data-reveal>
+        <div className="releaseNotesIntro">
+          <p className="sectionLabel">{zh ? "版本 4.0.0" : "Version 4.0.0"}</p>
+          <h2>{zh ? "一次完整的跨平台升级。" : "One complete cross-platform upgrade."}</h2>
+          <p>{zh ? "从独立词典搜索到更流畅的动画、稳定更新和统一发布链路，以下内容合并为一个完整版本。" : "From dedicated dictionary search to smoother motion, reliable updates, and one release pipeline, everything below ships as a single complete version."}</p>
+        </div>
+        <div className="releaseNotesGrid">
+          {releaseManifest.releaseNoteSections[zh ? "zh" : "en"].map((section) => (
+            <article key={section.title}>
+              <h3>{section.title}</h3>
+              <ul>{section.items.map((item) => <li key={item}>{item}</li>)}</ul>
+            </article>
+          ))}
+        </div>
+      </section>
 
       <section className="homeDonateChannels wrap" aria-labelledby="donation-channels-title" data-reveal>
         <div className="homeDonateIntro">

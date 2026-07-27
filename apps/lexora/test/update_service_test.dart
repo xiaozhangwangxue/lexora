@@ -275,6 +275,37 @@ void main() {
     );
   });
 
+  test(
+    'prefers concise in-app notes over the full compatibility notes',
+    () async {
+      await _withServer(
+        (request, origin) async {
+          final manifest = _manifest(
+            origin,
+            apkBytes,
+            sources: ['/updates/lexora.apk'],
+          );
+          manifest['inAppReleaseNotes'] = {
+            'zh': ['精简更新'],
+            'en': ['Concise update'],
+          };
+          await _json(request.response, manifest);
+        },
+        (origin, cache) async {
+          final service = UpdateService(
+            manifestUri: origin.resolve('/version.json'),
+            platformKey: 'android',
+            cacheDirectory: () async => cache,
+            isMacOS: false,
+          );
+          final update = await service.check();
+          expect(update?.notesZh, ['精简更新']);
+          expect(update?.notesEn, ['Concise update']);
+        },
+      );
+    },
+  );
+
   test('prepares a macOS installer before opening it and then exits', () async {
     final events = <String>[];
     await _withServer(

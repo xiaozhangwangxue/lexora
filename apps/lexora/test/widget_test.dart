@@ -98,6 +98,18 @@ class _ProgressiveWordService extends WordService {
   Future<void> retainOnly(String rawTerm, {int exampleCount = 1}) async {}
 }
 
+class _SuggestionWordService extends _ImmediateWordService {
+  @override
+  Future<List<String>> suggest(String rawTerm, {int maxResults = 12}) async =>
+      const ['word', 'world', 'work'];
+
+  @override
+  Future<void> prefetchCandidates(
+    Iterable<String> rawTerms, {
+    int maxCandidates = 3,
+  }) async {}
+}
+
 class _StaticSearchHistoryService extends SearchHistoryService {
   _StaticSearchHistoryService(this.records);
 
@@ -114,6 +126,74 @@ void main() {
     await pumpUi(tester);
     expect(find.text('Look it up before you save it'), findsOneWidget);
     expect(find.text('Skip'), findsOneWidget);
+  });
+
+  testWidgets('compact 4.0 release notes remain scrollable on a small phone', (
+    tester,
+  ) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(360, 640);
+    addTearDown(() {
+      tester.view.resetDevicePixelRatio();
+      tester.view.resetPhysicalSize();
+    });
+    SharedPreferences.setMockInitialValues({
+      'lexora.onboarding.completed.v1': true,
+    });
+
+    await tester.pumpWidget(const LexoraApp(locale: Locale('zh', 'CN')));
+    await pumpUi(tester);
+    expect(find.textContaining('Lexora 4.0.0'), findsOneWidget);
+    expect(find.text('查看完整更新内容'), findsOneWidget);
+    expect(find.text('继续使用'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+
+    await tester.tap(find.text('继续使用'));
+    await pumpUi(tester);
+    expect(find.text('搜索英文单词或短语'), findsOneWidget);
+  });
+
+  testWidgets('search suggestions float above content without overflow', (
+    tester,
+  ) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(390, 844);
+    addTearDown(() {
+      tester.view.resetDevicePixelRatio();
+      tester.view.resetPhysicalSize();
+    });
+    final controller = SearchScreenController();
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('zh', 'CN'),
+        localizationsDelegates: const [
+          AppLocalizationsDelegate(),
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        supportedLocales: const [Locale('en'), Locale('zh')],
+        home: Scaffold(
+          body: SearchScreen(
+            active: true,
+            controller: controller,
+            vocabularyTerms: const [],
+            onVocabularyChanged: (_) {},
+            onHistoryChanged: () {},
+            wordService: _SuggestionWordService(),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.tap(find.byType(TextField));
+    await tester.enterText(find.byType(TextField), 'wo');
+    await tester.pump(const Duration(milliseconds: 150));
+    await tester.pump(const Duration(milliseconds: 180));
+
+    expect(find.text('其他联想'), findsOneWidget);
+    expect(find.text('world'), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('desktop sidebar compacts smoothly and can be toggled', (

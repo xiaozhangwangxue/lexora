@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
@@ -171,40 +172,60 @@ class _InteractionLogger extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Listener(
     behavior: HitTestBehavior.translucent,
-    onPointerDown: (event) => DeveloperLogService.instance.log(
-      'input.pointer_down',
-      data: {
-        'pointer': event.pointer,
-        'kind': event.kind.name,
-        'x': event.position.dx,
-        'y': event.position.dy,
-        'buttons': event.buttons,
-      },
-    ),
-    onPointerUp: (event) => DeveloperLogService.instance.log(
-      'input.pointer_up',
-      data: {
-        'pointer': event.pointer,
-        'kind': event.kind.name,
-        'x': event.position.dx,
-        'y': event.position.dy,
-        'buttons': event.buttons,
-      },
-    ),
-    onPointerCancel: (event) => DeveloperLogService.instance.log(
-      'input.pointer_cancel',
-      data: {'pointer': event.pointer, 'kind': event.kind.name},
-    ),
-    onPointerSignal: (event) => DeveloperLogService.instance.log(
-      'input.pointer_signal',
-      data: {
-        'pointer': event.pointer,
-        'kind': event.kind.name,
-        'x': event.position.dx,
-        'y': event.position.dy,
-        'signal': event.runtimeType.toString(),
-      },
-    ),
+    onPointerDown: (event) {
+      final logs = DeveloperLogService.instance;
+      if (!logs.enabled) return;
+      logs.log(
+        'input.pointer_down',
+        data: {
+          'pointer': event.pointer,
+          'kind': event.kind.name,
+          'x': event.position.dx,
+          'y': event.position.dy,
+          'buttons': event.buttons,
+        },
+      );
+    },
+    onPointerUp: (event) {
+      final logs = DeveloperLogService.instance;
+      if (!logs.enabled) return;
+      logs.log(
+        'input.pointer_up',
+        data: {
+          'pointer': event.pointer,
+          'kind': event.kind.name,
+          'x': event.position.dx,
+          'y': event.position.dy,
+          'buttons': event.buttons,
+        },
+      );
+    },
+    onPointerCancel: (event) {
+      final logs = DeveloperLogService.instance;
+      if (!logs.enabled) return;
+      logs.log(
+        'input.pointer_cancel',
+        data: {'pointer': event.pointer, 'kind': event.kind.name},
+      );
+    },
+    onPointerSignal: (event) {
+      final logs = DeveloperLogService.instance;
+      if (!logs.enabled) return;
+      logs.logCoalesced(
+        'input.pointer_signal',
+        data: {
+          'pointer': event.pointer,
+          'kind': event.kind.name,
+          'x': event.position.dx,
+          'y': event.position.dy,
+          'signal': event.runtimeType.toString(),
+          if (event is PointerScrollEvent) ...{
+            'deltaX': event.scrollDelta.dx,
+            'deltaY': event.scrollDelta.dy,
+          },
+        },
+      );
+    },
     child: child,
   );
 }

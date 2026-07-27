@@ -160,7 +160,10 @@ class UpdateService {
         'No installer is available for this platform.',
       );
     }
-    final notes = json['releaseNotes'] as Map<String, dynamic>? ?? const {};
+    final notes =
+        json['inAppReleaseNotes'] as Map<String, dynamic>? ??
+        json['releaseNotes'] as Map<String, dynamic>? ??
+        const {};
     final info = UpdateInfo(
       version: version,
       download: _parseDownload(rawDownload),

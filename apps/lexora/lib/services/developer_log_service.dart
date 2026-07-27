@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:isolate';
 
+import 'package:flutter/scheduler.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -16,7 +18,9 @@ class DeveloperLogService {
   static const _enabledKey = 'lexora.developer-logging.enabled.v1';
   static const _maxFileBytes = 8 * 1024 * 1024;
 
-  final _pending = <String>[];
+  final _pending = <Map<String, Object?>>[];
+  final _frameSamples = <double>[];
+  final _coalescedEvents = <String, _CoalescedEvent>{};
   final _uptime = Stopwatch()..start();
   late final String _sessionId =
       '${DateTime.now().toUtc().microsecondsSinceEpoch}-$pid';
@@ -24,7 +28,9 @@ class DeveloperLogService {
   int _sequence = 0;
   File? _file;
   Timer? _flushTimer;
+  Timer? _coalescedFlushTimer;
   Future<void>? _flushInFlight;
+  bool _timingsCallbackAttached = false;
 
   bool get enabled => _enabled;
 
@@ -33,6 +39,7 @@ class DeveloperLogService {
     _enabled = preferences.getBool(_enabledKey) ?? false;
     if (_enabled) {
       await _ensureFile();
+      _attachTimingsCallback();
       log('session.start', data: _environment());
     }
   }
@@ -44,8 +51,11 @@ class DeveloperLogService {
     await preferences.setBool(_enabledKey, value);
     if (value) {
       await _ensureFile();
+      _attachTimingsCallback();
       log('developer_logging.enabled', data: _environment());
     } else {
+      _flushCoalescedEvents();
+      _detachTimingsCallback();
       await flush();
       _flushTimer?.cancel();
       _flushTimer = null;
@@ -69,7 +79,7 @@ class DeveloperLogService {
       if (error != null) 'error': error.toString(),
       if (stackTrace != null) 'stack': stackTrace.toString(),
     };
-    _pending.add('${jsonEncode(record)}\n');
+    _pending.add(record);
     if (_pending.length >= 40) {
       unawaited(flush());
     } else {
@@ -78,6 +88,32 @@ class DeveloperLogService {
         unawaited(flush());
       });
     }
+  }
+
+  /// Coalesces high-frequency input such as scroll-wheel and trackpad signals.
+  /// Exact pointer down/up/cancel events continue to use [log].
+  void logCoalesced(String event, {Map<String, Object?> data = const {}}) {
+    if (!_enabled) return;
+    final now = DateTime.now().toUtc();
+    final aggregate = _coalescedEvents[event];
+    if (aggregate == null) {
+      _coalescedEvents[event] = _CoalescedEvent(
+        count: 1,
+        first: now,
+        last: now,
+        firstData: data,
+        lastData: data,
+      );
+    } else {
+      aggregate.count++;
+      aggregate
+        ..last = now
+        ..lastData = data;
+    }
+    _coalescedFlushTimer ??= Timer(
+      const Duration(milliseconds: 100),
+      _flushCoalescedEvents,
+    );
   }
 
   /// Records a complete start/success/failure span without delaying UI work.
@@ -120,11 +156,14 @@ class DeveloperLogService {
       if (_pending.isNotEmpty) await flush();
       return;
     }
-    final batch = _pending.join();
+    final records = List<Map<String, Object?>>.of(_pending);
     _pending.clear();
     _flushTimer?.cancel();
     _flushTimer = null;
     _flushInFlight = () async {
+      final batch = await Isolate.run(
+        () => records.map((record) => '${jsonEncode(record)}\n').join(),
+      );
       final file = await _ensureFile();
       await _rotateIfNeeded(file, batch.length);
       await (await _ensureFile()).writeAsString(
@@ -169,6 +208,9 @@ class DeveloperLogService {
   Future<void> deleteLogs() async {
     _flushTimer?.cancel();
     _flushTimer = null;
+    _coalescedFlushTimer?.cancel();
+    _coalescedFlushTimer = null;
+    _coalescedEvents.clear();
     _pending.clear();
     if (_flushInFlight != null) await _flushInFlight;
     final directory = await _logDirectory();
@@ -217,4 +259,85 @@ class DeveloperLogService {
     'locale': Platform.localeName,
     'processors': Platform.numberOfProcessors,
   };
+
+  void _flushCoalescedEvents() {
+    _coalescedFlushTimer?.cancel();
+    _coalescedFlushTimer = null;
+    if (!_enabled || _coalescedEvents.isEmpty) {
+      _coalescedEvents.clear();
+      return;
+    }
+    final events = Map<String, _CoalescedEvent>.of(_coalescedEvents);
+    _coalescedEvents.clear();
+    for (final entry in events.entries) {
+      final value = entry.value;
+      log(
+        entry.key,
+        data: {
+          'count': value.count,
+          'firstTime': value.first.toIso8601String(),
+          'lastTime': value.last.toIso8601String(),
+          'first': value.firstData,
+          'last': value.lastData,
+        },
+      );
+    }
+  }
+
+  void _attachTimingsCallback() {
+    if (_timingsCallbackAttached) return;
+    SchedulerBinding.instance.addTimingsCallback(_handleFrameTimings);
+    _timingsCallbackAttached = true;
+  }
+
+  void _detachTimingsCallback() {
+    if (!_timingsCallbackAttached) return;
+    SchedulerBinding.instance.removeTimingsCallback(_handleFrameTimings);
+    _timingsCallbackAttached = false;
+    _frameSamples.clear();
+  }
+
+  void _handleFrameTimings(List<FrameTiming> timings) {
+    if (!_enabled) return;
+    for (final timing in timings) {
+      _frameSamples.add(
+        (timing.buildDuration + timing.rasterDuration).inMicroseconds / 1000,
+      );
+    }
+    if (_frameSamples.length < 60) return;
+    final samples = List<double>.of(_frameSamples)..sort();
+    _frameSamples.clear();
+    double percentile(double value) {
+      final index = ((samples.length - 1) * value).round();
+      return samples[index];
+    }
+
+    log(
+      'performance.frame_summary',
+      data: {
+        'frames': samples.length,
+        'p50Ms': percentile(.50),
+        'p95Ms': percentile(.95),
+        'worstMs': samples.last,
+        'over16_7Ms': samples.where((value) => value > 16.7).length,
+        'over32Ms': samples.where((value) => value > 32).length,
+      },
+    );
+  }
+}
+
+class _CoalescedEvent {
+  _CoalescedEvent({
+    required this.count,
+    required this.first,
+    required this.last,
+    required this.firstData,
+    required this.lastData,
+  });
+
+  int count;
+  final DateTime first;
+  DateTime last;
+  final Map<String, Object?> firstData;
+  Map<String, Object?> lastData;
 }

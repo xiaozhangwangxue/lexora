@@ -24,6 +24,72 @@ Lexora is a bilingual dictionary for Android, macOS, Windows, and Linux that tur
 > [!IMPORTANT]
 > Lexora needs no account. Word lists, history, and generated PDFs stay on the device by default. Only after **Start generating** is selected are words, definitions, and examples sent to public dictionary and translation services.
 
+## Lexora 4.0.0 release notes
+
+<!-- release-notes:en:start -->
+
+### Dictionary and personal vocabulary books
+
+- Added a dedicated dictionary search with live suggestions, bilingual senses by part of speech, examples, collocations, and linked related words.
+- Add or remove a result from Vocabulary Book in one tap with immediate motion and a self-dismissing confirmation.
+- History now switches between generated-word and search history, with one-tap repeat searches.
+- Added precise search-result text sizing, optimized by default for phone reading.
+- Reorganized navigation into Words, Vocabulary Book, Generated, History, and Settings.
+- Result text is selectable, and related words open in a draggable preview on double-click.
+- Parts of speech include Chinese labels in both interface languages.
+
+### Search speed and accuracy
+
+- Search now enters the result immediately, targets the core definition within two seconds, and completes the rest in the background.
+- Cloudflare edge aggregation brings in the complete English dictionary, pronunciation, parts of speech, and related content as a fast second stage.
+- Chinese translation now uses edge batching while related words, examples, and phrases fill independently without serially blocking search.
+- Typing prefetches English dictionary data for only the top three suggestions and warms just the first definition translation.
+- Translation work is capped at two concurrent requests with progressive retries; failed responses are no longer cached.
+- Completed translation cache survives a confirmed search for faster, more reliable repeat viewing.
+- Fixed raw pronunciation codes by converting fallback phonetics into readable IPA.
+- 4.0.0 moves suggestions into an independent overlay so typing and result completion no longer relayout the page.
+
+### History, previews, and interaction
+
+- Search history supports sorting, multi-select deletion, and batch book creation.
+- Search history and linked words share a draggable sheet that expands, dismisses, and returns through linked results naturally.
+- Double-click Words in the desktop sidebar to return home; GitHub hides as suggestions appear.
+- The history header and search-history list now share a consistent layout.
+- Search, dragging, state feedback, navigation, and desktop sidebar motion have been retuned throughout the app.
+- Reduced-motion support keeps meaningful feedback while removing unnecessary spatial movement.
+
+### Cross-platform stability and updates
+
+- Fixed a macOS crash when exporting images caused by missing Photos permission descriptions.
+- Reduced desktop resize jank by suspending costly sidebar motion during live resizing and restoring it naturally afterward.
+- The GitHub button hides when a search result is shown so it cannot cover content.
+- Fixed compressed search-result layouts and enforced a safe minimum desktop window size.
+- Recentered macOS traffic-light controls in the wider collapsed sidebar.
+- macOS updates open the official download, quit Lexora, and reveal Privacy & Security.
+- Fixed desktop sidebar reader exit and unwanted Android keyboard popups.
+- Update checks fail over across the official site, direct Cloudflare Worker, and GitHub.
+- The macOS sidebar uses flush native material while interactive Liquid Glass is limited to selected controls for cheaper resizing.
+- Android, macOS, Windows, and Linux builds, installation, upgrades, and download integrity are revalidated.
+
+### Website, documentation, and diagnostics
+
+- The website demo adapts to mobile or desktop and includes multiple interactive pages.
+- The website, README, and onboarding are updated while historical downloads remain available.
+- Developer mode captures detailed input, navigation, search, backend response, timing, generation, and reader diagnostics.
+- 4.0.0 coalesces high-frequency scroll diagnostics off the UI thread and adds P50, P95, worst-frame, and slow-frame summaries.
+- GitHub, the website, and README share the complete release notes while the app uses a concise phone-friendly version.
+
+### 4.0.0 performance, security, and motion
+
+- Website dragging now updates a GPU-composited transform per frame instead of rerendering the page on every pointer move.
+- FLIP reordering is interruptible, while the wordmark and demo use shorter, more natural nonlinear transitions.
+- Removed animated filters, background positions, top changes, and transition: all patterns that caused unnecessary work.
+- Version, build, filenames, checksums, and release notes are generated from one manifest and checked before publishing.
+- Updated website runtime and build dependencies to address known high-severity vulnerabilities.
+- Added coverage for small-screen notes, rapid typing, live desktop resizing, reduced motion, and manifest compatibility.
+
+<!-- release-notes:en:end -->
+
 ## Why Lexora
 
 | 🔎 Search-engine-speed lookup | ＋ One-tap saving | ↕️ Playlist-like ordering | 📖 A finished result |
@@ -61,21 +127,21 @@ Use the [official download section](https://lexora.12323456.xyz/#download) for b
 
 | Platform | Package | Requirement | Download |
 | --- | --- | --- | --- |
-| Android | APK | Android 8.0+ | [Official mirror](https://lexora.12323456.xyz/downloads/lexora-android-v3.2.5.apk) |
-| macOS | Drag-to-install DMG | macOS 12+ | [Official mirror](https://lexora.12323456.xyz/downloads/lexora-macos-v3.2.5.dmg) |
-| Windows | Setup EXE (launch option checked by default) | Windows 10 / 11 | [Official mirror](https://lexora.12323456.xyz/downloads/lexora-windows-v3.2.5-setup.exe) |
-| Linux | tar.gz | 64-bit Linux | [Official mirror](https://lexora.12323456.xyz/downloads/lexora-linux-v3.2.5.tar.gz) |
+| Android | APK | Android 8.0+ | [Official mirror](https://lexora.12323456.xyz/downloads/lexora-android-v4.0.0.apk) |
+| macOS | Drag-to-install DMG | macOS 12+ | [Official mirror](https://lexora.12323456.xyz/downloads/lexora-macos-v4.0.0.dmg) |
+| Windows | Setup EXE (launch option checked by default) | Windows 10 / 11 | [Official mirror](https://lexora.12323456.xyz/downloads/lexora-windows-v4.0.0-setup.exe) |
+| Linux | tar.gz | 64-bit Linux | [Official mirror](https://lexora.12323456.xyz/downloads/lexora-linux-v4.0.0.tar.gz) |
 
 > [!IMPORTANT]
 > Android v0.2.0 used an ephemeral build signature whose private key cannot be recovered. Moving to the stable v0.3.0 signing key therefore requires one uninstall and reinstall. From v0.3.0 onward, future APKs use the same release key and install directly over the existing app. Export any PDFs you need before removing v0.2.0.
 
-Every release filename contains its version, such as `lexora-android-v3.2.5.apk`, so old and new installers remain easy to distinguish. The website keeps 3.1.0 under Previous versions and it will remain in R2. In-app updates prefer Cloudflare R2 and verify download completeness plus SHA-256 before opening an installer.
+Every release filename contains its version, such as `lexora-android-v4.0.0.apk`, so old and new installers remain easy to distinguish. The website keeps 3.2.5 and 3.1.0 under Previous versions, and both remain in R2. In-app updates prefer Cloudflare R2 and verify download completeness plus SHA-256 before opening an installer.
 
 ## Three steps to a vocabulary book
 
 1. Search in **Words** and save useful results, or type/import a large batch in **Vocabulary Book**.
 2. Long-press to reorder or select a sort mode, choose type and examples in **Settings**, then select **Start generating**.
-3. Choose PDF, EPUB, or DOCX; read, export, or share the result in **Generated**, and browse every generated word in **History**.
+3. Choose PDF, EPUB, DOCX, page images, or one long image; read, export, or share the result in **Generated**, and browse every generated word in **History**.
 
 ```text
 word list → dictionary + corpus + translation → bilingual layout → PDF / EPUB / DOCX → history / export / share

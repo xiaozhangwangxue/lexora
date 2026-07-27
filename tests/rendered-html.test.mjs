@@ -29,11 +29,13 @@ test("server-renders the finished Lexora landing page", async () => {
   assert.match(html, /\/lɛkˈsɔːrə\//);
   assert.match(html, /正在识别设备/);
   assert.match(html, /id="all-downloads"/);
-  assert.match(html, /lexora-android-v3\.2\.5\.apk/);
-  assert.match(html, /lexora-macos-v3\.2\.5\.dmg/);
-  assert.match(html, /lexora-windows-v3\.2\.5-setup\.exe/);
+  assert.match(html, /lexora-android-v4\.0\.0\.apk/);
+  assert.match(html, /lexora-macos-v4\.0\.0\.dmg/);
+  assert.match(html, /lexora-windows-v4\.0\.0-setup\.exe/);
   assert.match(html, /历史版本/);
+  assert.match(html, /lexora-android-v3\.2\.5\.apk/);
   assert.match(html, /lexora-android-v3\.1\.0\.apk/);
+  assert.match(html, /4\.0\.0 性能、安全与动画/);
   assert.match(html, /每一次查词/);
   assert.match(html, /分页图片或长图/);
   assert.doesNotMatch(html, /supportInner/);
@@ -47,7 +49,6 @@ test("server-renders the bilingual donation page", async () => {
   const response = await render("/donate");
   assert.equal(response.status, 200);
   const html = await response.text();
-  assert.match(html, /支持独立开发/);
   assert.match(html, /支持独立开发/);
   assert.match(html, /photo\.12323456\.xyz\/api\/rfile\/%E5%BE%AE%E4%BF%A1\.png/);
   assert.match(html, /photo\.12323456\.xyz\/api\/rfile\/%E6%94%AF%E4%BB%98%E5%AE%9D\.jpg/);

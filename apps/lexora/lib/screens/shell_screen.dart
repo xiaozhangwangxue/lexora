@@ -21,6 +21,7 @@ import '../services/pdf_service.dart';
 import '../services/pdf_settings_service.dart';
 import '../services/word_service.dart';
 import '../widgets/github_button.dart';
+import '../widgets/release_notes_content.dart';
 import 'history_screen.dart';
 import 'history_hub_screen.dart';
 import 'home_screen.dart';
@@ -66,11 +67,15 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
   bool? _desktopSidebarExpandedPreference;
   bool? _nativeMacShellAvailable;
   Completer<void>? _resumeCompleter;
+  Timer? _desktopResizeTimer;
+  bool _desktopLiveResizing = false;
 
   bool get _isAndroid =>
       Platform.isAndroid ||
       debugDefaultTargetPlatformOverride == TargetPlatform.android;
   bool get _isWidgetTest => Platform.environment['FLUTTER_TEST'] == 'true';
+  bool get _isDesktop =>
+      Platform.isMacOS || Platform.isWindows || Platform.isLinux;
 
   @override
   void initState() {
@@ -93,8 +98,22 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
     }
     _pageController.dispose();
     _generationProgress.dispose();
+    _desktopResizeTimer?.cancel();
     if (_resumeCompleter?.isCompleted == false) _resumeCompleter!.complete();
     super.dispose();
+  }
+
+  @override
+  void didChangeMetrics() {
+    super.didChangeMetrics();
+    if (!_isDesktop || !mounted) return;
+    _desktopResizeTimer?.cancel();
+    if (!_desktopLiveResizing) {
+      setState(() => _desktopLiveResizing = true);
+    }
+    _desktopResizeTimer = Timer(const Duration(milliseconds: 140), () {
+      if (mounted) setState(() => _desktopLiveResizing = false);
+    });
   }
 
   Future<void> _detectNativeMacShell() async {
@@ -222,28 +241,7 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
       builder: (dialogContext) => AlertDialog(
         icon: const Icon(Icons.auto_awesome_rounded),
         title: Text('Lexora $appVersion · ${strings.whatsNew}'),
-        content: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 480),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              for (final note in notes) ...[
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Padding(
-                      padding: EdgeInsets.only(top: 7),
-                      child: Icon(Icons.circle, size: 5),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(child: Text(note)),
-                  ],
-                ),
-                const SizedBox(height: 9),
-              ],
-            ],
-          ),
-        ),
+        content: ReleaseNotesContent(notes: notes, isZh: strings.isZh),
         actions: [
           FilledButton(
             onPressed: () => Navigator.of(dialogContext).pop(),
@@ -991,7 +989,9 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
           children: [
             AnimatedContainer(
               key: const Key('desktop-sidebar'),
-              duration: MediaQuery.disableAnimationsOf(context)
+              duration:
+                  MediaQuery.disableAnimationsOf(context) ||
+                      _desktopLiveResizing
                   ? Duration.zero
                   : const Duration(milliseconds: 220),
               curve: const Cubic(.23, 1, .32, 1),
