@@ -146,11 +146,14 @@ void main() {
         await Future<void>.delayed(const Duration(milliseconds: 45));
         final payload = jsonDecode(request.body) as Map<String, dynamic>;
         final texts = (payload['texts'] as List).cast<String>();
-        return http.Response(
-          jsonEncode({
-            'translations': [for (final text in texts) '中译：$text'],
-          }),
+        return http.Response.bytes(
+          utf8.encode(
+            jsonEncode({
+              'translations': [for (final text in texts) '中译：$text'],
+            }),
+          ),
           200,
+          headers: const {'content-type': 'application/json; charset=utf-8'},
         );
       }
       if (request.url.host == 'api.dictionaryapi.dev') {
@@ -178,6 +181,142 @@ void main() {
     expect(result.definition, 'A unit of language.');
     expect(result.definitionZh, isEmpty);
   });
+
+  test('completed open lexicon entry powers a full bilingual lookup', () async {
+    SharedPreferences.setMockInitialValues({});
+    var directDictionaryRequests = 0;
+    final client = MockClient((request) async {
+      if (request.url.host == 'dict.12323456.xyz' &&
+          request.url.path == '/v1/lookup') {
+        return http.Response.bytes(
+          utf8.encode(
+            jsonEncode({
+              'word': 'word',
+              'normalized_word': 'word',
+              'pos': 'noun',
+              'difficulty': 'A1–A2',
+              'frequency': 5.26,
+              'us_phonetic': 'wɝd',
+              'uk_phonetic': 'wɜːd',
+              'definition': 'A unit of language.',
+              'definition_zh': '语言单位。',
+              'synonyms': ['term'],
+              'antonyms': ['silence'],
+              'examples': ['This is a word.'],
+              'phrases': ['word for word'],
+              'phrase_entries': [
+                {
+                  'word': 'word for word',
+                  'definition': 'Using exactly the same words.',
+                },
+              ],
+              'related_entries': [
+                {'word': 'lexeme', 'definition': 'A lexical unit.'},
+              ],
+              'senses': [
+                {
+                  'pos': 'noun',
+                  'definitions': ['A unit of language.'],
+                },
+              ],
+              'enrichment': {'status': 'completed'},
+              'match_type': 'exact',
+            }),
+          ),
+          200,
+          headers: const {'content-type': 'application/json; charset=utf-8'},
+        );
+      }
+      if (request.url.path == '/api/translate/batch') {
+        final body = jsonDecode(request.body) as Map<String, dynamic>;
+        final texts = (body['texts'] as List).cast<String>();
+        return http.Response.bytes(
+          utf8.encode(
+            jsonEncode({
+              'translations': [for (final text in texts) '中译：$text'],
+            }),
+          ),
+          200,
+          headers: const {'content-type': 'application/json; charset=utf-8'},
+        );
+      }
+      if (request.url.host == 'api.dictionaryapi.dev') {
+        directDictionaryRequests++;
+        await Future<void>.delayed(const Duration(seconds: 2));
+        return http.Response('{}', 404);
+      }
+      if (request.url.host == 'api.datamuse.com') {
+        await Future<void>.delayed(const Duration(seconds: 2));
+        return http.Response('[]', 200);
+      }
+      return http.Response('not found', 404);
+    });
+
+    final stopwatch = Stopwatch()..start();
+    final entry = await WordService(
+      client: client,
+    ).lookup('word', exampleCount: 1);
+
+    expect(stopwatch.elapsedMilliseconds, lessThan(1500));
+    expect(entry.word, 'word');
+    expect(entry.definition, 'A unit of language.');
+    expect(entry.definitionZh, '中译：A unit of language.');
+    expect(entry.usPhonetic, 'wɝd');
+    expect(entry.ukPhonetic, 'wɜːd');
+    expect(entry.synonyms, contains('term'));
+    expect(entry.antonyms, contains('silence'));
+    expect(entry.examples, ['This is a word.']);
+    expect(entry.phrases.single.phrase, 'word for word');
+    expect(entry.phrases.single.meaning, 'Using exactly the same words.');
+    expect(entry.relatedWords.single.word, 'lexeme');
+    expect(directDictionaryRequests, 0);
+  });
+
+  test(
+    'open lexicon normalizes legacy phonetic characters for core search',
+    () async {
+      SharedPreferences.setMockInitialValues({});
+      final client = MockClient((request) async {
+        if (request.url.host == 'dict.12323456.xyz') {
+          return http.Response.bytes(
+            utf8.encode(
+              jsonEncode({
+                'word': 'hello',
+                'normalized_word': 'hello',
+                'pos': 'interjection',
+                'frequency': 4.72,
+                'us_phonetic': "hә'lәu",
+                'uk_phonetic': "hә'lәu",
+                'definition': 'A greeting.',
+                'synonyms': const [],
+                'antonyms': const [],
+                'examples': const [],
+                'phrase_entries': const [],
+                'related_entries': const [],
+                'senses': [
+                  {
+                    'pos': 'interjection',
+                    'definitions': ['A greeting.'],
+                  },
+                ],
+                'enrichment': const {},
+                'match_type': 'exact',
+              }),
+            ),
+            200,
+            headers: const {'content-type': 'application/json; charset=utf-8'},
+          );
+        }
+        return http.Response('not found', 404);
+      });
+
+      final entry = await WordService(client: client).lookupCore('hello');
+
+      expect(entry.usPhonetic, 'həˈləu');
+      expect(entry.ukPhonetic, 'həˈləu');
+      expect(entry.definition, 'A greeting.');
+    },
+  );
 
   test(
     'lookupAll performs bounded concurrent work and preserves word order',
@@ -469,6 +608,16 @@ void main() {
 
   test('suggest returns normalized unique candidates', () async {
     final client = MockClient((request) async {
+      if (request.url.host == 'dict.12323456.xyz') {
+        return http.Response(
+          jsonEncode([
+            {'word': 'Word', 'normalized_word': 'word'},
+            {'word': 'word', 'normalized_word': 'word'},
+            {'word': 'word play', 'normalized_word': 'word play'},
+          ]),
+          200,
+        );
+      }
       expect(request.url.path, '/sug');
       return http.Response(
         jsonEncode([

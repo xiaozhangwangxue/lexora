@@ -65,10 +65,11 @@ class WordService {
   String? _retainedLookupKey;
   // Bump the cache when provider/fallback semantics change so incomplete
   // results from older releases do not keep causing exact words to fail.
-  static const _cachePrefix = 'lexora.word.v8';
+  static const _cachePrefix = 'lexora.word.v9';
   static const _cacheLifetime = Duration(days: 14);
   static const _translationUnavailable = '翻译暂不可用';
   static const _maxTranslationConcurrency = 2;
+  static const _openLexiconHost = 'dict.12323456.xyz';
 
   /// Returns the essential dictionary result without waiting for optional
   /// translations, related words, phrases, synonyms or antonyms.
@@ -127,6 +128,13 @@ class WordService {
               exactResponse = response;
               return response;
             });
+        final lexiconFuture = _providerResponse(
+          word,
+          'open-lexicon',
+          Uri.https(_openLexiconHost, '/v1/lookup', {'term': word}),
+          timeout: const Duration(milliseconds: 1200),
+          attempts: 1,
+        );
         final edgeFuture = _firstSuccessfulEdgeGet(
           [
             Uri.https('lexora.12323456.xyz', '/api/dictionary/core', {
@@ -165,6 +173,25 @@ class WordService {
           }
         }
 
+        unawaited(
+          lexiconFuture.then((response) {
+            if (response?.statusCode != 200) return;
+            try {
+              final lexiconResponses = _coreResponsesFromLexicon(
+                response!,
+                word,
+              );
+              offer('open-lexicon', lexiconResponses[0], lexiconResponses[1]);
+            } catch (error, stackTrace) {
+              DeveloperLogService.instance.log(
+                'search.core.open_lexicon_invalid',
+                data: {'term': word},
+                error: error,
+                stackTrace: stackTrace,
+              );
+            }
+          }),
+        );
         unawaited(
           dictionaryFuture.then(
             (response) => offer('dictionary-direct', response, exactResponse),
@@ -409,7 +436,7 @@ class WordService {
     String term, {
     required int maxResults,
   }) async {
-    final response = await _getWithRetry(
+    final directFuture = _getWithRetry(
       Uri.https('api.datamuse.com', '/sug', {
         's': term,
         'max': '${max(1, min(maxResults, 24))}',
@@ -418,6 +445,21 @@ class WordService {
       operation: 'suggestions',
       term: term,
     );
+    final lexiconResponse = await _getWithRetry(
+      Uri.https(_openLexiconHost, '/v1/suggest', {
+        'prefix': term,
+        'limit': '${max(1, min(maxResults, 24))}',
+      }),
+      timeout: const Duration(milliseconds: 1200),
+      attempts: 1,
+      operation: 'open-lexicon-suggestions',
+      term: term,
+    );
+    final lexiconSuggestions = _decodeLexiconSuggestions(lexiconResponse);
+    if (lexiconSuggestions.isNotEmpty) {
+      return lexiconSuggestions.take(maxResults).toList(growable: false);
+    }
+    final response = await directFuture;
     if (response == null) return const [];
     return _decodeDatamuse(response)
         .map((item) => _normalizeTerm(item['word'] as String? ?? ''))
@@ -425,6 +467,27 @@ class WordService {
         .toSet()
         .take(maxResults)
         .toList(growable: false);
+  }
+
+  List<String> _decodeLexiconSuggestions(http.Response? response) {
+    if (response?.statusCode != 200) return const [];
+    try {
+      final values = _decodeJson(response!) as List;
+      return values
+          .whereType<Map<String, dynamic>>()
+          .map(
+            (item) => _normalizeTerm(
+              item['normalized_word']?.toString() ??
+                  item['word']?.toString() ??
+                  '',
+            ),
+          )
+          .where((item) => item.isNotEmpty)
+          .toSet()
+          .toList(growable: false);
+    } catch (_) {
+      return const [];
+    }
   }
 
   Future<void> prefetch(String rawWord, {int exampleCount = 1}) async {
@@ -1506,7 +1569,7 @@ class WordService {
       try {
         final stopwatch = Stopwatch()..start();
         final uris = _providerUris(word);
-        final directFuture = Future.wait([
+        Future<List<http.Response?>> directLookup() => Future.wait([
           _providerResponse(
             word,
             'dictionary',
@@ -1543,6 +1606,46 @@ class WordService {
             attempts: 1,
           ),
         ]);
+        final lexiconFuture = _providerResponse(
+          word,
+          'open-lexicon',
+          Uri.https(_openLexiconHost, '/v1/lookup', {'term': word}),
+          timeout: const Duration(milliseconds: 1200),
+          attempts: 1,
+        );
+        List<http.Response?> responses;
+        final lexiconResponse = await lexiconFuture;
+        if (lexiconResponse?.statusCode == 200) {
+          try {
+            responses = _sourceResponsesFromLexicon(
+              lexiconResponse!,
+              word,
+              requireCompleted: true,
+            );
+            DeveloperLogService.instance.log(
+              'search.sources.open_lexicon_presented',
+              data: {
+                'term': word,
+                'durationMs': stopwatch.elapsedMilliseconds,
+                'availableProviders': responses
+                    .where((response) => response?.statusCode == 200)
+                    .length,
+              },
+            );
+            if (_retainedLookupKey == null ||
+                _retainedLookupKey!.endsWith('|$word')) {
+              _sourceCache[word] = responses;
+            }
+            return responses;
+          } catch (error, stackTrace) {
+            DeveloperLogService.instance.log(
+              'search.sources.open_lexicon_incomplete',
+              data: {'term': word},
+              error: error,
+              stackTrace: stackTrace,
+            );
+          }
+        }
         final edgeFuture = _firstSuccessfulEdgeGet(
           [
             Uri.https('lexora.12323456.xyz', '/api/dictionary/full', {
@@ -1559,7 +1662,6 @@ class WordService {
           term: word,
         );
         final edgeResponse = await edgeFuture;
-        List<http.Response?> responses;
         if (edgeResponse?.statusCode == 200) {
           try {
             responses = _sourceResponsesFromEdge(edgeResponse!);
@@ -1580,10 +1682,10 @@ class WordService {
               error: error,
               stackTrace: stackTrace,
             );
-            responses = await directFuture;
+            responses = await directLookup();
           }
         } else {
-          responses = await directFuture;
+          responses = await directLookup();
         }
         if (responses.any((response) => response?.statusCode == 200) &&
             (_retainedLookupKey == null ||
@@ -1759,6 +1861,200 @@ class WordService {
       senses: senses,
     );
   }
+
+  List<http.Response?> _coreResponsesFromLexicon(
+    http.Response response,
+    String requestedWord,
+  ) {
+    final responses = _sourceResponsesFromLexicon(
+      response,
+      requestedWord,
+      requireCompleted: false,
+    );
+    return [responses[0], responses[2]];
+  }
+
+  List<http.Response?> _sourceResponsesFromLexicon(
+    http.Response response,
+    String requestedWord, {
+    required bool requireCompleted,
+  }) {
+    final payload = _decodeJson(response) as Map<String, dynamic>;
+    final normalizedWord = _normalizeTerm(
+      payload['normalized_word']?.toString() ??
+          payload['word']?.toString() ??
+          '',
+    );
+    if (normalizedWord != requestedWord ||
+        payload['match_type']?.toString() == 'fuzzy') {
+      throw const FormatException('Open lexicon returned a non-exact match.');
+    }
+    final frequency =
+        double.tryParse(payload['frequency']?.toString() ?? '') ?? 0;
+    if (frequency > 10) {
+      throw const FormatException('Open lexicon frequency is not normalized.');
+    }
+    if (requireCompleted) {
+      final enrichment =
+          payload['enrichment'] as Map<String, dynamic>? ?? const {};
+      if (enrichment['status'] != 'completed') {
+        throw const FormatException('Open lexicon entry is still enriching.');
+      }
+    }
+
+    final senses = (payload['senses'] as List? ?? const [])
+        .whereType<Map<String, dynamic>>()
+        .toList(growable: false);
+    final meanings = <Map<String, dynamic>>[];
+    for (final sense in senses.take(12)) {
+      final definitions = (sense['definitions'] as List? ?? const [])
+          .map((value) => _cleanLexiconText(value))
+          .where((value) => value.isNotEmpty)
+          .take(3)
+          .map<Map<String, dynamic>>(
+            (value) => <String, dynamic>{'definition': value},
+          )
+          .toList(growable: true);
+      if (definitions.isEmpty) continue;
+      meanings.add({
+        'partOfSpeech': _cleanLexiconText(sense['pos']),
+        'definitions': definitions,
+        'synonyms': <String>[],
+        'antonyms': <String>[],
+      });
+    }
+
+    final fallbackDefinitions = _cleanLexiconText(
+      payload['definition'],
+    ).split('\n').where((value) => value.trim().isNotEmpty).toList();
+    if (meanings.isEmpty && fallbackDefinitions.isNotEmpty) {
+      meanings.add({
+        'partOfSpeech': _cleanLexiconText(payload['pos']),
+        'definitions': [
+          for (final value in fallbackDefinitions.take(3))
+            <String, dynamic>{'definition': value.trim()},
+        ],
+        'synonyms': <String>[],
+        'antonyms': <String>[],
+      });
+    }
+    if (meanings.isEmpty) {
+      throw const FormatException('Open lexicon entry has no definition.');
+    }
+
+    final synonyms = _lexiconStringList(payload['synonyms']);
+    final antonyms = _lexiconStringList(payload['antonyms']);
+    meanings.first['synonyms'] = synonyms;
+    meanings.first['antonyms'] = antonyms;
+    final definitionMaps = meanings
+        .expand(
+          (meaning) => (meaning['definitions'] as List)
+              .whereType<Map<String, dynamic>>(),
+        )
+        .toList(growable: false);
+    final examples = _lexiconStringList(payload['examples']);
+    for (
+      var index = 0;
+      index < min(definitionMaps.length, examples.length);
+      index++
+    ) {
+      definitionMaps[index]['example'] = examples[index];
+    }
+
+    final us = _normalizeLexiconPhonetic(payload['us_phonetic']);
+    final uk = _normalizeLexiconPhonetic(payload['uk_phonetic']);
+    final primaryDefinition = _cleanLexiconText(
+      definitionMaps.first['definition'],
+    );
+    final frequencyTag = frequency > 0
+        ? 'f:${pow(10, frequency - 3).toStringAsFixed(4)}'
+        : '';
+    final exactTags = <String>[
+      if (frequencyTag.isNotEmpty) frequencyTag,
+      if (us.isNotEmpty) 'pron:$us',
+    ];
+    final exact = [
+      {
+        'word': normalizedWord,
+        'defs': ['${_cleanLexiconText(payload['pos'])}\t$primaryDefinition'],
+        'tags': exactTags,
+      },
+    ];
+    final dictionary = [
+      {
+        'word': normalizedWord,
+        'phonetic': us.isNotEmpty ? us : uk,
+        'phonetics': [
+          if (us.isNotEmpty) {'text': us, 'audio': 'lexora-us.mp3'},
+          if (uk.isNotEmpty) {'text': uk, 'audio': 'lexora-uk.mp3'},
+        ],
+        'meanings': meanings,
+      },
+    ];
+
+    final relationEntries = [
+      ..._lexiconNamedEntries(payload['phrase_entries']),
+      ..._lexiconNamedEntries(payload['related_entries']),
+    ];
+    final related = [
+      for (final item in relationEntries)
+        {
+          'word': item.$1,
+          'defs': ['\t${item.$2}'],
+          'tags': <String>[],
+        },
+    ];
+    final synonymItems = [
+      for (final value in synonyms) {'word': value, 'tags': <String>[]},
+    ];
+    final antonymItems = [
+      for (final value in antonyms) {'word': value, 'tags': <String>[]},
+    ];
+
+    http.Response encoded(Object value) => http.Response(
+      jsonEncode(value),
+      200,
+      headers: const {'content-type': 'application/json; charset=utf-8'},
+    );
+    return [
+      encoded(dictionary),
+      encoded(related),
+      encoded(exact),
+      encoded(synonymItems),
+      encoded(antonymItems),
+    ];
+  }
+
+  String _cleanLexiconText(Object? value) => (value ?? '')
+      .toString()
+      .replaceAll(r'\n', '\n')
+      .replaceAll(RegExp(r'[ \t]+'), ' ')
+      .trim();
+
+  String _normalizeLexiconPhonetic(Object? value) => _cleanLexiconText(value)
+      .replaceAll('ә', 'ə')
+      .replaceAll(':', 'ː')
+      .replaceAll("'", 'ˈ')
+      .replaceAll('ˈˈ', 'ˈ')
+      .replaceAll(RegExp(r'^/+|/+$'), '');
+
+  List<String> _lexiconStringList(Object? value) => (value as List? ?? const [])
+      .map(_cleanLexiconText)
+      .where((item) => item.isNotEmpty)
+      .toSet()
+      .toList(growable: false);
+
+  List<(String, String)> _lexiconNamedEntries(Object? value) =>
+      (value as List? ?? const [])
+          .whereType<Map<String, dynamic>>()
+          .map(
+            (item) => (
+              _normalizeTerm(item['word']?.toString() ?? ''),
+              _cleanLexiconText(item['definition'] ?? item['meaning'] ?? ''),
+            ),
+          )
+          .where((item) => item.$1.isNotEmpty && item.$2.isNotEmpty)
+          .toList(growable: false);
 
   List<http.Response?> _coreResponsesFromEdge(http.Response response) {
     final payload = _decodeJson(response) as Map<String, dynamic>;
