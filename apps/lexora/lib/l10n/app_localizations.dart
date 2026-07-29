@@ -109,6 +109,39 @@ class AppLocalizations {
   String get gotIt => isZh ? '知道了' : 'Got it';
   String get customize => isZh ? '自定义文档' : 'Customize document';
   String get pdfSettings => isZh ? '文档自定义' : 'Document customization';
+  String get offlineLexicon => isZh ? '离线极速词库' : 'Offline fast lexicon';
+  String get offlineLexiconHint => isZh
+      ? '可选下载 2 万词极速版或完整词库。安装后优先在本机查询，断网也能显示已有完整数据；未命中时仍会自动使用云端和原有词典来源。'
+      : 'Optionally download the 20K fast edition or the complete lexicon. Installed data is searched locally first and existing cloud providers still fill any gaps.';
+  String get onlineLexicon => isZh ? '仅使用联网查询' : 'Online lookup only';
+  String get fastLexicon => isZh ? '2 万词极速版' : '20K fast edition';
+  String get fastLexiconHint => isZh
+      ? '体积较小，覆盖最常用的单词和短语'
+      : 'A smaller download covering the most common words and phrases';
+  String get fullLexicon => isZh ? '完整词库' : 'Complete lexicon';
+  String get fullLexiconHint => isZh
+      ? '覆盖全部已收集单词和短语，下载体积较大'
+      : 'Every collected word and phrase; this is a much larger download';
+  String get offlineLexiconInstalled =>
+      isZh ? '已安装并启用' : 'Installed and active';
+  String get offlineLexiconAvailable =>
+      isZh ? '已安装，可启用' : 'Installed, ready to use';
+  String get downloadLexicon => isZh ? '下载' : 'Download';
+  String get useLexicon => isZh ? '启用' : 'Use';
+  String get useOnlineOnly => isZh ? '改用联网查询' : 'Use online lookup';
+  String get preparingLexicon =>
+      isZh ? '正在获取词库信息…' : 'Loading lexicon details…';
+  String get downloadingLexicon =>
+      isZh ? '正在下载并校验词库…' : 'Downloading and verifying…';
+  String offlineLexiconRows(int count) =>
+      isZh ? '约 $count 个词条' : 'About $count entries';
+  String get downloadLexiconTitle =>
+      isZh ? '下载离线词库？' : 'Download offline lexicon?';
+  String downloadLexiconBody(String name, String size) => isZh
+      ? '将下载$name（约 $size）。下载会自动校验，完整安装成功前不会替换当前词库。'
+      : 'Lexora will download $name (about $size). The file is verified before it replaces the active lexicon.';
+  String offlineLexiconFailed(String error) =>
+      isZh ? '离线词库操作失败：$error' : 'Offline lexicon failed: $error';
   String get exportFormat => isZh ? '导出格式' : 'Export format';
   String get pageImages => isZh ? '分页图片' : 'Page images';
   String get longImage => isZh ? '长图' : 'Long image';
@@ -248,8 +281,7 @@ class AppLocalizations {
   String updateAvailable(String version) =>
       isZh ? '发现 Lexora $version' : 'Lexora $version is available';
   String get downloadAndInstall => isZh ? '下载并安装' : 'Download and install';
-  String get openOfficialDownload =>
-      isZh ? '前往官网下载' : 'Open official download';
+  String get openOfficialDownload => isZh ? '前往官网下载' : 'Open official download';
   String get downloadingUpdate => isZh ? '正在下载安装包…' : 'Downloading installer…';
   String get launchingInstaller =>
       isZh ? '正在启动系统安装器…' : 'Opening the system installer…';
@@ -264,9 +296,8 @@ class AppLocalizations {
   String get openWebsiteFailed =>
       isZh ? '无法打开 Lexora 官网。' : 'Could not open the Lexora website.';
   String get openSourceLicense => isZh ? '开源协议' : 'Open-source license';
-  String get openSourceLicenseHint => isZh
-      ? '查看 Lexora 的开源许可内容'
-      : 'Read the license used by Lexora';
+  String get openSourceLicenseHint =>
+      isZh ? '查看 Lexora 的开源许可内容' : 'Read the license used by Lexora';
   String get donate => isZh ? '支持 Lexora' : 'Support Lexora';
   String get donateHint => isZh
       ? '捐款完全自愿，不会解锁付费功能。'

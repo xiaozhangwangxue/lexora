@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/word_entry.dart';
 import 'developer_log_service.dart';
+import 'offline_lexicon_service.dart';
 
 class WordLookupException implements Exception {
   const WordLookupException(this.message);
@@ -43,9 +44,12 @@ class LookupBatchResult {
 }
 
 class WordService {
-  WordService({http.Client? client}) : _client = client ?? http.Client();
+  WordService({http.Client? client, OfflineLexiconSource? offlineLexicon})
+    : _client = client ?? http.Client(),
+      _offlineLexicon = offlineLexicon ?? OfflineLexiconService.instance;
 
   final http.Client _client;
+  final OfflineLexiconSource _offlineLexicon;
   final Map<String, WordEntry> _memoryCache = {};
   final Map<String, Future<WordEntry>> _inFlightLookups = {};
   final Map<String, List<String>> _suggestionCache = {};
@@ -103,6 +107,42 @@ class WordService {
         data: {'term': word, 'exampleCount': exampleCount},
       );
       try {
+        final offlinePayload = await _offlineLexicon.lookup(word);
+        if (offlinePayload != null) {
+          try {
+            final lexiconResponses = _coreResponsesFromLexicon(
+              _lexiconPayloadResponse(offlinePayload),
+              word,
+            );
+            final entry = _coreEntryFromResponses(
+              word,
+              lexiconResponses[0],
+              lexiconResponses[1],
+              exampleCount: exampleCount,
+            );
+            _coreCache[word] = entry;
+            DeveloperLogService.instance.log(
+              'search.core.completed',
+              data: {
+                'term': word,
+                'durationMs': stopwatch.elapsedMilliseconds,
+                'source': 'offline-lexicon',
+                'definitionChars': entry.definition.length,
+                'senses': entry.senses.length,
+                'examples': entry.examples.length,
+                'hasPrimaryTranslation': entry.definitionZh.isNotEmpty,
+              },
+            );
+            return entry;
+          } catch (error, stackTrace) {
+            DeveloperLogService.instance.log(
+              'search.core.offline_lexicon_invalid',
+              data: {'term': word},
+              error: error,
+              stackTrace: stackTrace,
+            );
+          }
+        }
         final uris = _providerUris(word);
         http.Response? dictionaryResponse;
         http.Response? exactResponse;
@@ -436,6 +476,24 @@ class WordService {
     String term, {
     required int maxResults,
   }) async {
+    final offlineSuggestions =
+        (await _offlineLexicon.suggest(
+              term,
+              limit: max(1, min(maxResults, 24)),
+            ))
+            .map(
+              (item) => _normalizeTerm(
+                item['normalized_word']?.toString() ??
+                    item['word']?.toString() ??
+                    '',
+              ),
+            )
+            .where((item) => item.isNotEmpty)
+            .toSet()
+            .toList(growable: false);
+    if (offlineSuggestions.isNotEmpty) {
+      return offlineSuggestions.take(maxResults).toList(growable: false);
+    }
     final directFuture = _getWithRetry(
       Uri.https('api.datamuse.com', '/sug', {
         's': term,
@@ -1606,6 +1664,39 @@ class WordService {
             attempts: 1,
           ),
         ]);
+        List<http.Response?> responses;
+        final offlinePayload = await _offlineLexicon.lookup(word);
+        if (offlinePayload != null) {
+          try {
+            responses = _sourceResponsesFromLexicon(
+              _lexiconPayloadResponse(offlinePayload),
+              word,
+              requireCompleted: true,
+            );
+            DeveloperLogService.instance.log(
+              'search.sources.offline_lexicon_presented',
+              data: {
+                'term': word,
+                'durationMs': stopwatch.elapsedMilliseconds,
+                'availableProviders': responses
+                    .where((response) => response?.statusCode == 200)
+                    .length,
+              },
+            );
+            if (_retainedLookupKey == null ||
+                _retainedLookupKey!.endsWith('|$word')) {
+              _sourceCache[word] = responses;
+            }
+            return responses;
+          } catch (error, stackTrace) {
+            DeveloperLogService.instance.log(
+              'search.sources.offline_lexicon_incomplete',
+              data: {'term': word},
+              error: error,
+              stackTrace: stackTrace,
+            );
+          }
+        }
         final lexiconFuture = _providerResponse(
           word,
           'open-lexicon',
@@ -1613,7 +1704,6 @@ class WordService {
           timeout: const Duration(milliseconds: 1200),
           attempts: 1,
         );
-        List<http.Response?> responses;
         final lexiconResponse = await lexiconFuture;
         if (lexiconResponse?.statusCode == 200) {
           try {
@@ -1873,6 +1963,13 @@ class WordService {
     );
     return [responses[0], responses[2]];
   }
+
+  http.Response _lexiconPayloadResponse(Map<String, dynamic> payload) =>
+      http.Response(
+        jsonEncode(payload),
+        200,
+        headers: const {'content-type': 'application/json; charset=utf-8'},
+      );
 
   List<http.Response?> _sourceResponsesFromLexicon(
     http.Response response,

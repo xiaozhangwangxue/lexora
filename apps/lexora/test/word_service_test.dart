@@ -4,6 +4,7 @@ import 'dart:math';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
+import 'package:lexora/services/offline_lexicon_service.dart';
 import 'package:lexora/services/word_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -927,4 +928,70 @@ void main() {
     expect(peakTranslations, lessThanOrEqualTo(2));
     expect(peakTranslations, greaterThan(0));
   });
+
+  test('installed offline lexicon avoids every network provider', () async {
+    SharedPreferences.setMockInitialValues({});
+    var networkRequests = 0;
+    final client = MockClient((request) async {
+      networkRequests++;
+      return http.Response('network should not be used', 503);
+    });
+    final service = WordService(
+      client: client,
+      offlineLexicon: _MemoryOfflineLexicon({
+        'normalized_word': 'word',
+        'word': 'word',
+        'definition': 'A unit of language.',
+        'definition_zh': '语言单位。',
+        'us_phonetic': 'wɝːd',
+        'uk_phonetic': 'wɜːd',
+        'difficulty': 'A1-A2',
+        'frequency': 7.2,
+        'senses': [
+          {
+            'pos': 'noun',
+            'definitions': ['A unit of language.'],
+          },
+        ],
+        'synonyms': const [],
+        'antonyms': const [],
+        'examples': const [],
+        'phrases': const [],
+        'phrase_entries': const [],
+        'related_words': const [],
+        'related_entries': const [],
+        'enrichment': {'status': 'completed'},
+      }),
+    );
+
+    final entry = await service.lookupCore('word');
+    final suggestions = await service.suggest('wo');
+
+    expect(entry.word, 'word');
+    expect(entry.definition, 'A unit of language.');
+    expect(suggestions, ['word']);
+    expect(networkRequests, 0);
+  });
+}
+
+class _MemoryOfflineLexicon implements OfflineLexiconSource {
+  _MemoryOfflineLexicon(this.payload);
+
+  final Map<String, dynamic> payload;
+
+  @override
+  Future<Map<String, dynamic>?> lookup(String normalizedTerm) async =>
+      normalizedTerm == payload['normalized_word'] ? payload : null;
+
+  @override
+  Future<List<Map<String, dynamic>>> suggest(
+    String normalizedPrefix, {
+    int limit = 12,
+  }) async {
+    final term = payload['normalized_word']!.toString();
+    if (!term.startsWith(normalizedPrefix)) return const [];
+    return [
+      {'word': payload['word'], 'normalized_word': payload['normalized_word']},
+    ];
+  }
 }

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -8,6 +9,7 @@ import '../app_version.dart';
 import '../l10n/app_localizations.dart';
 import '../models/word_entry.dart';
 import '../services/developer_log_service.dart';
+import '../services/offline_lexicon_service.dart';
 import '../services/pdf_service.dart';
 import '../services/pdf_settings_service.dart';
 import '../services/update_service.dart';
@@ -32,9 +34,94 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
+  final _offlineLexicon = OfflineLexiconService.instance;
+
   PdfSettings get settings => widget.settings;
   ValueChanged<PdfSettings> get onChanged => widget.onChanged;
   VoidCallback get onOpenTypography => widget.onOpenTypography;
+
+  @override
+  void initState() {
+    super.initState();
+    _offlineLexicon.addListener(_offlineLexiconChanged);
+    unawaited(_offlineLexicon.initialize());
+  }
+
+  @override
+  void dispose() {
+    _offlineLexicon.removeListener(_offlineLexiconChanged);
+    super.dispose();
+  }
+
+  void _offlineLexiconChanged() {
+    if (mounted) setState(() {});
+  }
+
+  Future<void> _activateOfflineLexicon(
+    BuildContext context,
+    OfflineLexiconEdition? edition,
+  ) async {
+    try {
+      await _offlineLexicon.activate(edition);
+    } catch (error) {
+      if (context.mounted) {
+        final strings = AppLocalizations.of(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(strings.offlineLexiconFailed('$error'))),
+        );
+      }
+    }
+  }
+
+  Future<void> _downloadOfflineLexicon(
+    BuildContext context,
+    OfflineLexiconEdition edition,
+  ) async {
+    final strings = AppLocalizations.of(context);
+    try {
+      final manifest =
+          _offlineLexicon.manifest ?? await _offlineLexicon.refreshManifest();
+      if (!context.mounted) return;
+      final package = manifest.packages[edition];
+      if (package == null) {
+        throw StateError('Package is not available yet.');
+      }
+      final name = edition == OfflineLexiconEdition.fast20k
+          ? strings.fastLexicon
+          : strings.fullLexicon;
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: Text(strings.downloadLexiconTitle),
+          content: Text(
+            strings.downloadLexiconBody(
+              name,
+              _formatFileSize(package.archiveBytes),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: Text(strings.cancel),
+            ),
+            FilledButton.icon(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              icon: const Icon(Icons.download_rounded),
+              label: Text(strings.downloadLexicon),
+            ),
+          ],
+        ),
+      );
+      if (confirmed != true) return;
+      await _offlineLexicon.download(edition);
+    } catch (error) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(strings.offlineLexiconFailed('$error'))),
+        );
+      }
+    }
+  }
 
   Future<void> _setDeveloperMode(bool value) async {
     await DeveloperLogService.instance.setEnabled(value);
@@ -298,6 +385,46 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
+  Widget _buildOfflinePackageTile(
+    BuildContext context,
+    OfflineLexiconEdition edition, {
+    required IconData icon,
+    required String title,
+    required String subtitle,
+  }) {
+    final strings = AppLocalizations.of(context);
+    final installed = _offlineLexicon.installed[edition];
+    final package = _offlineLexicon.manifest?.packages[edition];
+    final selected = _offlineLexicon.activeEdition == edition;
+    final details = <String>[
+      subtitle,
+      if (installed != null)
+        '${strings.offlineLexiconRows(installed.rows)} · v${installed.version}'
+      else if (package != null)
+        '${strings.offlineLexiconRows(package.rows)} · ${_formatFileSize(package.archiveBytes)}',
+    ].join('\n');
+    final busy = _offlineLexicon.downloading;
+    return _OfflineLexiconTile(
+      icon: icon,
+      title: title,
+      subtitle: details,
+      selected: selected,
+      status: selected
+          ? strings.offlineLexiconInstalled
+          : installed != null
+          ? strings.offlineLexiconAvailable
+          : null,
+      buttonLabel: installed != null
+          ? strings.useLexicon
+          : strings.downloadLexicon,
+      onPressed: busy
+          ? null
+          : installed != null
+          ? () => _activateOfflineLexicon(context, edition)
+          : () => _downloadOfflineLexicon(context, edition),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -550,6 +677,66 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ),
                       const SizedBox(height: 18),
                       _SettingsSection(
+                        title: strings.offlineLexicon,
+                        icon: Icons.offline_bolt_rounded,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              strings.offlineLexiconHint,
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                height: 1.5,
+                                color: theme.colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                            const SizedBox(height: 14),
+                            _OfflineLexiconTile(
+                              icon: Icons.cloud_outlined,
+                              title: strings.onlineLexicon,
+                              subtitle: strings.isZh
+                                  ? '无需下载，自动使用双服务器和原有词典来源'
+                                  : 'No download; uses the dual-server service and existing providers',
+                              selected: _offlineLexicon.activeEdition == null,
+                              buttonLabel: strings.useOnlineOnly,
+                              onPressed: _offlineLexicon.downloading
+                                  ? null
+                                  : () =>
+                                        _activateOfflineLexicon(context, null),
+                            ),
+                            const Divider(height: 22),
+                            _buildOfflinePackageTile(
+                              context,
+                              OfflineLexiconEdition.fast20k,
+                              icon: Icons.bolt_rounded,
+                              title: strings.fastLexicon,
+                              subtitle: strings.fastLexiconHint,
+                            ),
+                            const Divider(height: 22),
+                            _buildOfflinePackageTile(
+                              context,
+                              OfflineLexiconEdition.full,
+                              icon: Icons.library_books_rounded,
+                              title: strings.fullLexicon,
+                              subtitle: strings.fullLexiconHint,
+                            ),
+                            if (_offlineLexicon.downloading) ...[
+                              const SizedBox(height: 15),
+                              LinearProgressIndicator(
+                                value: _offlineLexicon.downloadProgress,
+                              ),
+                              const SizedBox(height: 7),
+                              Text(
+                                strings.downloadingLexicon,
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: theme.colorScheme.onSurfaceVariant,
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 18),
+                      _SettingsSection(
                         title: strings.isZh ? '搜索结果字体' : 'Search result text',
                         icon: Icons.text_fields_rounded,
                         child: Column(
@@ -706,6 +893,121 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+String _formatFileSize(int bytes) {
+  if (bytes >= 1024 * 1024 * 1024) {
+    return '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(1)} GB';
+  }
+  if (bytes >= 1024 * 1024) {
+    return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
+  }
+  return '${(bytes / 1024).toStringAsFixed(1)} KB';
+}
+
+class _OfflineLexiconTile extends StatelessWidget {
+  const _OfflineLexiconTile({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.selected,
+    required this.buttonLabel,
+    required this.onPressed,
+    this.status,
+  });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final bool selected;
+  final String? status;
+  final String buttonLabel;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 180),
+      curve: const Cubic(.23, 1, .32, 1),
+      padding: const EdgeInsets.fromLTRB(14, 12, 10, 12),
+      decoration: BoxDecoration(
+        color: selected
+            ? theme.colorScheme.primaryContainer.withValues(alpha: .55)
+            : theme.colorScheme.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: selected
+              ? theme.colorScheme.primary.withValues(alpha: .42)
+              : theme.colorScheme.outlineVariant.withValues(alpha: .65),
+        ),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Container(
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(
+              color: selected
+                  ? theme.colorScheme.primary
+                  : theme.colorScheme.secondaryContainer,
+              borderRadius: BorderRadius.circular(13),
+            ),
+            child: Icon(
+              selected ? Icons.check_rounded : icon,
+              color: selected
+                  ? theme.colorScheme.onPrimary
+                  : theme.colorScheme.onSecondaryContainer,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Flexible(
+                      child: Text(
+                        title,
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                    if (status != null) ...[
+                      const SizedBox(width: 8),
+                      Flexible(
+                        child: Text(
+                          status!,
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            color: theme.colorScheme.primary,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  subtitle,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    height: 1.35,
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 10),
+          if (!selected)
+            TextButton(onPressed: onPressed, child: Text(buttonLabel)),
+        ],
       ),
     );
   }
