@@ -29,13 +29,14 @@ test("server-renders the finished Lexora landing page", async () => {
   assert.match(html, /\/lɛkˈsɔːrə\//);
   assert.match(html, /正在识别设备/);
   assert.match(html, /id="all-downloads"/);
-  assert.match(html, /lexora-android-v4\.0\.0\.apk/);
-  assert.match(html, /lexora-macos-v4\.0\.0\.dmg/);
-  assert.match(html, /lexora-windows-v4\.0\.0-setup\.exe/);
+  assert.match(html, /lexora-android-v4\.0\.1\.apk/);
+  assert.match(html, /lexora-macos-v4\.0\.1\.dmg/);
+  assert.match(html, /lexora-windows-v4\.0\.1-setup\.exe/);
   assert.match(html, /历史版本/);
   assert.match(html, /lexora-android-v3\.2\.5\.apk/);
   assert.match(html, /lexora-android-v3\.1\.0\.apk/);
   assert.match(html, /4\.0\.0 性能、安全与动画/);
+  assert.match(html, /4\.0\.1 可选服务器加速/);
   assert.match(html, /每一次查词/);
   assert.match(html, /分页图片或长图/);
   assert.doesNotMatch(html, /supportInner/);

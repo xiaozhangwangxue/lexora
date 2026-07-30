@@ -128,7 +128,7 @@ void main() {
     expect(find.text('Skip'), findsOneWidget);
   });
 
-  testWidgets('compact 4.0 release notes remain scrollable on a small phone', (
+  testWidgets('compact release notes remain scrollable on a small phone', (
     tester,
   ) async {
     tester.view.devicePixelRatio = 1;
@@ -143,7 +143,7 @@ void main() {
 
     await tester.pumpWidget(const LexoraApp(locale: Locale('zh', 'CN')));
     await pumpUi(tester);
-    expect(find.textContaining('Lexora 4.0.0'), findsOneWidget);
+    expect(find.textContaining('Lexora 4.0.1'), findsOneWidget);
     expect(find.text('查看完整更新内容'), findsOneWidget);
     expect(find.text('继续使用'), findsOneWidget);
     expect(tester.takeException(), isNull);

@@ -612,7 +612,11 @@ export default function Home() {
 
       <section className="releaseNotes wrap" id="release-notes" data-reveal>
         <div className="releaseNotesIntro">
-          <p className="sectionLabel">{zh ? "版本 4.0.0" : "Version 4.0.0"}</p>
+          <p className="sectionLabel">
+            {zh
+              ? `版本 ${releaseManifest.version}`
+              : `Version ${releaseManifest.version}`}
+          </p>
           <h2>{zh ? "一次完整的跨平台升级。" : "One complete cross-platform upgrade."}</h2>
           <p>{zh ? "从独立词典搜索到更流畅的动画、稳定更新和统一发布链路，以下内容合并为一个完整版本。" : "From dedicated dictionary search to smoother motion, reliable updates, and one release pipeline, everything below ships as a single complete version."}</p>
         </div>

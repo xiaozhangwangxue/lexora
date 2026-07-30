@@ -1,44 +1,41 @@
 {
-  "version": "4.0.0",
-  "build": 25,
+  "version": "4.0.1",
+  "build": 26,
   "releaseNotes": {
     "zh": [
-      "更快的词典搜索和联想预加载，常用单词可更快显示核心结果。",
-      "新增完整词典页面、搜索历史和一键加入个人词汇书。",
-      "优化词汇书生成、文档预览、历史管理与跨页面操作。",
-      "全面改善 Android、macOS、Windows 和 Linux 端的稳定性。",
-      "重新优化软件和官网动画，拖拽、搜索和窗口缩放更加流畅。",
-      "修复已发现的崩溃、更新、音标、键盘和界面显示问题。"
+      "设置新增可选的 Lexora 服务器加速，同时用于查单词、联想和生成词汇书。",
+      "服务器加速默认关闭，升级后继续使用原来的搜索方式。",
+      "开启加速后会优先连接 Cloudflare 中转，无法使用时自动回退到原有词典来源。"
     ],
     "en": [
-      "Faster dictionary search and suggestion preloading for quicker core results.",
-      "A complete dictionary experience with search history and one-tap vocabulary-book saving.",
-      "Improved vocabulary-book generation, document viewing, history management, and navigation.",
-      "Better stability across Android, macOS, Windows, and Linux.",
-      "Smoother animations for search, dragging, navigation, and desktop resizing.",
-      "Fixes for crashes, updates, phonetics, keyboards, and interface issues."
+      "Added optional Lexora server acceleration for dictionary search, suggestions, and vocabulary-book generation.",
+      "Server acceleration is off by default, so updates continue using the original search behavior.",
+      "When enabled, Lexora prefers the Cloudflare relay and automatically falls back to existing dictionary providers."
     ]
   },
   "inAppReleaseNotes": {
     "zh": [
-      "更快的词典搜索和联想预加载，常用单词可更快显示核心结果。",
-      "新增完整词典页面、搜索历史和一键加入个人词汇书。",
-      "优化词汇书生成、文档预览、历史管理与跨页面操作。",
-      "全面改善 Android、macOS、Windows 和 Linux 端的稳定性。",
-      "重新优化软件和官网动画，拖拽、搜索和窗口缩放更加流畅。",
-      "修复已发现的崩溃、更新、音标、键盘和界面显示问题。"
+      "设置新增可选的 Lexora 服务器加速，同时用于查单词、联想和生成词汇书。",
+      "服务器加速默认关闭，升级后继续使用原来的搜索方式。",
+      "开启加速后会优先连接 Cloudflare 中转，无法使用时自动回退到原有词典来源。"
     ],
     "en": [
-      "Faster dictionary search and suggestion preloading for quicker core results.",
-      "A complete dictionary experience with search history and one-tap vocabulary-book saving.",
-      "Improved vocabulary-book generation, document viewing, history management, and navigation.",
-      "Better stability across Android, macOS, Windows, and Linux.",
-      "Smoother animations for search, dragging, navigation, and desktop resizing.",
-      "Fixes for crashes, updates, phonetics, keyboards, and interface issues."
+      "Added optional Lexora server acceleration for dictionary search, suggestions, and vocabulary-book generation.",
+      "Server acceleration is off by default, so updates continue using the original search behavior.",
+      "When enabled, Lexora prefers the Cloudflare relay and automatically falls back to existing dictionary providers."
     ]
   },
   "releaseNoteSections": {
     "zh": [
+      {
+        "title": "4.0.1 可选服务器加速",
+        "items": [
+          "设置新增“Lexora 服务器加速”开关，可同时加速查单词、实时联想和词汇书生成。",
+          "开关默认关闭，安装或升级 4.0.1 后仍使用原来的搜索方式，不改变现有使用习惯。",
+          "用户主动开启后优先通过 Cloudflare 中转连接 Lexora 词典服务器；连接失败会自动回退到原有词典来源。",
+          "离线词库继续保持最高优先级，服务器开关和用户选择会保存在本机。"
+        ]
+      },
       {
         "title": "字典与个人词汇书",
         "items": [
@@ -114,6 +111,15 @@
     ],
     "en": [
       {
+        "title": "4.0.1 optional server acceleration",
+        "items": [
+          "Settings now includes Lexora server acceleration for dictionary search, live suggestions, and vocabulary-book generation.",
+          "The option is off by default, preserving the original search behavior after installing or updating to 4.0.1.",
+          "When enabled, Lexora prefers its dictionary servers through the Cloudflare relay and automatically falls back to existing providers.",
+          "The offline lexicon remains the highest-priority source, and the user's choice is stored locally."
+        ]
+      },
+      {
         "title": "Dictionary and personal vocabulary books",
         "items": [
           "Added a dedicated dictionary search with live suggestions, bilingual senses by part of speech, examples, collocations, and linked related words.",
@@ -188,55 +194,55 @@
     ]
   },
   "downloads": {
-    "android": "/downloads/lexora-android-v4.0.0.apk",
-    "macos": "/downloads/lexora-macos-v4.0.0.dmg",
-    "windows": "/downloads/lexora-windows-v4.0.0-setup.exe",
-    "linux": "/downloads/lexora-linux-v4.0.0.tar.gz"
+    "android": "/downloads/lexora-android-v4.0.1.apk",
+    "macos": "/downloads/lexora-macos-v4.0.1.dmg",
+    "windows": "/downloads/lexora-windows-v4.0.1-setup.exe",
+    "linux": "/downloads/lexora-linux-v4.0.1.tar.gz"
   },
   "verifiedDownloads": {
     "android": {
-      "filename": "lexora-android-v4.0.0.apk",
-      "url": "/updates/lexora-android-v4.0.0.apk",
+      "filename": "lexora-android-v4.0.1.apk",
+      "url": "/updates/lexora-android-v4.0.1.apk",
       "sources": [
-        "/updates/lexora-android-v4.0.0.apk",
-        "https://lexora-official.xiaozhangwangxue.workers.dev/updates/lexora-android-v4.0.0.apk",
-        "https://github.com/xiaozhangwangxue/lexora/releases/download/v4.0.0/lexora-android-v4.0.0.apk"
+        "/updates/lexora-android-v4.0.1.apk",
+        "https://lexora-official.xiaozhangwangxue.workers.dev/updates/lexora-android-v4.0.1.apk",
+        "https://github.com/xiaozhangwangxue/lexora/releases/download/v4.0.1/lexora-android-v4.0.1.apk"
       ],
-      "sha256": "fc57e1ed23611311c9a4c7569fda96f20d4476cf8564427adea6d2af500634de",
-      "size": 99749019
+      "sha256": "",
+      "size": 0
     },
     "macos": {
-      "filename": "lexora-macos-v4.0.0.dmg",
-      "url": "/updates/lexora-macos-v4.0.0.dmg",
+      "filename": "lexora-macos-v4.0.1.dmg",
+      "url": "/updates/lexora-macos-v4.0.1.dmg",
       "sources": [
-        "/updates/lexora-macos-v4.0.0.dmg",
-        "https://lexora-official.xiaozhangwangxue.workers.dev/updates/lexora-macos-v4.0.0.dmg",
-        "https://github.com/xiaozhangwangxue/lexora/releases/download/v4.0.0/lexora-macos-v4.0.0.dmg"
+        "/updates/lexora-macos-v4.0.1.dmg",
+        "https://lexora-official.xiaozhangwangxue.workers.dev/updates/lexora-macos-v4.0.1.dmg",
+        "https://github.com/xiaozhangwangxue/lexora/releases/download/v4.0.1/lexora-macos-v4.0.1.dmg"
       ],
-      "sha256": "50c53a08081c1a1f015f65e36c841a74001ff12cc0dc93f4dbd8daee6462442e",
-      "size": 47319031
+      "sha256": "",
+      "size": 0
     },
     "windows": {
-      "filename": "lexora-windows-v4.0.0-setup.exe",
-      "url": "/updates/lexora-windows-v4.0.0-setup.exe",
+      "filename": "lexora-windows-v4.0.1-setup.exe",
+      "url": "/updates/lexora-windows-v4.0.1-setup.exe",
       "sources": [
-        "/updates/lexora-windows-v4.0.0-setup.exe",
-        "https://lexora-official.xiaozhangwangxue.workers.dev/updates/lexora-windows-v4.0.0-setup.exe",
-        "https://github.com/xiaozhangwangxue/lexora/releases/download/v4.0.0/lexora-windows-v4.0.0-setup.exe"
+        "/updates/lexora-windows-v4.0.1-setup.exe",
+        "https://lexora-official.xiaozhangwangxue.workers.dev/updates/lexora-windows-v4.0.1-setup.exe",
+        "https://github.com/xiaozhangwangxue/lexora/releases/download/v4.0.1/lexora-windows-v4.0.1-setup.exe"
       ],
-      "sha256": "8325e19b98627b4751f611f54ff6b5d3e00e51c70ff7c25cfa422f8794b7f79d",
-      "size": 27331859
+      "sha256": "",
+      "size": 0
     },
     "linux": {
-      "filename": "lexora-linux-v4.0.0.tar.gz",
-      "url": "/updates/lexora-linux-v4.0.0.tar.gz",
+      "filename": "lexora-linux-v4.0.1.tar.gz",
+      "url": "/updates/lexora-linux-v4.0.1.tar.gz",
       "sources": [
-        "/updates/lexora-linux-v4.0.0.tar.gz",
-        "https://lexora-official.xiaozhangwangxue.workers.dev/updates/lexora-linux-v4.0.0.tar.gz",
-        "https://github.com/xiaozhangwangxue/lexora/releases/download/v4.0.0/lexora-linux-v4.0.0.tar.gz"
+        "/updates/lexora-linux-v4.0.1.tar.gz",
+        "https://lexora-official.xiaozhangwangxue.workers.dev/updates/lexora-linux-v4.0.1.tar.gz",
+        "https://github.com/xiaozhangwangxue/lexora/releases/download/v4.0.1/lexora-linux-v4.0.1.tar.gz"
       ],
-      "sha256": "237ef65c46dd70911309e5bd7a3b9971b92c1524e4bae36386e7614ccfc16498",
-      "size": 31515321
+      "sha256": "",
+      "size": 0
     }
   },
   "historicalDownloads": [

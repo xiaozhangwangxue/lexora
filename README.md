@@ -24,9 +24,16 @@ Lexora 是一款面向 Android、macOS、Windows 与 Linux、可以生成个人�
 > [!IMPORTANT]
 > Lexora 不要求账号。单词列表、历史记录和生成的 PDF 默认保存在设备本地；只有点击“开始生成”后，待查询的单词、释义和例句才会发送给公开词典与翻译服务。
 
-## Lexora 4.0.0 更新说明
+## Lexora 4.0.1 更新说明
 
 <!-- release-notes:zh:start -->
+
+### 4.0.1 可选服务器加速
+
+- 设置新增“Lexora 服务器加速”开关，可同时加速查单词、实时联想和词汇书生成。
+- 开关默认关闭，安装或升级 4.0.1 后仍使用原来的搜索方式，不改变现有使用习惯。
+- 用户主动开启后优先通过 Cloudflare 中转连接 Lexora 词典服务器；连接失败会自动回退到原有词典来源。
+- 离线词库继续保持最高优先级，服务器开关和用户选择会保存在本机。
 
 ### 字典与个人词汇书
 
@@ -127,10 +134,10 @@ Lexora 是一款面向 Android、macOS、Windows 与 Linux、可以生成个人�
 
 | 平台 | 安装包 | 系统要求 | 下载 |
 | --- | --- | --- | --- |
-| Android | APK | Android 8.0+ | [官网下载](https://lexora.12323456.xyz/downloads/lexora-android-v4.0.0.apk) |
-| macOS | 拖动安装 DMG | macOS 12+ | [官网下载](https://lexora.12323456.xyz/downloads/lexora-macos-v4.0.0.dmg) |
-| Windows | 安装程序 EXE（默认安装后启动） | Windows 10 / 11 | [官网下载](https://lexora.12323456.xyz/downloads/lexora-windows-v4.0.0-setup.exe) |
-| Linux | tar.gz | 64 位 Linux | [官网下载](https://lexora.12323456.xyz/downloads/lexora-linux-v4.0.0.tar.gz) |
+| Android | APK | Android 8.0+ | [官网下载](https://lexora.12323456.xyz/downloads/lexora-android-v4.0.1.apk) |
+| macOS | 拖动安装 DMG | macOS 12+ | [官网下载](https://lexora.12323456.xyz/downloads/lexora-macos-v4.0.1.dmg) |
+| Windows | 安装程序 EXE（默认安装后启动） | Windows 10 / 11 | [官网下载](https://lexora.12323456.xyz/downloads/lexora-windows-v4.0.1-setup.exe) |
+| Linux | tar.gz | 64 位 Linux | [官网下载](https://lexora.12323456.xyz/downloads/lexora-linux-v4.0.1.tar.gz) |
 
 <details>
 <summary><strong>首次安装被系统拦截怎么办？</strong></summary>
@@ -145,7 +152,7 @@ Lexora 是一款面向 Android、macOS、Windows 与 Linux、可以生成个人�
 > [!IMPORTANT]
 > Android v0.2.0 使用了临时构建签名，旧私钥无法恢复，因此升级到采用稳定签名的 v0.3.0 时需要先卸载旧版再安装一次。自 v0.3.0 起，后续版本继续使用同一发布签名，可直接覆盖更新。请先按需导出旧版中的 PDF。
 
-所有发行文件名都包含版本号，例如 `lexora-android-v4.0.0.apk`。官网的“历史版本”中继续提供 3.2.5 和 3.1.0，不会从 R2 删除。应用内更新优先使用 Cloudflare R2，并在打开安装包前校验下载完整性与 SHA-256。
+所有发行文件名都包含版本号，例如 `lexora-android-v4.0.1.apk`。官网的“历史版本”中继续提供 3.2.5 和 3.1.0，不会从 R2 删除。应用内更新优先使用 Cloudflare R2，并在打开安装包前校验下载完整性与 SHA-256。
 
 ## 三步生成词汇书
 

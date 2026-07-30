@@ -109,6 +109,15 @@ class AppLocalizations {
   String get gotIt => isZh ? '知道了' : 'Got it';
   String get customize => isZh ? '自定义文档' : 'Customize document';
   String get pdfSettings => isZh ? '文档自定义' : 'Document customization';
+  String get serverAcceleration =>
+      isZh ? 'Lexora 服务器加速' : 'Lexora server acceleration';
+  String get serverAccelerationHint => isZh
+      ? '优先通过 Cloudflare 中转从 Lexora 双服务器获取词条数据，可加快查词和生成词汇书；不可用时会自动回退到原有词典来源。'
+      : 'Prefer Lexora’s dual-server data through the Cloudflare relay for faster searches and vocabulary-book generation. Existing dictionary sources remain automatic fallbacks.';
+  String get serverAccelerationEnabled =>
+      isZh ? '已开启服务器加速' : 'Server acceleration is on';
+  String get serverAccelerationDisabled =>
+      isZh ? '使用原有词典来源' : 'Using existing dictionary sources';
   String get offlineLexicon => isZh ? '离线极速词库' : 'Offline fast lexicon';
   String get offlineLexiconHint => isZh
       ? '可选下载 2 万词极速版或完整词库。安装后优先在本机查询，断网也能显示已有完整数据；未命中时仍会自动使用云端和原有词典来源。'

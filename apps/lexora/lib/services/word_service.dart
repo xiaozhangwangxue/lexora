@@ -9,6 +9,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/word_entry.dart';
 import 'developer_log_service.dart';
 import 'offline_lexicon_service.dart';
+import 'server_acceleration_service.dart';
 
 class WordLookupException implements Exception {
   const WordLookupException(this.message);
@@ -44,12 +45,18 @@ class LookupBatchResult {
 }
 
 class WordService {
-  WordService({http.Client? client, OfflineLexiconSource? offlineLexicon})
-    : _client = client ?? http.Client(),
-      _offlineLexicon = offlineLexicon ?? OfflineLexiconService.instance;
+  WordService({
+    http.Client? client,
+    OfflineLexiconSource? offlineLexicon,
+    ServerAccelerationSource? serverAcceleration,
+  }) : _client = client ?? http.Client(),
+       _offlineLexicon = offlineLexicon ?? OfflineLexiconService.instance,
+       _serverAcceleration =
+           serverAcceleration ?? ServerAccelerationService.instance;
 
   final http.Client _client;
   final OfflineLexiconSource _offlineLexicon;
+  final ServerAccelerationSource _serverAcceleration;
   final Map<String, WordEntry> _memoryCache = {};
   final Map<String, Future<WordEntry>> _inFlightLookups = {};
   final Map<String, List<String>> _suggestionCache = {};
@@ -168,13 +175,16 @@ class WordService {
               exactResponse = response;
               return response;
             });
-        final lexiconFuture = _providerResponse(
-          word,
-          'open-lexicon',
-          Uri.https(_openLexiconHost, '/v1/lookup', {'term': word}),
-          timeout: const Duration(milliseconds: 1200),
-          attempts: 1,
-        );
+        final serverAccelerationEnabled = await _serverAcceleration.isEnabled();
+        final lexiconFuture = serverAccelerationEnabled
+            ? _providerResponse(
+                word,
+                'open-lexicon',
+                Uri.https(_openLexiconHost, '/v1/lookup', {'term': word}),
+                timeout: const Duration(milliseconds: 1200),
+                attempts: 1,
+              )
+            : null;
         final edgeFuture = _firstSuccessfulEdgeGet(
           [
             Uri.https('lexora.12323456.xyz', '/api/dictionary/core', {
@@ -213,25 +223,27 @@ class WordService {
           }
         }
 
-        unawaited(
-          lexiconFuture.then((response) {
-            if (response?.statusCode != 200) return;
-            try {
-              final lexiconResponses = _coreResponsesFromLexicon(
-                response!,
-                word,
-              );
-              offer('open-lexicon', lexiconResponses[0], lexiconResponses[1]);
-            } catch (error, stackTrace) {
-              DeveloperLogService.instance.log(
-                'search.core.open_lexicon_invalid',
-                data: {'term': word},
-                error: error,
-                stackTrace: stackTrace,
-              );
-            }
-          }),
-        );
+        if (lexiconFuture != null) {
+          unawaited(
+            lexiconFuture.then((response) {
+              if (response?.statusCode != 200) return;
+              try {
+                final lexiconResponses = _coreResponsesFromLexicon(
+                  response!,
+                  word,
+                );
+                offer('open-lexicon', lexiconResponses[0], lexiconResponses[1]);
+              } catch (error, stackTrace) {
+                DeveloperLogService.instance.log(
+                  'search.core.open_lexicon_invalid',
+                  data: {'term': word},
+                  error: error,
+                  stackTrace: stackTrace,
+                );
+              }
+            }),
+          );
+        }
         unawaited(
           dictionaryFuture.then(
             (response) => offer('dictionary-direct', response, exactResponse),
@@ -503,19 +515,21 @@ class WordService {
       operation: 'suggestions',
       term: term,
     );
-    final lexiconResponse = await _getWithRetry(
-      Uri.https(_openLexiconHost, '/v1/suggest', {
-        'prefix': term,
-        'limit': '${max(1, min(maxResults, 24))}',
-      }),
-      timeout: const Duration(milliseconds: 1200),
-      attempts: 1,
-      operation: 'open-lexicon-suggestions',
-      term: term,
-    );
-    final lexiconSuggestions = _decodeLexiconSuggestions(lexiconResponse);
-    if (lexiconSuggestions.isNotEmpty) {
-      return lexiconSuggestions.take(maxResults).toList(growable: false);
+    if (await _serverAcceleration.isEnabled()) {
+      final lexiconResponse = await _getWithRetry(
+        Uri.https(_openLexiconHost, '/v1/suggest', {
+          'prefix': term,
+          'limit': '${max(1, min(maxResults, 24))}',
+        }),
+        timeout: const Duration(milliseconds: 1200),
+        attempts: 1,
+        operation: 'open-lexicon-suggestions',
+        term: term,
+      );
+      final lexiconSuggestions = _decodeLexiconSuggestions(lexiconResponse);
+      if (lexiconSuggestions.isNotEmpty) {
+        return lexiconSuggestions.take(maxResults).toList(growable: false);
+      }
     }
     final response = await directFuture;
     if (response == null) return const [];
@@ -1697,43 +1711,44 @@ class WordService {
             );
           }
         }
-        final lexiconFuture = _providerResponse(
-          word,
-          'open-lexicon',
-          Uri.https(_openLexiconHost, '/v1/lookup', {'term': word}),
-          timeout: const Duration(milliseconds: 1200),
-          attempts: 1,
-        );
-        final lexiconResponse = await lexiconFuture;
-        if (lexiconResponse?.statusCode == 200) {
-          try {
-            responses = _sourceResponsesFromLexicon(
-              lexiconResponse!,
-              word,
-              requireCompleted: true,
-            );
-            DeveloperLogService.instance.log(
-              'search.sources.open_lexicon_presented',
-              data: {
-                'term': word,
-                'durationMs': stopwatch.elapsedMilliseconds,
-                'availableProviders': responses
-                    .where((response) => response?.statusCode == 200)
-                    .length,
-              },
-            );
-            if (_retainedLookupKey == null ||
-                _retainedLookupKey!.endsWith('|$word')) {
-              _sourceCache[word] = responses;
+        if (await _serverAcceleration.isEnabled()) {
+          final lexiconResponse = await _providerResponse(
+            word,
+            'open-lexicon',
+            Uri.https(_openLexiconHost, '/v1/lookup', {'term': word}),
+            timeout: const Duration(milliseconds: 1200),
+            attempts: 1,
+          );
+          if (lexiconResponse?.statusCode == 200) {
+            try {
+              responses = _sourceResponsesFromLexicon(
+                lexiconResponse!,
+                word,
+                requireCompleted: true,
+              );
+              DeveloperLogService.instance.log(
+                'search.sources.open_lexicon_presented',
+                data: {
+                  'term': word,
+                  'durationMs': stopwatch.elapsedMilliseconds,
+                  'availableProviders': responses
+                      .where((response) => response?.statusCode == 200)
+                      .length,
+                },
+              );
+              if (_retainedLookupKey == null ||
+                  _retainedLookupKey!.endsWith('|$word')) {
+                _sourceCache[word] = responses;
+              }
+              return responses;
+            } catch (error, stackTrace) {
+              DeveloperLogService.instance.log(
+                'search.sources.open_lexicon_incomplete',
+                data: {'term': word},
+                error: error,
+                stackTrace: stackTrace,
+              );
             }
-            return responses;
-          } catch (error, stackTrace) {
-            DeveloperLogService.instance.log(
-              'search.sources.open_lexicon_incomplete',
-              data: {'term': word},
-              error: error,
-              stackTrace: stackTrace,
-            );
           }
         }
         final edgeFuture = _firstSuccessfulEdgeGet(

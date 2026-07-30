@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:lexora/services/offline_lexicon_service.dart';
+import 'package:lexora/services/server_acceleration_service.dart';
 import 'package:lexora/services/word_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -256,6 +257,7 @@ void main() {
     final stopwatch = Stopwatch()..start();
     final entry = await WordService(
       client: client,
+      serverAcceleration: const _StaticServerAcceleration(true),
     ).lookup('word', exampleCount: 1);
 
     expect(stopwatch.elapsedMilliseconds, lessThan(1500));
@@ -311,7 +313,10 @@ void main() {
         return http.Response('not found', 404);
       });
 
-      final entry = await WordService(client: client).lookupCore('hello');
+      final entry = await WordService(
+        client: client,
+        serverAcceleration: const _StaticServerAcceleration(true),
+      ).lookupCore('hello');
 
       expect(entry.usPhonetic, 'həˈləu');
       expect(entry.ukPhonetic, 'həˈləu');
@@ -972,6 +977,90 @@ void main() {
     expect(suggestions, ['word']);
     expect(networkRequests, 0);
   });
+
+  test(
+    'disabled server acceleration keeps search and generation on existing providers',
+    () async {
+      SharedPreferences.setMockInitialValues({});
+      var serverRequests = 0;
+      final client = MockClient((request) async {
+        if (request.url.host == 'dict.12323456.xyz') {
+          serverRequests++;
+          return http.Response('server should not be requested', 503);
+        }
+        if (request.url.host == 'api.dictionaryapi.dev') {
+          return http.Response(
+            jsonEncode([
+              {
+                'word': 'word',
+                'phonetic': '/wɜːd/',
+                'meanings': [
+                  {
+                    'partOfSpeech': 'noun',
+                    'definitions': [
+                      {
+                        'definition': 'A unit of language.',
+                        'example': 'This is a word.',
+                      },
+                    ],
+                  },
+                ],
+              },
+            ]),
+            200,
+          );
+        }
+        if (request.url.host == 'api.datamuse.com') {
+          if (request.url.path == '/sug') {
+            return http.Response(
+              jsonEncode([
+                {'word': 'word'},
+                {'word': 'wording'},
+              ]),
+              200,
+            );
+          }
+          if (request.url.queryParameters['sp'] == 'word') {
+            return http.Response(
+              jsonEncode([
+                {
+                  'word': 'word',
+                  'defs': ['n\tA unit of language.'],
+                  'tags': ['f:147.7', 'pron:W ER1 D'],
+                },
+              ]),
+              200,
+            );
+          }
+          return http.Response('[]', 200);
+        }
+        if (request.url.host == 'api.mymemory.translated.net') {
+          return http.Response(
+            jsonEncode({
+              'responseData': {'translatedText': '语言单位。'},
+            }),
+            200,
+          );
+        }
+        return http.Response('{}', 404);
+      });
+      final service = WordService(
+        client: client,
+        serverAcceleration: const _StaticServerAcceleration(false),
+      );
+
+      final suggestions = await service.suggest('wor');
+      final generated = await service.lookupAll(
+        const ['word'],
+        exampleCount: 1,
+        maxConcurrency: 1,
+      );
+
+      expect(suggestions, contains('word'));
+      expect(generated.entries.single.definition, 'A unit of language.');
+      expect(serverRequests, 0);
+    },
+  );
 }
 
 class _MemoryOfflineLexicon implements OfflineLexiconSource {
@@ -994,4 +1083,13 @@ class _MemoryOfflineLexicon implements OfflineLexiconSource {
       {'word': payload['word'], 'normalized_word': payload['normalized_word']},
     ];
   }
+}
+
+class _StaticServerAcceleration implements ServerAccelerationSource {
+  const _StaticServerAcceleration(this.value);
+
+  final bool value;
+
+  @override
+  Future<bool> isEnabled() async => value;
 }

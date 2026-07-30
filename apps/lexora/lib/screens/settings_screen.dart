@@ -12,6 +12,7 @@ import '../services/developer_log_service.dart';
 import '../services/offline_lexicon_service.dart';
 import '../services/pdf_service.dart';
 import '../services/pdf_settings_service.dart';
+import '../services/server_acceleration_service.dart';
 import '../services/update_service.dart';
 import '../widgets/github_button.dart';
 import '../widgets/lexora_wordmark.dart';
@@ -35,6 +36,7 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   final _offlineLexicon = OfflineLexiconService.instance;
+  final _serverAcceleration = ServerAccelerationService.instance;
 
   PdfSettings get settings => widget.settings;
   ValueChanged<PdfSettings> get onChanged => widget.onChanged;
@@ -44,17 +46,32 @@ class _SettingsScreenState extends State<SettingsScreen> {
   void initState() {
     super.initState();
     _offlineLexicon.addListener(_offlineLexiconChanged);
+    _serverAcceleration.addListener(_serverAccelerationChanged);
     unawaited(_offlineLexicon.initialize());
+    unawaited(_serverAcceleration.initialize());
   }
 
   @override
   void dispose() {
     _offlineLexicon.removeListener(_offlineLexiconChanged);
+    _serverAcceleration.removeListener(_serverAccelerationChanged);
     super.dispose();
   }
 
   void _offlineLexiconChanged() {
     if (mounted) setState(() {});
+  }
+
+  void _serverAccelerationChanged() {
+    if (mounted) setState(() {});
+  }
+
+  Future<void> _setServerAcceleration(bool value) async {
+    await _serverAcceleration.setEnabled(value);
+    DeveloperLogService.instance.log(
+      'settings.server_acceleration_changed',
+      data: {'enabled': value},
+    );
   }
 
   Future<void> _activateOfflineLexicon(
@@ -673,6 +690,33 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               ),
                             ),
                           ],
+                        ),
+                      ),
+                      const SizedBox(height: 18),
+                      _SettingsSection(
+                        title: strings.serverAcceleration,
+                        icon: Icons.cloud_sync_rounded,
+                        child: SwitchListTile.adaptive(
+                          contentPadding: EdgeInsets.zero,
+                          secondary: Icon(
+                            _serverAcceleration.enabled
+                                ? Icons.bolt_rounded
+                                : Icons.cloud_off_outlined,
+                            color: _serverAcceleration.enabled
+                                ? theme.colorScheme.primary
+                                : theme.colorScheme.onSurfaceVariant,
+                          ),
+                          title: Text(
+                            _serverAcceleration.enabled
+                                ? strings.serverAccelerationEnabled
+                                : strings.serverAccelerationDisabled,
+                          ),
+                          subtitle: Text(
+                            strings.serverAccelerationHint,
+                            style: const TextStyle(height: 1.45),
+                          ),
+                          value: _serverAcceleration.enabled,
+                          onChanged: _setServerAcceleration,
                         ),
                       ),
                       const SizedBox(height: 18),
