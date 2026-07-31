@@ -515,30 +515,49 @@ class WordService {
       operation: 'suggestions',
       term: term,
     );
-    if (await _serverAcceleration.isEnabled()) {
-      final lexiconResponse = await _getWithRetry(
-        Uri.https(_openLexiconHost, '/v1/suggest', {
-          'prefix': term,
-          'limit': '${max(1, min(maxResults, 24))}',
-        }),
-        timeout: const Duration(milliseconds: 1200),
-        attempts: 1,
-        operation: 'open-lexicon-suggestions',
-        term: term,
-      );
-      final lexiconSuggestions = _decodeLexiconSuggestions(lexiconResponse);
-      if (lexiconSuggestions.isNotEmpty) {
-        return lexiconSuggestions.take(maxResults).toList(growable: false);
+    List<String> decodeDirect(http.Response? response) {
+      if (response == null) return const [];
+      return _decodeDatamuse(response)
+          .map((item) => _normalizeTerm(item['word'] as String? ?? ''))
+          .where((item) => item.isNotEmpty)
+          .toSet()
+          .take(maxResults)
+          .toList(growable: false);
+    }
+
+    if (!await _serverAcceleration.isEnabled()) {
+      return decodeDirect(await directFuture);
+    }
+
+    // The optional server is an accelerator, not a prerequisite. Race it
+    // against Datamuse so a slow or incomplete server can never add its
+    // timeout to an otherwise successful suggestion request.
+    final lexiconFuture = _getWithRetry(
+      Uri.https(_openLexiconHost, '/v1/suggest', {
+        'prefix': term,
+        'limit': '${max(1, min(maxResults, 24))}',
+      }),
+      timeout: const Duration(milliseconds: 1200),
+      attempts: 1,
+      operation: 'open-lexicon-suggestions',
+      term: term,
+    ).then(_decodeLexiconSuggestions);
+    final directSuggestionsFuture = directFuture.then(decodeDirect);
+    final winner = Completer<List<String>>();
+    var finished = 0;
+    void offer(List<String> values) {
+      if (winner.isCompleted) return;
+      finished++;
+      if (values.isNotEmpty || finished == 2) {
+        winner.complete(values);
       }
     }
-    final response = await directFuture;
-    if (response == null) return const [];
-    return _decodeDatamuse(response)
-        .map((item) => _normalizeTerm(item['word'] as String? ?? ''))
-        .where((item) => item.isNotEmpty)
-        .toSet()
-        .take(maxResults)
-        .toList(growable: false);
+
+    unawaited(lexiconFuture.then(offer, onError: (_) => offer(const [])));
+    unawaited(
+      directSuggestionsFuture.then(offer, onError: (_) => offer(const [])),
+    );
+    return winner.future;
   }
 
   List<String> _decodeLexiconSuggestions(http.Response? response) {
@@ -1711,46 +1730,7 @@ class WordService {
             );
           }
         }
-        if (await _serverAcceleration.isEnabled()) {
-          final lexiconResponse = await _providerResponse(
-            word,
-            'open-lexicon',
-            Uri.https(_openLexiconHost, '/v1/lookup', {'term': word}),
-            timeout: const Duration(milliseconds: 1200),
-            attempts: 1,
-          );
-          if (lexiconResponse?.statusCode == 200) {
-            try {
-              responses = _sourceResponsesFromLexicon(
-                lexiconResponse!,
-                word,
-                requireCompleted: true,
-              );
-              DeveloperLogService.instance.log(
-                'search.sources.open_lexicon_presented',
-                data: {
-                  'term': word,
-                  'durationMs': stopwatch.elapsedMilliseconds,
-                  'availableProviders': responses
-                      .where((response) => response?.statusCode == 200)
-                      .length,
-                },
-              );
-              if (_retainedLookupKey == null ||
-                  _retainedLookupKey!.endsWith('|$word')) {
-                _sourceCache[word] = responses;
-              }
-              return responses;
-            } catch (error, stackTrace) {
-              DeveloperLogService.instance.log(
-                'search.sources.open_lexicon_incomplete',
-                data: {'term': word},
-                error: error,
-                stackTrace: stackTrace,
-              );
-            }
-          }
-        }
+        final directFuture = directLookup();
         final edgeFuture = _firstSuccessfulEdgeGet(
           [
             Uri.https('lexora.12323456.xyz', '/api/dictionary/full', {
@@ -1766,32 +1746,84 @@ class WordService {
           operation: 'edge-full',
           term: word,
         );
-        final edgeResponse = await edgeFuture;
-        if (edgeResponse?.statusCode == 200) {
-          try {
-            responses = _sourceResponsesFromEdge(edgeResponse!);
-            DeveloperLogService.instance.log(
-              'search.sources.edge_presented',
-              data: {
-                'term': word,
-                'durationMs': stopwatch.elapsedMilliseconds,
-                'availableProviders': responses
-                    .where((response) => response?.statusCode == 200)
-                    .length,
-              },
-            );
-          } catch (error, stackTrace) {
-            DeveloperLogService.instance.log(
-              'search.sources.edge_invalid',
-              data: {'term': word},
-              error: error,
-              stackTrace: stackTrace,
-            );
-            responses = await directLookup();
-          }
-        } else {
-          responses = await directLookup();
+        final candidates = <Future<(String, List<http.Response?>?)>>[
+          directFuture.then(
+            (value) => (
+              'direct',
+              _responsesContainDefinition(word, value) ? value : null,
+            ),
+          ),
+          edgeFuture.then((response) {
+            if (response?.statusCode != 200) {
+              return ('cloudflare-edge', null);
+            }
+            try {
+              final value = _sourceResponsesFromEdge(response!);
+              return (
+                'cloudflare-edge',
+                _responsesContainDefinition(word, value) ? value : null,
+              );
+            } catch (_) {
+              return ('cloudflare-edge', null);
+            }
+          }),
+        ];
+        if (await _serverAcceleration.isEnabled()) {
+          candidates.add(
+            _providerResponse(
+              word,
+              'open-lexicon',
+              Uri.https(_openLexiconHost, '/v1/lookup', {'term': word}),
+              timeout: const Duration(milliseconds: 1200),
+              attempts: 1,
+            ).then((response) {
+              if (response?.statusCode != 200) {
+                return ('open-lexicon', null);
+              }
+              try {
+                final value = _sourceResponsesFromLexicon(
+                  response!,
+                  word,
+                  requireCompleted: true,
+                );
+                // Conversion itself rejects non-exact or definition-less
+                // payloads, including incomplete records with no usable
+                // bilingual gloss.
+                return ('open-lexicon', value);
+              } catch (_) {
+                return ('open-lexicon', null);
+              }
+            }),
+          );
         }
+        final winner = Completer<(String, List<http.Response?>?)>();
+        var finished = 0;
+        void offer((String, List<http.Response?>?) candidate) {
+          if (winner.isCompleted) return;
+          finished++;
+          if (candidate.$2 != null || finished == candidates.length) {
+            winner.complete(candidate);
+          }
+        }
+
+        for (final candidate in candidates) {
+          unawaited(
+            candidate.then(offer, onError: (_) => offer(('unavailable', null))),
+          );
+        }
+        final selected = await winner.future;
+        responses = selected.$2 ?? await directFuture;
+        DeveloperLogService.instance.log(
+          'search.sources.presented',
+          data: {
+            'term': word,
+            'source': selected.$1,
+            'durationMs': stopwatch.elapsedMilliseconds,
+            'availableProviders': responses
+                .where((response) => response?.statusCode == 200)
+                .length,
+          },
+        );
         if (responses.any((response) => response?.statusCode == 200) &&
             (_retainedLookupKey == null ||
                 _retainedLookupKey!.endsWith('|$word'))) {
@@ -2009,7 +2041,11 @@ class WordService {
     if (requireCompleted) {
       final enrichment =
           payload['enrichment'] as Map<String, dynamic>? ?? const {};
-      if (enrichment['status'] != 'completed') {
+      final hasUsableDefinition =
+          _cleanLexiconText(payload['definition']).isNotEmpty ||
+          _cleanLexiconText(payload['definition_zh']).isNotEmpty ||
+          (payload['senses'] as List? ?? const []).isNotEmpty;
+      if (enrichment['status'] != 'completed' && !hasUsableDefinition) {
         throw const FormatException('Open lexicon entry is still enriching.');
       }
     }
@@ -2050,6 +2086,21 @@ class WordService {
         'antonyms': <String>[],
       });
     }
+    final fallbackTranslation = _cleanLexiconText(payload['definition_zh']);
+    if (meanings.isEmpty && fallbackTranslation.isNotEmpty) {
+      // Some phrases in open bilingual datasets have a reliable Chinese
+      // gloss before an English definition is enriched. Keep that useful
+      // exact result instead of replacing the already displayed result with
+      // "not found".
+      meanings.add({
+        'partOfSpeech': _cleanLexiconText(payload['pos']),
+        'definitions': [
+          <String, dynamic>{'definition': fallbackTranslation},
+        ],
+        'synonyms': <String>[],
+        'antonyms': <String>[],
+      });
+    }
     if (meanings.isEmpty) {
       throw const FormatException('Open lexicon entry has no definition.');
     }
@@ -2078,6 +2129,9 @@ class WordService {
     final primaryDefinition = _cleanLexiconText(
       definitionMaps.first['definition'],
     );
+    if (fallbackTranslation.isNotEmpty) {
+      _translationCache[primaryDefinition] = fallbackTranslation;
+    }
     final frequencyTag = frequency > 0
         ? 'f:${pow(10, frequency - 3).toStringAsFixed(4)}'
         : '';
@@ -2135,6 +2189,23 @@ class WordService {
       encoded(synonymItems),
       encoded(antonymItems),
     ];
+  }
+
+  bool _responsesContainDefinition(
+    String word,
+    List<http.Response?> responses,
+  ) {
+    try {
+      _coreEntryFromResponses(
+        word,
+        responses[0],
+        responses[2],
+        exampleCount: 1,
+      );
+      return true;
+    } catch (_) {
+      return false;
+    }
   }
 
   String _cleanLexiconText(Object? value) => (value ?? '')

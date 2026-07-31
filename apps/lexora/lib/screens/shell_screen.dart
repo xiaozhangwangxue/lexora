@@ -820,7 +820,10 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
     final autoExpandedNavigation = windowWidth >= 820;
     final expandedNavigation =
         autoExpandedNavigation && (_desktopSidebarExpandedPreference ?? true);
-    final showGitHub = _index == 1 || (_index == 0 && !_searchShowingResult);
+    // Keep the search surface focused on the dictionary. GitHub remains
+    // available from Vocabulary Book and Settings, but never floats over the
+    // search home, suggestions, loading state, or results.
+    final showGitHub = _index == 1;
     final pages = [
       SearchScreen(
         active: _index == 0,

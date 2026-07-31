@@ -1,5 +1,10 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
+
+const manifest = JSON.parse(
+  await readFile(new URL("../public/version.json", import.meta.url), "utf8"),
+);
 
 async function render(path = "/") {
   const workerUrl = new URL("../dist/server/index.js", import.meta.url);
@@ -29,14 +34,14 @@ test("server-renders the finished Lexora landing page", async () => {
   assert.match(html, /\/lɛkˈsɔːrə\//);
   assert.match(html, /正在识别设备/);
   assert.match(html, /id="all-downloads"/);
-  assert.match(html, /lexora-android-v4\.0\.1\.apk/);
-  assert.match(html, /lexora-macos-v4\.0\.1\.dmg/);
-  assert.match(html, /lexora-windows-v4\.0\.1-setup\.exe/);
+  assert.match(html, new RegExp(manifest.verifiedDownloads.android.filename));
+  assert.match(html, new RegExp(manifest.verifiedDownloads.macos.filename));
+  assert.match(html, new RegExp(manifest.verifiedDownloads.windows.filename));
   assert.match(html, /历史版本/);
   assert.match(html, /lexora-android-v3\.2\.5\.apk/);
   assert.match(html, /lexora-android-v3\.1\.0\.apk/);
   assert.match(html, /4\.0\.0 性能、安全与动画/);
-  assert.match(html, /4\.0\.1 可选服务器加速/);
+  assert.match(html, /4\.0\.2 搜索与服务器稳定性/);
   assert.match(html, /每一次查词/);
   assert.match(html, /分页图片或长图/);
   assert.doesNotMatch(html, /supportInner/);

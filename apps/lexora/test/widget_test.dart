@@ -143,7 +143,7 @@ void main() {
 
     await tester.pumpWidget(const LexoraApp(locale: Locale('zh', 'CN')));
     await pumpUi(tester);
-    expect(find.textContaining('Lexora 4.0.1'), findsOneWidget);
+    expect(find.textContaining('Lexora $appVersion'), findsOneWidget);
     expect(find.text('查看完整更新内容'), findsOneWidget);
     expect(find.text('继续使用'), findsOneWidget);
     expect(tester.takeException(), isNull);
@@ -284,6 +284,7 @@ void main() {
     await pumpUi(tester);
     expect(find.byType(LexoraWordmark), findsOneWidget);
     expect(find.text('搜索英文单词或短语'), findsOneWidget);
+    expect(find.text('GitHub'), findsNothing);
     await tester.tap(find.byIcon(Icons.auto_stories_outlined));
     await pumpUi(tester);
     expect(find.text('开始生成'), findsOneWidget);

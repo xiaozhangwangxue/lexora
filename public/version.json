@@ -1,32 +1,43 @@
 {
-  "version": "4.0.1",
-  "build": 26,
+  "version": "4.0.2",
+  "build": 27,
   "releaseNotes": {
     "zh": [
-      "设置新增可选的 Lexora 服务器加速，同时用于查单词、联想和生成词汇书。",
-      "服务器加速默认关闭，升级后继续使用原来的搜索方式。",
-      "开启加速后会优先连接 Cloudflare 中转，无法使用时自动回退到原有词典来源。"
+      "修复短语结果被后续请求错误覆盖的问题，已有双语释义会稳定保留。",
+      "服务器加速改为与原词典来源并行竞速，慢响应不再拖慢搜索和词汇书生成。",
+      "移除单词搜索页的 GitHub 按钮，并提升服务器联想和采集稳定性。"
     ],
     "en": [
-      "Added optional Lexora server acceleration for dictionary search, suggestions, and vocabulary-book generation.",
-      "Server acceleration is off by default, so updates continue using the original search behavior.",
-      "When enabled, Lexora prefers the Cloudflare relay and automatically falls back to existing dictionary providers."
+      "Fixed phrase results being replaced by a later failed request, preserving available bilingual definitions.",
+      "Server acceleration now races existing providers in parallel, so a slow relay cannot delay search or book generation.",
+      "Removed GitHub from dictionary search and improved server suggestions and collection reliability."
     ]
   },
   "inAppReleaseNotes": {
     "zh": [
-      "设置新增可选的 Lexora 服务器加速，同时用于查单词、联想和生成词汇书。",
-      "服务器加速默认关闭，升级后继续使用原来的搜索方式。",
-      "开启加速后会优先连接 Cloudflare 中转，无法使用时自动回退到原有词典来源。"
+      "修复短语结果被后续请求错误覆盖的问题，已有双语释义会稳定保留。",
+      "服务器加速改为与原词典来源并行竞速，慢响应不再拖慢搜索和词汇书生成。",
+      "移除单词搜索页的 GitHub 按钮，并提升服务器联想和采集稳定性。"
     ],
     "en": [
-      "Added optional Lexora server acceleration for dictionary search, suggestions, and vocabulary-book generation.",
-      "Server acceleration is off by default, so updates continue using the original search behavior.",
-      "When enabled, Lexora prefers the Cloudflare relay and automatically falls back to existing dictionary providers."
+      "Fixed phrase results being replaced by a later failed request, preserving available bilingual definitions.",
+      "Server acceleration now races existing providers in parallel, so a slow relay cannot delay search or book generation.",
+      "Removed GitHub from dictionary search and improved server suggestions and collection reliability."
     ]
   },
   "releaseNoteSections": {
     "zh": [
+      {
+        "title": "4.0.2 搜索与服务器稳定性",
+        "items": [
+          "单词搜索页不再显示 GitHub 按钮，搜索首页、联想、加载和结果状态都保持专注。",
+          "修复短语先显示初步结果、随后被错误替换为“没有找到可靠结果”的问题。",
+          "开放词库中只有可靠中文释义的精确短语也会保留显示，例如 people-to-people。",
+          "服务器加速改为与原有词典来源并行竞速，服务器较慢或内容不完整时不会额外增加等待。",
+          "服务器联想前缀查询改用索引范围，百万级词库的常见联想查询由约一秒降至约十毫秒。",
+          "修复 Cloudflare 临时 5xx/504 会中止整批采集并空等 15 分钟的问题；真实免费额度 429 仍会安全停机。"
+        ]
+      },
       {
         "title": "4.0.1 可选服务器加速",
         "items": [
@@ -111,6 +122,17 @@
     ],
     "en": [
       {
+        "title": "4.0.2 search and server reliability",
+        "items": [
+          "GitHub no longer appears on dictionary search, including home, suggestions, loading, and results.",
+          "Fixed phrase results being shown briefly and then incorrectly replaced by a no-reliable-result message.",
+          "Exact open-lexicon phrases with a reliable Chinese gloss remain usable, including people-to-people.",
+          "Server acceleration now races existing providers, so slow or incomplete server responses add no serial delay.",
+          "Indexed prefix ranges reduce common suggestion queries on the million-entry server from about one second to roughly ten milliseconds.",
+          "Transient Cloudflare 5xx/504 responses no longer stop a whole collection pass for 15 minutes; a real free-quota 429 still stops safely."
+        ]
+      },
+      {
         "title": "4.0.1 optional server acceleration",
         "items": [
           "Settings now includes Lexora server acceleration for dictionary search, live suggestions, and vocabulary-book generation.",
@@ -194,52 +216,52 @@
     ]
   },
   "downloads": {
-    "android": "/downloads/lexora-android-v4.0.1.apk",
-    "macos": "/downloads/lexora-macos-v4.0.1.dmg",
-    "windows": "/downloads/lexora-windows-v4.0.1-setup.exe",
-    "linux": "/downloads/lexora-linux-v4.0.1.tar.gz"
+    "android": "/downloads/lexora-android-v4.0.2.apk",
+    "macos": "/downloads/lexora-macos-v4.0.2.dmg",
+    "windows": "/downloads/lexora-windows-v4.0.2-setup.exe",
+    "linux": "/downloads/lexora-linux-v4.0.2.tar.gz"
   },
   "verifiedDownloads": {
     "android": {
-      "filename": "lexora-android-v4.0.1.apk",
-      "url": "/updates/lexora-android-v4.0.1.apk",
+      "filename": "lexora-android-v4.0.2.apk",
+      "url": "/updates/lexora-android-v4.0.2.apk",
       "sources": [
-        "/updates/lexora-android-v4.0.1.apk",
-        "https://lexora-official.xiaozhangwangxue.workers.dev/updates/lexora-android-v4.0.1.apk",
-        "https://github.com/xiaozhangwangxue/lexora/releases/download/v4.0.1/lexora-android-v4.0.1.apk"
+        "/updates/lexora-android-v4.0.2.apk",
+        "https://lexora-official.xiaozhangwangxue.workers.dev/updates/lexora-android-v4.0.2.apk",
+        "https://github.com/xiaozhangwangxue/lexora/releases/download/v4.0.2/lexora-android-v4.0.2.apk"
       ],
       "sha256": "f43d83529ad3197bc28872816a5da6a74ac05587c3743308a68072e21d86ad57",
       "size": 105422261
     },
     "macos": {
-      "filename": "lexora-macos-v4.0.1.dmg",
-      "url": "/updates/lexora-macos-v4.0.1.dmg",
+      "filename": "lexora-macos-v4.0.2.dmg",
+      "url": "/updates/lexora-macos-v4.0.2.dmg",
       "sources": [
-        "/updates/lexora-macos-v4.0.1.dmg",
-        "https://lexora-official.xiaozhangwangxue.workers.dev/updates/lexora-macos-v4.0.1.dmg",
-        "https://github.com/xiaozhangwangxue/lexora/releases/download/v4.0.1/lexora-macos-v4.0.1.dmg"
+        "/updates/lexora-macos-v4.0.2.dmg",
+        "https://lexora-official.xiaozhangwangxue.workers.dev/updates/lexora-macos-v4.0.2.dmg",
+        "https://github.com/xiaozhangwangxue/lexora/releases/download/v4.0.2/lexora-macos-v4.0.2.dmg"
       ],
       "sha256": "29202c98a3d30b481ea1d3748be0727e5250a356c6b3152c08eadcbbba69ad90",
       "size": 49205983
     },
     "windows": {
-      "filename": "lexora-windows-v4.0.1-setup.exe",
-      "url": "/updates/lexora-windows-v4.0.1-setup.exe",
+      "filename": "lexora-windows-v4.0.2-setup.exe",
+      "url": "/updates/lexora-windows-v4.0.2-setup.exe",
       "sources": [
-        "/updates/lexora-windows-v4.0.1-setup.exe",
-        "https://lexora-official.xiaozhangwangxue.workers.dev/updates/lexora-windows-v4.0.1-setup.exe",
-        "https://github.com/xiaozhangwangxue/lexora/releases/download/v4.0.1/lexora-windows-v4.0.1-setup.exe"
+        "/updates/lexora-windows-v4.0.2-setup.exe",
+        "https://lexora-official.xiaozhangwangxue.workers.dev/updates/lexora-windows-v4.0.2-setup.exe",
+        "https://github.com/xiaozhangwangxue/lexora/releases/download/v4.0.2/lexora-windows-v4.0.2-setup.exe"
       ],
       "sha256": "871146f3a05601d2e7778ad15b916607a1ff1ab142f7fc12a3e762163782139b",
       "size": 28057781
     },
     "linux": {
-      "filename": "lexora-linux-v4.0.1.tar.gz",
-      "url": "/updates/lexora-linux-v4.0.1.tar.gz",
+      "filename": "lexora-linux-v4.0.2.tar.gz",
+      "url": "/updates/lexora-linux-v4.0.2.tar.gz",
       "sources": [
-        "/updates/lexora-linux-v4.0.1.tar.gz",
-        "https://lexora-official.xiaozhangwangxue.workers.dev/updates/lexora-linux-v4.0.1.tar.gz",
-        "https://github.com/xiaozhangwangxue/lexora/releases/download/v4.0.1/lexora-linux-v4.0.1.tar.gz"
+        "/updates/lexora-linux-v4.0.2.tar.gz",
+        "https://lexora-official.xiaozhangwangxue.workers.dev/updates/lexora-linux-v4.0.2.tar.gz",
+        "https://github.com/xiaozhangwangxue/lexora/releases/download/v4.0.2/lexora-linux-v4.0.2.tar.gz"
       ],
       "sha256": "cdfdb5b52009d749c3efe31d9dfbde38a985d073acaa6270b603b71c2832eb3d",
       "size": 32491838

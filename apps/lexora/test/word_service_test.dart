@@ -263,7 +263,7 @@ void main() {
     expect(stopwatch.elapsedMilliseconds, lessThan(1500));
     expect(entry.word, 'word');
     expect(entry.definition, 'A unit of language.');
-    expect(entry.definitionZh, '中译：A unit of language.');
+    expect(entry.definitionZh, '语言单位。');
     expect(entry.usPhonetic, 'wɝd');
     expect(entry.ukPhonetic, 'wɜːd');
     expect(entry.synonyms, contains('term'));
@@ -272,7 +272,116 @@ void main() {
     expect(entry.phrases.single.phrase, 'word for word');
     expect(entry.phrases.single.meaning, 'Using exactly the same words.');
     expect(entry.relatedWords.single.word, 'lexeme');
-    expect(directDictionaryRequests, 0);
+    // The direct provider now races in the background so server acceleration
+    // can never turn into an extra serial wait.
+    expect(directDictionaryRequests, lessThanOrEqualTo(1));
+  });
+
+  test(
+    'partial server phrase keeps its exact Chinese gloss instead of failing',
+    () async {
+      SharedPreferences.setMockInitialValues({});
+      final client = MockClient((request) async {
+        if (request.url.host == 'dict.12323456.xyz') {
+          return http.Response.bytes(
+            utf8.encode(
+              jsonEncode({
+                'word': 'people-to-people',
+                'normalized_word': 'people-to-people',
+                'pos': 'adjective',
+                'definition': '',
+                'definition_zh': '人民之间的',
+                'frequency': 5.94,
+                'senses': const [],
+                'synonyms': const [],
+                'antonyms': const [],
+                'examples': const [],
+                'phrases': const [],
+                'phrase_entries': const [],
+                'related_entries': const [],
+                'enrichment': {'status': 'not_found'},
+                'match_type': 'exact',
+              }),
+            ),
+            200,
+            headers: const {
+              'content-type': 'application/json; charset=utf-8',
+            },
+          );
+        }
+        await Future<void>.delayed(const Duration(seconds: 2));
+        return request.url.host == 'api.datamuse.com'
+            ? http.Response('[]', 200)
+            : http.Response('not found', 404);
+      });
+
+      final service = WordService(
+        client: client,
+        serverAcceleration: const _StaticServerAcceleration(true),
+      );
+      final core = await service.lookupCore('people-to-people');
+      final entry = await service.lookup('people-to-people');
+
+      expect(core.definition, '人民之间的');
+      expect(entry.word, 'people-to-people');
+      expect(entry.definition, '人民之间的');
+      expect(entry.definitionZh, '人民之间的');
+    },
+  );
+
+  test('slow acceleration server never delays a faster direct lookup', () async {
+    SharedPreferences.setMockInitialValues({});
+    final client = MockClient((request) async {
+      if (request.url.host == 'dict.12323456.xyz') {
+        await Future<void>.delayed(const Duration(seconds: 2));
+        return http.Response('not found', 404);
+      }
+      if (request.url.host == 'api.dictionaryapi.dev') {
+        return http.Response(
+          jsonEncode([
+            {
+              'word': 'word',
+              'meanings': [
+                {
+                  'partOfSpeech': 'noun',
+                  'definitions': [
+                    {'definition': 'A unit of language.'},
+                  ],
+                },
+              ],
+            },
+          ]),
+          200,
+        );
+      }
+      if (request.url.host == 'api.datamuse.com') {
+        return http.Response(
+          request.url.path == '/sug'
+              ? jsonEncode([
+                  {'word': 'word'},
+                ])
+              : '[]',
+          200,
+        );
+      }
+      return http.Response('not found', 404);
+    });
+    final service = WordService(
+      client: client,
+      serverAcceleration: const _StaticServerAcceleration(true),
+    );
+
+    final lookupStopwatch = Stopwatch()..start();
+    final entry = await service.lookup('word', exampleCount: 0);
+    lookupStopwatch.stop();
+    final suggestionStopwatch = Stopwatch()..start();
+    final suggestions = await service.suggest('wor');
+    suggestionStopwatch.stop();
+
+    expect(entry.definition, 'A unit of language.');
+    expect(lookupStopwatch.elapsedMilliseconds, lessThan(1000));
+    expect(suggestions, ['word']);
+    expect(suggestionStopwatch.elapsedMilliseconds, lessThan(1000));
   });
 
   test(

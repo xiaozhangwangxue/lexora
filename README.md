@@ -24,9 +24,18 @@ Lexora 是一款面向 Android、macOS、Windows 与 Linux、可以生成个人�
 > [!IMPORTANT]
 > Lexora 不要求账号。单词列表、历史记录和生成的 PDF 默认保存在设备本地；只有点击“开始生成”后，待查询的单词、释义和例句才会发送给公开词典与翻译服务。
 
-## Lexora 4.0.1 更新说明
+## Lexora 4.0.2 更新说明
 
 <!-- release-notes:zh:start -->
+
+### 4.0.2 搜索与服务器稳定性
+
+- 单词搜索页不再显示 GitHub 按钮，搜索首页、联想、加载和结果状态都保持专注。
+- 修复短语先显示初步结果、随后被错误替换为“没有找到可靠结果”的问题。
+- 开放词库中只有可靠中文释义的精确短语也会保留显示，例如 people-to-people。
+- 服务器加速改为与原有词典来源并行竞速，服务器较慢或内容不完整时不会额外增加等待。
+- 服务器联想前缀查询改用索引范围，百万级词库的常见联想查询由约一秒降至约十毫秒。
+- 修复 Cloudflare 临时 5xx/504 会中止整批采集并空等 15 分钟的问题；真实免费额度 429 仍会安全停机。
 
 ### 4.0.1 可选服务器加速
 
@@ -134,10 +143,10 @@ Lexora 是一款面向 Android、macOS、Windows 与 Linux、可以生成个人�
 
 | 平台 | 安装包 | 系统要求 | 下载 |
 | --- | --- | --- | --- |
-| Android | APK | Android 8.0+ | [官网下载](https://lexora.12323456.xyz/downloads/lexora-android-v4.0.1.apk) |
-| macOS | 拖动安装 DMG | macOS 12+ | [官网下载](https://lexora.12323456.xyz/downloads/lexora-macos-v4.0.1.dmg) |
-| Windows | 安装程序 EXE（默认安装后启动） | Windows 10 / 11 | [官网下载](https://lexora.12323456.xyz/downloads/lexora-windows-v4.0.1-setup.exe) |
-| Linux | tar.gz | 64 位 Linux | [官网下载](https://lexora.12323456.xyz/downloads/lexora-linux-v4.0.1.tar.gz) |
+| Android | APK | Android 8.0+ | [官网下载](https://lexora.12323456.xyz/downloads/lexora-android-v4.0.2.apk) |
+| macOS | 拖动安装 DMG | macOS 12+ | [官网下载](https://lexora.12323456.xyz/downloads/lexora-macos-v4.0.2.dmg) |
+| Windows | 安装程序 EXE（默认安装后启动） | Windows 10 / 11 | [官网下载](https://lexora.12323456.xyz/downloads/lexora-windows-v4.0.2-setup.exe) |
+| Linux | tar.gz | 64 位 Linux | [官网下载](https://lexora.12323456.xyz/downloads/lexora-linux-v4.0.2.tar.gz) |
 
 <details>
 <summary><strong>首次安装被系统拦截怎么办？</strong></summary>
@@ -152,7 +161,7 @@ Lexora 是一款面向 Android、macOS、Windows 与 Linux、可以生成个人�
 > [!IMPORTANT]
 > Android v0.2.0 使用了临时构建签名，旧私钥无法恢复，因此升级到采用稳定签名的 v0.3.0 时需要先卸载旧版再安装一次。自 v0.3.0 起，后续版本继续使用同一发布签名，可直接覆盖更新。请先按需导出旧版中的 PDF。
 
-所有发行文件名都包含版本号，例如 `lexora-android-v4.0.1.apk`。官网的“历史版本”中继续提供 3.2.5 和 3.1.0，不会从 R2 删除。应用内更新优先使用 Cloudflare R2，并在打开安装包前校验下载完整性与 SHA-256。
+所有发行文件名都包含版本号，例如 `lexora-android-v4.0.2.apk`。官网的“历史版本”中继续提供 3.2.5 和 3.1.0，不会从 R2 删除。应用内更新优先使用 Cloudflare R2，并在打开安装包前校验下载完整性与 SHA-256。
 
 ## 三步生成词汇书
 

@@ -24,9 +24,18 @@ Lexora is a bilingual dictionary for Android, macOS, Windows, and Linux that tur
 > [!IMPORTANT]
 > Lexora needs no account. Word lists, history, and generated PDFs stay on the device by default. Only after **Start generating** is selected are words, definitions, and examples sent to public dictionary and translation services.
 
-## Lexora 4.0.1 release notes
+## Lexora 4.0.2 release notes
 
 <!-- release-notes:en:start -->
+
+### 4.0.2 search and server reliability
+
+- GitHub no longer appears on dictionary search, including home, suggestions, loading, and results.
+- Fixed phrase results being shown briefly and then incorrectly replaced by a no-reliable-result message.
+- Exact open-lexicon phrases with a reliable Chinese gloss remain usable, including people-to-people.
+- Server acceleration now races existing providers, so slow or incomplete server responses add no serial delay.
+- Indexed prefix ranges reduce common suggestion queries on the million-entry server from about one second to roughly ten milliseconds.
+- Transient Cloudflare 5xx/504 responses no longer stop a whole collection pass for 15 minutes; a real free-quota 429 still stops safely.
 
 ### 4.0.1 optional server acceleration
 
@@ -134,15 +143,15 @@ Use the [official download section](https://lexora.12323456.xyz/#download) for b
 
 | Platform | Package | Requirement | Download |
 | --- | --- | --- | --- |
-| Android | APK | Android 8.0+ | [Official mirror](https://lexora.12323456.xyz/downloads/lexora-android-v4.0.1.apk) |
-| macOS | Drag-to-install DMG | macOS 12+ | [Official mirror](https://lexora.12323456.xyz/downloads/lexora-macos-v4.0.1.dmg) |
-| Windows | Setup EXE (launch option checked by default) | Windows 10 / 11 | [Official mirror](https://lexora.12323456.xyz/downloads/lexora-windows-v4.0.1-setup.exe) |
-| Linux | tar.gz | 64-bit Linux | [Official mirror](https://lexora.12323456.xyz/downloads/lexora-linux-v4.0.1.tar.gz) |
+| Android | APK | Android 8.0+ | [Official mirror](https://lexora.12323456.xyz/downloads/lexora-android-v4.0.2.apk) |
+| macOS | Drag-to-install DMG | macOS 12+ | [Official mirror](https://lexora.12323456.xyz/downloads/lexora-macos-v4.0.2.dmg) |
+| Windows | Setup EXE (launch option checked by default) | Windows 10 / 11 | [Official mirror](https://lexora.12323456.xyz/downloads/lexora-windows-v4.0.2-setup.exe) |
+| Linux | tar.gz | 64-bit Linux | [Official mirror](https://lexora.12323456.xyz/downloads/lexora-linux-v4.0.2.tar.gz) |
 
 > [!IMPORTANT]
 > Android v0.2.0 used an ephemeral build signature whose private key cannot be recovered. Moving to the stable v0.3.0 signing key therefore requires one uninstall and reinstall. From v0.3.0 onward, future APKs use the same release key and install directly over the existing app. Export any PDFs you need before removing v0.2.0.
 
-Every release filename contains its version, such as `lexora-android-v4.0.1.apk`, so old and new installers remain easy to distinguish. The website keeps 3.2.5 and 3.1.0 under Previous versions, and both remain in R2. In-app updates prefer Cloudflare R2 and verify download completeness plus SHA-256 before opening an installer.
+Every release filename contains its version, such as `lexora-android-v4.0.2.apk`, so old and new installers remain easy to distinguish. The website keeps 3.2.5 and 3.1.0 under Previous versions, and both remain in R2. In-app updates prefer Cloudflare R2 and verify download completeness plus SHA-256 before opening an installer.
 
 ## Three steps to a vocabulary book
 

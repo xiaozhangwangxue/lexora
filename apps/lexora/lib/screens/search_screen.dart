@@ -212,16 +212,17 @@ class _SearchScreenState extends State<SearchScreen> {
       _searchedTerm = term;
     });
     final coreFuture = _wordService.lookupCore(term, exampleCount: 3);
-    var englishPresented = false;
+    var resultPresented = false;
     unawaited(
       coreFuture
           .then((core) {
             if (!mounted || revision != _searchRevision) return;
-            if (englishPresented) return;
+            if (resultPresented) return;
             setState(() {
               _entry = core;
               _coreLoading = false;
             });
+            resultPresented = true;
             DeveloperLogService.instance.log(
               'ui.search.core_presented',
               data: {
@@ -249,7 +250,7 @@ class _SearchScreenState extends State<SearchScreen> {
           .lookupEnglish(term, exampleCount: 3)
           .then((english) {
             if (!mounted || revision != _searchRevision) return;
-            englishPresented = true;
+            resultPresented = true;
             setState(() {
               _entry = english;
               _coreLoading = false;
@@ -289,7 +290,7 @@ class _SearchScreenState extends State<SearchScreen> {
     );
     if (!mounted || revision != _searchRevision) return;
     if (result.entries.isEmpty) {
-      if (englishPresented) {
+      if (resultPresented) {
         setState(() {
           _loading = false;
           _coreLoading = false;
