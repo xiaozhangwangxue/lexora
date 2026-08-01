@@ -250,8 +250,8 @@
         "https://lexora-official.xiaozhangwangxue.workers.dev/updates/lexora-android-v4.0.3.apk",
         "https://github.com/xiaozhangwangxue/lexora/releases/download/v4.0.3/lexora-android-v4.0.3.apk"
       ],
-      "sha256": "004cbec3107b11a598f701401b48d3a6985591e24d35a345b02d6581c464639d",
-      "size": 105422261
+      "sha256": "c508b78e4fa303ed25632fdd160e9da4c6632d7ec9466a48c38acaac18ab0dce",
+      "size": 105438645
     },
     "macos": {
       "filename": "lexora-macos-v4.0.3.dmg",
@@ -261,8 +261,8 @@
         "https://lexora-official.xiaozhangwangxue.workers.dev/updates/lexora-macos-v4.0.3.dmg",
         "https://github.com/xiaozhangwangxue/lexora/releases/download/v4.0.3/lexora-macos-v4.0.3.dmg"
       ],
-      "sha256": "3b29626631adec0c1f4d3c7a4d1fb1ec6fa6d1a3d47fb9638f3110bff786c80a",
-      "size": 49200297
+      "sha256": "4bceb77c5c58298f8c95a7fd2843b809fc750d04820d5ef26210b66b0987d18b",
+      "size": 49200622
     },
     "windows": {
       "filename": "lexora-windows-v4.0.3-setup.exe",
@@ -272,8 +272,8 @@
         "https://lexora-official.xiaozhangwangxue.workers.dev/updates/lexora-windows-v4.0.3-setup.exe",
         "https://github.com/xiaozhangwangxue/lexora/releases/download/v4.0.3/lexora-windows-v4.0.3-setup.exe"
       ],
-      "sha256": "175775d291ebb8d49e077de6cfbe24b5b8415bb440b83f7b9dcb54f45abbbeb9",
-      "size": 28057907
+      "sha256": "b467bf9888f33a94dd84c5c085411e626b5078c80f350e6bf1f3737e339d5592",
+      "size": 28060118
     },
     "linux": {
       "filename": "lexora-linux-v4.0.3.tar.gz",
@@ -283,8 +283,8 @@
         "https://lexora-official.xiaozhangwangxue.workers.dev/updates/lexora-linux-v4.0.3.tar.gz",
         "https://github.com/xiaozhangwangxue/lexora/releases/download/v4.0.3/lexora-linux-v4.0.3.tar.gz"
       ],
-      "sha256": "62e9b04027fa031e49be1cc46f31dff372f838e484e97527304ee61af775a742",
-      "size": 32494170
+      "sha256": "76d5ea88ce2a20648871410d273f44f1bd6f526f3ee6b923167981fa791c7070",
+      "size": 32496052
     }
   },
   "historicalDownloads": [
