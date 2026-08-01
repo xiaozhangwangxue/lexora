@@ -193,6 +193,12 @@ void main() {
 
     expect(find.text('其他联想'), findsOneWidget);
     expect(find.text('world'), findsOneWidget);
+    final fieldRect = tester.getRect(find.byType(TextField));
+    final panelRect = tester.getRect(
+      find.byKey(const Key('search-suggestion-panel')),
+    );
+    expect(panelRect.left, closeTo(fieldRect.left, .01));
+    expect(panelRect.right, closeTo(fieldRect.right, .01));
     expect(tester.takeException(), isNull);
   });
 
@@ -335,6 +341,14 @@ void main() {
     expect(find.text('Lexora 官网'), findsOneWidget);
     expect(find.text('支持 Lexora'), findsOneWidget);
     expect(find.text('GitHub'), findsOneWidget);
+    final quickLinkMaterial = tester.widget<Material>(
+      find.byKey(const ValueKey('quick-link-检查更新')),
+    );
+    expect(quickLinkMaterial.clipBehavior, Clip.antiAlias);
+    expect(
+      quickLinkMaterial.borderRadius,
+      const BorderRadius.all(Radius.circular(18)),
+    );
   });
 
   testWidgets('search result hides shell chrome and stays responsive', (

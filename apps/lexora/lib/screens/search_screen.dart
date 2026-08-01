@@ -519,42 +519,47 @@ class _SearchScreenState extends State<SearchScreen> {
                           ),
                   ),
                 ),
-                OverlayPortal(
-                  controller: _suggestionOverlayController,
-                  overlayChildBuilder: (overlayContext) {
-                    final viewportWidth = MediaQuery.sizeOf(
-                      overlayContext,
-                    ).width;
-                    return CompositedTransformFollower(
-                      link: _suggestionLayerLink,
-                      targetAnchor: Alignment.bottomLeft,
-                      followerAnchor: Alignment.topLeft,
-                      offset: const Offset(0, 6),
-                      showWhenUnlinked: false,
-                      child: SizedBox(
-                        width: (viewportWidth - 40).clamp(280, 880),
-                        child: _SuggestionPopover(
-                          reduceMotion: reduceMotion,
-                          child: _SuggestionPanel(
-                            history: _matchingHistory,
-                            fresh: _freshSuggestions,
-                            isZh: _isZh,
-                            onSelected: _search,
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final fieldWidth = constraints.maxWidth;
+                    return OverlayPortal(
+                      controller: _suggestionOverlayController,
+                      overlayChildBuilder: (overlayContext) =>
+                          CompositedTransformFollower(
+                            link: _suggestionLayerLink,
+                            targetAnchor: Alignment.bottomLeft,
+                            followerAnchor: Alignment.topLeft,
+                            offset: const Offset(0, 6),
+                            showWhenUnlinked: false,
+                            child: UnconstrainedBox(
+                              alignment: Alignment.topLeft,
+                              constrainedAxis: Axis.vertical,
+                              child: SizedBox(
+                                width: fieldWidth,
+                                child: _SuggestionPopover(
+                                  reduceMotion: reduceMotion,
+                                  child: _SuggestionPanel(
+                                    history: _matchingHistory,
+                                    fresh: _freshSuggestions,
+                                    isZh: _isZh,
+                                    onSelected: _search,
+                                  ),
+                                ),
+                              ),
+                            ),
                           ),
+                      child: CompositedTransformTarget(
+                        link: _suggestionLayerLink,
+                        child: _SearchField(
+                          controller: _textController,
+                          focusNode: _focusNode,
+                          hint: _isZh ? '搜索英文单词或短语' : 'Search a word or phrase',
+                          onChanged: _queryChanged,
+                          onSubmitted: _search,
                         ),
                       ),
                     );
                   },
-                  child: CompositedTransformTarget(
-                    link: _suggestionLayerLink,
-                    child: _SearchField(
-                      controller: _textController,
-                      focusNode: _focusNode,
-                      hint: _isZh ? '搜索英文单词或短语' : 'Search a word or phrase',
-                      onChanged: _queryChanged,
-                      onSubmitted: _search,
-                    ),
-                  ),
                 ),
                 if (_entry == null && !_loading && _error == null)
                   const Spacer(flex: 3)
@@ -640,8 +645,10 @@ class _SuggestionPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
+      key: const Key('search-suggestion-panel'),
       margin: const EdgeInsets.only(top: 6),
       clipBehavior: Clip.antiAlias,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxHeight: 360),
         child: ListView(
@@ -1413,6 +1420,12 @@ Future<void> showLexoraWordSheet({
     isDismissible: true,
     backgroundColor: Colors.transparent,
     barrierColor: Colors.black.withValues(alpha: .46),
+    sheetAnimationStyle: MediaQuery.disableAnimationsOf(context)
+        ? AnimationStyle.noAnimation
+        : const AnimationStyle(
+            duration: Duration(milliseconds: 210),
+            reverseDuration: Duration(milliseconds: 150),
+          ),
     builder: (_) => _WordPreviewSheet(
       term: normalized,
       initialEntry: initialEntry,
@@ -1686,7 +1699,7 @@ class _WordPreviewSheetState extends State<_WordPreviewSheet> {
           snap: true,
           snapAnimationDuration: MediaQuery.disableAnimationsOf(context)
               ? Duration.zero
-              : const Duration(milliseconds: 320),
+              : const Duration(milliseconds: 180),
           snapSizes: const [.56, .96],
           shouldCloseOnMinExtent: true,
           expand: false,

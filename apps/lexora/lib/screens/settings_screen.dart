@@ -1165,22 +1165,32 @@ class _QuickLinkTile extends StatelessWidget {
   final IconData trailing;
 
   @override
-  Widget build(BuildContext context) => ListTile(
-    contentPadding: EdgeInsets.zero,
-    leading: Container(
-      width: 42,
-      height: 42,
-      decoration: BoxDecoration(
-        color: background,
-        borderRadius: BorderRadius.circular(13),
+  Widget build(BuildContext context) {
+    const radius = BorderRadius.all(Radius.circular(18));
+    return Material(
+      key: ValueKey('quick-link-$title'),
+      type: MaterialType.transparency,
+      borderRadius: radius,
+      clipBehavior: Clip.antiAlias,
+      child: ListTile(
+        shape: const RoundedRectangleBorder(borderRadius: radius),
+        contentPadding: EdgeInsets.zero,
+        leading: Container(
+          width: 42,
+          height: 42,
+          decoration: BoxDecoration(
+            color: background,
+            borderRadius: BorderRadius.circular(13),
+          ),
+          child: Icon(icon, color: color),
+        ),
+        title: Text(title),
+        subtitle: Text(subtitle),
+        trailing: Icon(trailing),
+        onTap: onTap,
       ),
-      child: Icon(icon, color: color),
-    ),
-    title: Text(title),
-    subtitle: Text(subtitle),
-    trailing: Icon(trailing),
-    onTap: onTap,
-  );
+    );
+  }
 }
 
 class _SettingsSection extends StatelessWidget {
