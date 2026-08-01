@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:ui';
 
+import 'package:fluent_ui/fluent_ui.dart' as fluent;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -76,6 +77,10 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
   bool get _isWidgetTest => Platform.environment['FLUTTER_TEST'] == 'true';
   bool get _isDesktop =>
       Platform.isMacOS || Platform.isWindows || Platform.isLinux;
+
+  bool get _isWindows =>
+      Platform.isWindows ||
+      debugDefaultTargetPlatformOverride == TargetPlatform.windows;
 
   @override
   void initState() {
@@ -979,6 +984,27 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
       );
     }
 
+    if (wide && _isWindows) {
+      return _WindowsFluentShell(
+        selectedIndex: _index,
+        expanded: expandedNavigation,
+        canToggle: autoExpandedNavigation,
+        body: body,
+        labels: [
+          strings.words,
+          strings.vocabularyBookLabel,
+          strings.generationRecords,
+          strings.history,
+          strings.settings,
+        ],
+        onSelected: _selectPage,
+        onSearchRepeated: _resetSearchHome,
+        onExpandedChanged: (expanded) => setState(() {
+          _desktopSidebarExpandedPreference = expanded;
+        }),
+      );
+    }
+
     if (wide) {
       return Scaffold(
         // The generated Windows runner has an opaque light window. Using a
@@ -1093,6 +1119,200 @@ class _LexoraPagePhysics extends PageScrollPhysics {
   @override
   SpringDescription get spring =>
       const SpringDescription(mass: .9, stiffness: 260, damping: 31);
+}
+
+class _WindowsFluentShell extends StatefulWidget {
+  const _WindowsFluentShell({
+    required this.selectedIndex,
+    required this.expanded,
+    required this.canToggle,
+    required this.body,
+    required this.labels,
+    required this.onSelected,
+    required this.onSearchRepeated,
+    required this.onExpandedChanged,
+  });
+
+  final int selectedIndex;
+  final bool expanded;
+  final bool canToggle;
+  final Widget body;
+  final List<String> labels;
+  final ValueChanged<int> onSelected;
+  final VoidCallback onSearchRepeated;
+  final ValueChanged<bool> onExpandedChanged;
+
+  @override
+  State<_WindowsFluentShell> createState() => _WindowsFluentShellState();
+}
+
+class _WindowsFluentShellState extends State<_WindowsFluentShell> {
+  DateTime? _lastSearchPress;
+
+  void _handleItemPressed(int index) {
+    final now = DateTime.now();
+    if (index == 0 && widget.selectedIndex == 0) {
+      final previous = _lastSearchPress;
+      if (previous != null && now.difference(previous).inMilliseconds <= 360) {
+        widget.onSearchRepeated();
+        _lastSearchPress = null;
+        return;
+      }
+      _lastSearchPress = now;
+    } else {
+      _lastSearchPress = null;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final accent = fluent.Colors.blue;
+    final typography = _windowsFluentTypography(Brightness.light);
+    final reduceMotion = MediaQuery.disableAnimationsOf(context);
+    final fluentTheme = fluent.FluentThemeData(
+      brightness: Brightness.light,
+      accentColor: accent,
+      fontFamily: 'Segoe UI Variable',
+      typography: typography,
+      scaffoldBackgroundColor: const Color(0xFFF3F3F3),
+      animationCurve: const Cubic(.23, 1, .32, 1),
+      fasterAnimationDuration: reduceMotion
+          ? Duration.zero
+          : const Duration(milliseconds: 90),
+      fastAnimationDuration: reduceMotion
+          ? Duration.zero
+          : const Duration(milliseconds: 160),
+      mediumAnimationDuration: reduceMotion
+          ? Duration.zero
+          : const Duration(milliseconds: 210),
+      slowAnimationDuration: reduceMotion
+          ? Duration.zero
+          : const Duration(milliseconds: 260),
+      navigationPaneTheme: fluent.NavigationPaneThemeData(
+        backgroundColor: const Color(0xFFF3F3F3),
+        overlayBackgroundColor: const Color(0xFFF3F3F3),
+        highlightColor: const Color(0xFF0067C0),
+        animationDuration: reduceMotion
+            ? Duration.zero
+            : const Duration(milliseconds: 190),
+        animationCurve: const Cubic(.23, 1, .32, 1),
+        selectedTextStyle: WidgetStatePropertyAll(
+          typography.body?.copyWith(fontWeight: FontWeight.w600),
+        ),
+        unselectedTextStyle: WidgetStatePropertyAll(
+          typography.body?.copyWith(fontWeight: FontWeight.w400),
+        ),
+        selectedIconColor: const WidgetStatePropertyAll(Color(0xFF005FB8)),
+        unselectedIconColor: const WidgetStatePropertyAll(Color(0xFF42474D)),
+      ),
+    );
+    final icons = <IconData>[
+      fluent.FluentIcons.search,
+      fluent.FluentIcons.dictionary,
+      fluent.FluentIcons.document,
+      fluent.FluentIcons.history,
+      fluent.FluentIcons.settings,
+    ];
+    return fluent.FluentTheme(
+      data: fluentTheme,
+      child: fluent.NavigationView(
+        key: const Key('windows-winui-navigation'),
+        transitionBuilder: (child, animation) {
+          if (reduceMotion) return child;
+          final curved = CurvedAnimation(
+            parent: animation,
+            curve: const Cubic(.23, 1, .32, 1),
+            reverseCurve: const Cubic(.4, 0, 1, 1),
+          );
+          return FadeTransition(
+            opacity: curved,
+            child: SlideTransition(
+              position: Tween<Offset>(
+                begin: const Offset(.018, 0),
+                end: Offset.zero,
+              ).animate(curved),
+              child: child,
+            ),
+          );
+        },
+        paneBodyBuilder: (_, __) => Material(
+          color: Theme.of(context).scaffoldBackgroundColor,
+          child: widget.body,
+        ),
+        pane: fluent.NavigationPane(
+          selected: widget.selectedIndex,
+          onChanged: widget.onSelected,
+          onItemPressed: _handleItemPressed,
+          displayMode: widget.expanded
+              ? fluent.PaneDisplayMode.expanded
+              : fluent.PaneDisplayMode.compact,
+          toggleable: widget.canToggle,
+          size: const fluent.NavigationPaneSize(
+            compactWidth: 68,
+            openWidth: 224,
+            openMinWidth: 224,
+            openMaxWidth: 224,
+            headerHeight: 56,
+          ),
+          header: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(7),
+                child: Image.asset(
+                  'assets/icon/lexora-icon.png',
+                  width: 28,
+                  height: 28,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Text(
+                'Lexora',
+                style: typography.bodyStrong?.copyWith(fontSize: 15),
+              ),
+            ],
+          ),
+          items: [
+            for (var index = 0; index < widget.labels.length; index++)
+              fluent.PaneItem(
+                key: ValueKey('windows-pane-item-$index'),
+                icon: fluent.Icon(icons[index], size: 20),
+                title: Text(widget.labels[index]),
+                body: const SizedBox.expand(),
+              ),
+          ],
+        ),
+        onDisplayModeChanged: (mode) {
+          if (!widget.canToggle) return;
+          widget.onExpandedChanged(mode == fluent.PaneDisplayMode.expanded);
+        },
+      ),
+    );
+  }
+}
+
+fluent.Typography _windowsFluentTypography(Brightness brightness) {
+  const fallback = <String>[
+    'Microsoft YaHei UI',
+    'Microsoft YaHei',
+    'Segoe UI',
+    'Arial',
+  ];
+  final base = fluent.Typography.fromBrightness(brightness: brightness);
+  TextStyle? style(TextStyle? value) => value?.copyWith(
+    fontFamily: 'Segoe UI Variable',
+    fontFamilyFallback: fallback,
+  );
+  return fluent.Typography.raw(
+    display: style(base.display),
+    titleLarge: style(base.titleLarge),
+    title: style(base.title),
+    subtitle: style(base.subtitle),
+    bodyLarge: style(base.bodyLarge),
+    bodyStrong: style(base.bodyStrong),
+    body: style(base.body),
+    caption: style(base.caption),
+  );
 }
 
 class _DesktopSidebar extends StatelessWidget {

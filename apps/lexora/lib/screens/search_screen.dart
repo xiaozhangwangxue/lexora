@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:animations/animations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -832,6 +833,8 @@ class _ResultView extends StatelessWidget {
     required this.onSearch,
     required this.onPreview,
     this.scrollController,
+    this.reverseTransition = false,
+    this.linkedDoubleTapEnabled = true,
   });
 
   final WordEntry entry;
@@ -845,6 +848,8 @@ class _ResultView extends StatelessWidget {
   final ValueChanged<String> onSearch;
   final ValueChanged<String> onPreview;
   final ScrollController? scrollController;
+  final bool reverseTransition;
+  final bool linkedDoubleTapEnabled;
 
   @override
   Widget build(BuildContext context) {
@@ -867,290 +872,336 @@ class _ResultView extends StatelessWidget {
         controller: scrollController,
         padding: const EdgeInsets.only(top: 22, bottom: 40),
         children: [
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final title = Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    entry.word,
-                    style: theme.textTheme.displaySmall?.copyWith(
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: -1.2,
-                    ),
+          PageTransitionSwitcher(
+            key: const Key('word-result-transition'),
+            duration: MediaQuery.disableAnimationsOf(context)
+                ? Duration.zero
+                : const Duration(milliseconds: 220),
+            reverse: reverseTransition,
+            transitionBuilder: (child, primaryAnimation, secondaryAnimation) =>
+                SharedAxisTransition(
+                  animation: CurvedAnimation(
+                    parent: primaryAnimation,
+                    curve: const Cubic(.23, 1, .32, 1),
+                    reverseCurve: const Cubic(.4, 0, 1, 1),
                   ),
-                  if (entry.isFuzzyMatch)
-                    Text(
-                      isZh
-                          ? '由“${entry.originalTerm}”匹配'
-                          : 'Matched from “${entry.originalTerm}”',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                  const SizedBox(height: 5),
-                  if (entry.usPhonetic.isNotEmpty ||
-                      entry.ukPhonetic.isNotEmpty)
-                    Text(
-                      'US ${entry.usPhonetic}   ·   UK ${entry.ukPhonetic}',
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
-                    )
-                  else if (coreLoading)
-                    _InlineLoading(
-                      label: isZh ? '正在获取音标' : 'Loading pronunciation',
-                    ),
-                ],
-              );
-              final metrics = coreLoading && entry.difficulty == '…'
-                  ? _InlineLoading(
-                      label: isZh
-                          ? '正在获取难度与词频'
-                          : 'Loading difficulty and frequency',
-                    )
-                  : Wrap(
-                      crossAxisAlignment: WrapCrossAlignment.center,
-                      spacing: 6,
-                      runSpacing: 6,
+                  secondaryAnimation: CurvedAnimation(
+                    parent: secondaryAnimation,
+                    curve: const Cubic(.23, 1, .32, 1),
+                    reverseCurve: const Cubic(.4, 0, 1, 1),
+                  ),
+                  transitionType: SharedAxisTransitionType.horizontal,
+                  fillColor: Colors.transparent,
+                  child: child,
+                ),
+            child: Column(
+              key: ValueKey('result-$searchedTerm'),
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final title = Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Chip(label: Text(entry.difficulty)),
-                        Chip(
-                          label: Text(
-                            'freq ${entry.frequency.toStringAsFixed(1)}',
+                        Text(
+                          entry.word,
+                          style: theme.textTheme.displaySmall?.copyWith(
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: -1.2,
                           ),
                         ),
-                        IconButton(
-                          tooltip: isZh
-                              ? '难度和词频说明'
-                              : 'About difficulty and frequency',
-                          onPressed: () => _showMetricsHelp(context),
-                          icon: Icon(
-                            Icons.help_outline_rounded,
-                            size: 19,
-                            color: theme.colorScheme.outline,
+                        if (entry.isFuzzyMatch)
+                          Text(
+                            isZh
+                                ? '由“${entry.originalTerm}”匹配'
+                                : 'Matched from “${entry.originalTerm}”',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
                           ),
-                        ),
+                        const SizedBox(height: 5),
+                        if (entry.usPhonetic.isNotEmpty ||
+                            entry.ukPhonetic.isNotEmpty)
+                          Text(
+                            'US ${entry.usPhonetic}   ·   UK ${entry.ukPhonetic}',
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                          )
+                        else if (coreLoading)
+                          _InlineLoading(
+                            label: isZh ? '正在获取音标' : 'Loading pronunciation',
+                          ),
                       ],
                     );
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(child: title),
-                      const SizedBox(width: 12),
-                      IconButton.filledTonal(
-                        tooltip: added
-                            ? (isZh ? '从词汇书移除' : 'Remove from Vocabulary Book')
-                            : (isZh ? '添加到词汇书' : 'Add to Vocabulary Book'),
-                        onPressed: coreLoading ? null : onToggleVocabulary,
-                        icon: AnimatedSwitcher(
-                          duration: MediaQuery.disableAnimationsOf(context)
-                              ? const Duration(milliseconds: 100)
-                              : const Duration(milliseconds: 180),
-                          switchInCurve: const Cubic(.22, 1, .36, 1),
-                          transitionBuilder: (child, animation) {
-                            final fade = FadeTransition(
-                              opacity: animation,
-                              child: child,
-                            );
-                            if (MediaQuery.disableAnimationsOf(context)) {
-                              return fade;
-                            }
-                            return ScaleTransition(
-                              scale: Tween<double>(begin: .92, end: 1).animate(
-                                CurvedAnimation(
-                                  parent: animation,
-                                  curve: const Cubic(.23, 1, .32, 1),
+                    final metrics = coreLoading && entry.difficulty == '…'
+                        ? _InlineLoading(
+                            label: isZh
+                                ? '正在获取难度与词频'
+                                : 'Loading difficulty and frequency',
+                          )
+                        : Wrap(
+                            crossAxisAlignment: WrapCrossAlignment.center,
+                            spacing: 6,
+                            runSpacing: 6,
+                            children: [
+                              Chip(label: Text(entry.difficulty)),
+                              Chip(
+                                label: Text(
+                                  'freq ${entry.frequency.toStringAsFixed(1)}',
                                 ),
                               ),
-                              child: fade,
-                            );
-                          },
-                          child: Icon(
-                            added ? Icons.check_rounded : Icons.add_rounded,
-                            key: ValueKey(added),
-                          ),
+                              IconButton(
+                                tooltip: isZh
+                                    ? '难度和词频说明'
+                                    : 'About difficulty and frequency',
+                                onPressed: () => _showMetricsHelp(context),
+                                icon: Icon(
+                                  Icons.help_outline_rounded,
+                                  size: 19,
+                                  color: theme.colorScheme.outline,
+                                ),
+                              ),
+                            ],
+                          );
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(child: title),
+                            const SizedBox(width: 12),
+                            IconButton.filledTonal(
+                              tooltip: added
+                                  ? (isZh
+                                        ? '从词汇书移除'
+                                        : 'Remove from Vocabulary Book')
+                                  : (isZh
+                                        ? '添加到词汇书'
+                                        : 'Add to Vocabulary Book'),
+                              onPressed: coreLoading
+                                  ? null
+                                  : onToggleVocabulary,
+                              icon: AnimatedSwitcher(
+                                duration:
+                                    MediaQuery.disableAnimationsOf(context)
+                                    ? const Duration(milliseconds: 100)
+                                    : const Duration(milliseconds: 180),
+                                switchInCurve: const Cubic(.22, 1, .36, 1),
+                                transitionBuilder: (child, animation) {
+                                  final fade = FadeTransition(
+                                    opacity: animation,
+                                    child: child,
+                                  );
+                                  if (MediaQuery.disableAnimationsOf(context)) {
+                                    return fade;
+                                  }
+                                  return ScaleTransition(
+                                    scale: Tween<double>(begin: .92, end: 1)
+                                        .animate(
+                                          CurvedAnimation(
+                                            parent: animation,
+                                            curve: const Cubic(.23, 1, .32, 1),
+                                          ),
+                                        ),
+                                    child: fade,
+                                  );
+                                },
+                                child: Icon(
+                                  added
+                                      ? Icons.check_rounded
+                                      : Icons.add_rounded,
+                                  key: ValueKey(added),
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
-                      ),
+                        const SizedBox(height: 12),
+                        metrics,
+                      ],
+                    );
+                  },
+                ),
+                const SizedBox(height: 20),
+                if (coreLoading && entry.definition.isEmpty)
+                  _LoadingSection(
+                    title: isZh ? '核心释义' : 'Core definition',
+                    message: isZh
+                        ? '正在获取可靠词典结果…'
+                        : 'Loading a reliable dictionary result…',
+                  ),
+                for (final sense in senses)
+                  if (!coreLoading &&
+                      sense.definitions.any(
+                        (definition) => definition.definition.isNotEmpty,
+                      ))
+                    _section(
+                      context,
+                      title: sense.partOfSpeech.isEmpty
+                          ? (isZh ? '释义' : 'Definitions')
+                          : _partOfSpeechLabel(sense.partOfSpeech, isZh),
+                      children: [
+                        for (final definition in sense.definitions)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(definition.definition),
+                                if (definition.definitionZh.isNotEmpty)
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 3),
+                                    child: Text(
+                                      definition.definitionZh,
+                                      style: TextStyle(
+                                        color: theme.colorScheme.primary,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                      ],
+                    ),
+                if (detailsLoading && detailsStage < 1)
+                  _LoadingSection(
+                    key: const ValueKey('translations-loading'),
+                    title: isZh ? '完整中文释义' : 'Chinese translations',
+                    message: isZh ? '正在补充完整翻译…' : 'Adding translations…',
+                  ),
+                if (detailsLoading && detailsStage >= 4)
+                  _LoadingSection(
+                    key: const ValueKey('translations-background-loading'),
+                    title: isZh ? '中文翻译正在补齐' : 'Translations are loading',
+                    message: isZh
+                        ? '英文词典内容已可阅读，其余中文翻译会自动出现。'
+                        : 'English results are ready; Chinese translations will appear automatically.',
+                  ),
+                if (detailsLoading && detailsStage < 2)
+                  _LoadingSection(
+                    key: const ValueKey('relations-loading'),
+                    title: isZh ? '联想词与近反义词' : 'Related words',
+                    message: isZh
+                        ? '正在整理联想词、近义词和反义词…'
+                        : 'Finding related words, synonyms and antonyms…',
+                  ),
+                if (detailsStage >= 2 && entry.relatedWords.isNotEmpty)
+                  _section(
+                    context,
+                    title: isZh ? '联想词' : 'Related words',
+                    children: [
+                      for (final related in entry.relatedWords)
+                        _LinkedDefinition(
+                          word: related.word,
+                          meaning: related.meaning,
+                          meaningZh: related.meaningZh,
+                          onTap: onSearch,
+                          onDoubleTap: linkedDoubleTapEnabled
+                              ? onPreview
+                              : null,
+                        ),
                     ],
                   ),
-                  const SizedBox(height: 12),
-                  metrics,
-                ],
-              );
-            },
-          ),
-          const SizedBox(height: 20),
-          if (coreLoading && entry.definition.isEmpty)
-            _LoadingSection(
-              title: isZh ? '核心释义' : 'Core definition',
-              message: isZh
-                  ? '正在获取可靠词典结果…'
-                  : 'Loading a reliable dictionary result…',
-            ),
-          for (final sense in senses)
-            if (!coreLoading &&
-                sense.definitions.any(
-                  (definition) => definition.definition.isNotEmpty,
-                ))
-              _section(
-                context,
-                title: sense.partOfSpeech.isEmpty
-                    ? (isZh ? '释义' : 'Definitions')
-                    : _partOfSpeechLabel(sense.partOfSpeech, isZh),
-                children: [
-                  for (final definition in sense.definitions)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(definition.definition),
-                          if (definition.definitionZh.isNotEmpty)
-                            Padding(
-                              padding: const EdgeInsets.only(top: 3),
-                              child: Text(
-                                definition.definitionZh,
-                                style: TextStyle(
-                                  color: theme.colorScheme.primary,
-                                  fontWeight: FontWeight.w600,
-                                ),
+                if (detailsStage >= 2 && entry.synonyms.isNotEmpty)
+                  _WordLinks(
+                    title: isZh ? '近义词' : 'Synonyms',
+                    words: entry.synonyms,
+                    translation: entry.synonymsZh,
+                    translations: entry.synonymTranslations,
+                    onSearch: onSearch,
+                    onPreview: linkedDoubleTapEnabled ? onPreview : null,
+                  ),
+                if (detailsStage >= 2 && entry.antonyms.isNotEmpty)
+                  _WordLinks(
+                    title: isZh ? '反义词' : 'Antonyms',
+                    words: entry.antonyms,
+                    translation: entry.antonymsZh,
+                    translations: entry.antonymTranslations,
+                    onSearch: onSearch,
+                    onPreview: linkedDoubleTapEnabled ? onPreview : null,
+                  ),
+                if (detailsLoading && detailsStage < 3)
+                  _LoadingSection(
+                    key: const ValueKey('examples-loading'),
+                    title: isZh ? '例句' : 'Examples',
+                    message: isZh
+                        ? '正在查找并翻译例句…'
+                        : 'Finding and translating examples…',
+                  ),
+                if (detailsStage >= 3 && entry.examples.isNotEmpty)
+                  _section(
+                    context,
+                    title: isZh ? '例句' : 'Examples',
+                    children: [
+                      for (
+                        var index = 0;
+                        index < entry.examples.length;
+                        index++
+                      )
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 13),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _HighlightedText(
+                                text: entry.examples[index],
+                                term: searchedTerm,
                               ),
-                            ),
-                        ],
-                      ),
-                    ),
-                ],
-              ),
-          if (detailsLoading && detailsStage < 1)
-            _LoadingSection(
-              key: const ValueKey('translations-loading'),
-              title: isZh ? '完整中文释义' : 'Chinese translations',
-              message: isZh ? '正在补充完整翻译…' : 'Adding translations…',
-            ),
-          if (detailsLoading && detailsStage >= 4)
-            _LoadingSection(
-              key: const ValueKey('translations-background-loading'),
-              title: isZh ? '中文翻译正在补齐' : 'Translations are loading',
-              message: isZh
-                  ? '英文词典内容已可阅读，其余中文翻译会自动出现。'
-                  : 'English results are ready; Chinese translations will appear automatically.',
-            ),
-          if (detailsLoading && detailsStage < 2)
-            _LoadingSection(
-              key: const ValueKey('relations-loading'),
-              title: isZh ? '联想词与近反义词' : 'Related words',
-              message: isZh
-                  ? '正在整理联想词、近义词和反义词…'
-                  : 'Finding related words, synonyms and antonyms…',
-            ),
-          if (detailsStage >= 2 && entry.relatedWords.isNotEmpty)
-            _section(
-              context,
-              title: isZh ? '联想词' : 'Related words',
-              children: [
-                for (final related in entry.relatedWords)
-                  _LinkedDefinition(
-                    word: related.word,
-                    meaning: related.meaning,
-                    meaningZh: related.meaningZh,
-                    onTap: onSearch,
-                    onDoubleTap: onPreview,
-                  ),
-              ],
-            ),
-          if (detailsStage >= 2 && entry.synonyms.isNotEmpty)
-            _WordLinks(
-              title: isZh ? '近义词' : 'Synonyms',
-              words: entry.synonyms,
-              translation: entry.synonymsZh,
-              translations: entry.synonymTranslations,
-              onSearch: onSearch,
-              onPreview: onPreview,
-            ),
-          if (detailsStage >= 2 && entry.antonyms.isNotEmpty)
-            _WordLinks(
-              title: isZh ? '反义词' : 'Antonyms',
-              words: entry.antonyms,
-              translation: entry.antonymsZh,
-              translations: entry.antonymTranslations,
-              onSearch: onSearch,
-              onPreview: onPreview,
-            ),
-          if (detailsLoading && detailsStage < 3)
-            _LoadingSection(
-              key: const ValueKey('examples-loading'),
-              title: isZh ? '例句' : 'Examples',
-              message: isZh
-                  ? '正在查找并翻译例句…'
-                  : 'Finding and translating examples…',
-            ),
-          if (detailsStage >= 3 && entry.examples.isNotEmpty)
-            _section(
-              context,
-              title: isZh ? '例句' : 'Examples',
-              children: [
-                for (var index = 0; index < entry.examples.length; index++)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 13),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _HighlightedText(
-                          text: entry.examples[index],
-                          term: searchedTerm,
-                        ),
-                        if (index < entry.examplesZh.length)
-                          Text(
-                            entry.examplesZh[index],
-                            style: TextStyle(
-                              color: theme.colorScheme.onSurfaceVariant,
-                            ),
+                              if (index < entry.examplesZh.length)
+                                Text(
+                                  entry.examplesZh[index],
+                                  style: TextStyle(
+                                    color: theme.colorScheme.onSurfaceVariant,
+                                  ),
+                                ),
+                            ],
                           ),
-                      ],
-                    ),
-                  ),
-              ],
-            ),
-          if (detailsLoading && detailsStage < 4)
-            _LoadingSection(
-              key: const ValueKey('phrases-loading'),
-              title: isZh ? '短语与常用搭配' : 'Phrases & collocations',
-              message: isZh
-                  ? '正在补充常见短语和搭配…'
-                  : 'Adding common phrases and collocations…',
-            ),
-          if (detailsStage >= 4 && entry.phrases.isNotEmpty)
-            _section(
-              context,
-              title: isZh ? '短语与常用搭配' : 'Phrases & collocations',
-              children: [
-                for (final phrase in entry.phrases)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 13),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _HighlightedText(
-                          text: phrase.phrase,
-                          term: searchedTerm,
                         ),
-                        if (phrase.meaning.isNotEmpty) Text(phrase.meaning),
-                        if (phrase.meaningZh.isNotEmpty)
-                          Text(
-                            phrase.meaningZh,
-                            style: TextStyle(
-                              color: theme.colorScheme.onSurfaceVariant,
-                            ),
+                    ],
+                  ),
+                if (detailsLoading && detailsStage < 4)
+                  _LoadingSection(
+                    key: const ValueKey('phrases-loading'),
+                    title: isZh ? '短语与常用搭配' : 'Phrases & collocations',
+                    message: isZh
+                        ? '正在补充常见短语和搭配…'
+                        : 'Adding common phrases and collocations…',
+                  ),
+                if (detailsStage >= 4 && entry.phrases.isNotEmpty)
+                  _section(
+                    context,
+                    title: isZh ? '短语与常用搭配' : 'Phrases & collocations',
+                    children: [
+                      for (final phrase in entry.phrases)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 13),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _HighlightedText(
+                                text: phrase.phrase,
+                                term: searchedTerm,
+                              ),
+                              if (phrase.meaning.isNotEmpty)
+                                Text(phrase.meaning),
+                              if (phrase.meaningZh.isNotEmpty)
+                                Text(
+                                  phrase.meaningZh,
+                                  style: TextStyle(
+                                    color: theme.colorScheme.onSurfaceVariant,
+                                  ),
+                                ),
+                            ],
                           ),
-                      ],
-                    ),
+                        ),
+                    ],
                   ),
               ],
             ),
+          ),
         ],
       ),
     );
@@ -1251,14 +1302,14 @@ class _LinkedDefinition extends StatelessWidget {
     required this.meaning,
     required this.meaningZh,
     required this.onTap,
-    required this.onDoubleTap,
+    this.onDoubleTap,
   });
 
   final String word;
   final String meaning;
   final String meaningZh;
   final ValueChanged<String> onTap;
-  final ValueChanged<String> onDoubleTap;
+  final ValueChanged<String>? onDoubleTap;
 
   @override
   Widget build(BuildContext context) => Padding(
@@ -1268,7 +1319,7 @@ class _LinkedDefinition extends StatelessWidget {
       children: [
         InkWell(
           onTap: () => onTap(word),
-          onDoubleTap: () => onDoubleTap(word),
+          onDoubleTap: onDoubleTap == null ? null : () => onDoubleTap!(word),
           child: Text(
             word,
             style: TextStyle(
@@ -1299,7 +1350,7 @@ class _WordLinks extends StatelessWidget {
     required this.translation,
     required this.translations,
     required this.onSearch,
-    required this.onPreview,
+    this.onPreview,
   });
 
   final String title;
@@ -1307,7 +1358,7 @@ class _WordLinks extends StatelessWidget {
   final String translation;
   final Map<String, String> translations;
   final ValueChanged<String> onSearch;
-  final ValueChanged<String> onPreview;
+  final ValueChanged<String>? onPreview;
 
   @override
   Widget build(BuildContext context) => Padding(
@@ -1333,7 +1384,9 @@ class _WordLinks extends StatelessWidget {
                 children: [
                   InkWell(
                     onTap: () => onSearch(word),
-                    onDoubleTap: () => onPreview(word),
+                    onDoubleTap: onPreview == null
+                        ? null
+                        : () => onPreview!(word),
                     child: Text(
                       word,
                       style: TextStyle(
@@ -1464,6 +1517,7 @@ class _WordPreviewSheet extends StatefulWidget {
 
 class _WordPreviewSheetState extends State<_WordPreviewSheet> {
   final _termStack = <String>[];
+  final _sheetController = DraggableScrollableController();
   late String _term = widget.term;
   WordEntry? _entry;
   String? _error;
@@ -1474,6 +1528,11 @@ class _WordPreviewSheetState extends State<_WordPreviewSheet> {
   bool? _addedOverride;
   int _loadRevision = 0;
   double _lastLoggedExtent = -1;
+  double _previousExtent = .56;
+  double _extentVelocity = 0;
+  int _previousExtentMicros = 0;
+  bool _sheetSnapping = false;
+  bool _reverseContentTransition = false;
 
   @override
   void initState() {
@@ -1490,11 +1549,18 @@ class _WordPreviewSheetState extends State<_WordPreviewSheet> {
     }
   }
 
-  void _beginLoad(String rawTerm) {
+  @override
+  void dispose() {
+    _sheetController.dispose();
+    super.dispose();
+  }
+
+  void _beginLoad(String rawTerm, {bool reverse = false}) {
     final term = rawTerm.trim().toLowerCase();
     final revision = ++_loadRevision;
     final stopwatch = Stopwatch()..start();
     setState(() {
+      _reverseContentTransition = reverse;
       _term = term;
       _entry = _placeholderWordEntry(term);
       _error = null;
@@ -1656,7 +1722,60 @@ class _WordPreviewSheetState extends State<_WordPreviewSheet> {
       'ui.word_sheet.back',
       data: {'from': _term, 'to': previous, 'depth': _termStack.length},
     );
-    _beginLoad(previous);
+    _beginLoad(previous, reverse: true);
+  }
+
+  void _trackSheetExtent(DraggableScrollableNotification notification) {
+    final now = DateTime.now().microsecondsSinceEpoch;
+    if (_previousExtentMicros != 0) {
+      final elapsedSeconds = (now - _previousExtentMicros) / 1000000;
+      if (elapsedSeconds > 0 && elapsedSeconds < .12) {
+        final instantVelocity =
+            (notification.extent - _previousExtent) / elapsedSeconds;
+        _extentVelocity = (_extentVelocity * .35) + (instantVelocity * .65);
+      }
+    }
+    _previousExtent = notification.extent;
+    _previousExtentMicros = now;
+  }
+
+  Future<void> _settleSheet() async {
+    if (_sheetSnapping || !_sheetController.isAttached || !mounted) return;
+    final current = _sheetController.size;
+    final projected = (current + (_extentVelocity * .11)).clamp(.26, .96);
+    const snapPoints = <double>[.26, .56, .96];
+    var target = snapPoints.first;
+    for (final candidate in snapPoints.skip(1)) {
+      if ((candidate - projected).abs() < (target - projected).abs()) {
+        target = candidate;
+      }
+    }
+    if (current > .88) target = .96;
+    if (current >= .36 && target == .26) target = .56;
+    if ((current - target).abs() < .006) {
+      _extentVelocity = 0;
+      return;
+    }
+    _sheetSnapping = true;
+    final distance = (target - current).abs();
+    final milliseconds = (145 + distance * 180).round().clamp(150, 235);
+    try {
+      if (MediaQuery.disableAnimationsOf(context)) {
+        _sheetController.jumpTo(target);
+      } else {
+        await _sheetController.animateTo(
+          target,
+          duration: Duration(milliseconds: milliseconds),
+          curve: const Cubic(.32, .72, 0, 1),
+        );
+      }
+      if (target == .26 && mounted) Navigator.of(context).pop();
+    } catch (_) {
+      // A new drag intentionally interrupts the previous spring-like settle.
+    } finally {
+      _extentVelocity = 0;
+      _sheetSnapping = false;
+    }
   }
 
   bool _isAdded(WordEntry entry) =>
@@ -1675,6 +1794,7 @@ class _WordPreviewSheetState extends State<_WordPreviewSheet> {
       },
       child: NotificationListener<DraggableScrollableNotification>(
         onNotification: (notification) {
+          _trackSheetExtent(notification);
           if ((_lastLoggedExtent - notification.extent).abs() >= .08 ||
               notification.extent == notification.minExtent ||
               notification.extent == notification.maxExtent) {
@@ -1691,88 +1811,93 @@ class _WordPreviewSheetState extends State<_WordPreviewSheet> {
           }
           return false;
         },
-        child: DraggableScrollableSheet(
-          key: const Key('lexora-word-sheet'),
-          initialChildSize: .56,
-          minChildSize: .26,
-          maxChildSize: .96,
-          snap: true,
-          snapAnimationDuration: MediaQuery.disableAnimationsOf(context)
-              ? Duration.zero
-              : const Duration(milliseconds: 180),
-          snapSizes: const [.56, .96],
-          shouldCloseOnMinExtent: true,
-          expand: false,
-          builder: (context, scrollController) => Align(
-            alignment: Alignment.bottomCenter,
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 860),
-              child: Material(
-                color: theme.colorScheme.surface,
-                elevation: 16,
-                shadowColor: Colors.black.withValues(alpha: .24),
-                clipBehavior: Clip.antiAlias,
-                borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(28),
-                ),
-                child: Stack(
-                  children: [
-                    if (_error != null)
-                      CustomScrollView(
-                        controller: scrollController,
-                        slivers: [
-                          SliverFillRemaining(
-                            child: _SearchError(message: _error!),
-                          ),
-                        ],
-                      )
-                    else
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(22, 16, 22, 0),
-                        child: _ResultView(
-                          entry: _entry ?? _placeholderWordEntry(_term),
-                          searchedTerm: _term,
-                          isZh: widget.isZh,
-                          added: _entry == null ? false : _isAdded(_entry!),
-                          coreLoading: _coreLoading,
-                          detailsLoading: _detailsLoading,
-                          detailsStage: _detailsStage,
-                          onToggleVocabulary: () {
-                            final entry = _entry;
-                            if (entry == null) return;
-                            widget.onToggleVocabulary(entry);
-                            setState(() => _addedOverride = !_isAdded(entry));
-                          },
-                          onSearch: _openLinkedWord,
-                          onPreview: _openLinkedWord,
-                          scrollController: scrollController,
-                        ),
-                      ),
-                    Align(
-                      alignment: Alignment.topCenter,
-                      child: IgnorePointer(
-                        child: Container(
-                          width: 42,
-                          height: 5,
-                          margin: const EdgeInsets.only(top: 8),
-                          decoration: BoxDecoration(
-                            color: theme.colorScheme.outlineVariant,
-                            borderRadius: BorderRadius.circular(999),
+        child: NotificationListener<ScrollEndNotification>(
+          onNotification: (_) {
+            unawaited(_settleSheet());
+            return false;
+          },
+          child: DraggableScrollableSheet(
+            key: const Key('lexora-word-sheet'),
+            controller: _sheetController,
+            initialChildSize: .56,
+            minChildSize: .26,
+            maxChildSize: .96,
+            snap: false,
+            shouldCloseOnMinExtent: false,
+            expand: false,
+            builder: (context, scrollController) => Align(
+              alignment: Alignment.bottomCenter,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 860),
+                child: Material(
+                  color: theme.colorScheme.surface,
+                  elevation: 16,
+                  shadowColor: Colors.black.withValues(alpha: .24),
+                  clipBehavior: Clip.antiAlias,
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(28),
+                  ),
+                  child: Stack(
+                    children: [
+                      if (_error != null)
+                        CustomScrollView(
+                          controller: scrollController,
+                          slivers: [
+                            SliverFillRemaining(
+                              child: _SearchError(message: _error!),
+                            ),
+                          ],
+                        )
+                      else
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(22, 16, 22, 0),
+                          child: _ResultView(
+                            entry: _entry ?? _placeholderWordEntry(_term),
+                            searchedTerm: _term,
+                            isZh: widget.isZh,
+                            added: _entry == null ? false : _isAdded(_entry!),
+                            coreLoading: _coreLoading,
+                            detailsLoading: _detailsLoading,
+                            detailsStage: _detailsStage,
+                            onToggleVocabulary: () {
+                              final entry = _entry;
+                              if (entry == null) return;
+                              widget.onToggleVocabulary(entry);
+                              setState(() => _addedOverride = !_isAdded(entry));
+                            },
+                            onSearch: _openLinkedWord,
+                            onPreview: _openLinkedWord,
+                            scrollController: scrollController,
+                            reverseTransition: _reverseContentTransition,
+                            linkedDoubleTapEnabled: false,
                           ),
                         ),
-                      ),
-                    ),
-                    if (_termStack.isNotEmpty)
-                      Positioned(
-                        left: 12,
-                        top: 8,
-                        child: IconButton.filledTonal(
-                          tooltip: widget.isZh ? '返回上一个单词' : 'Previous word',
-                          onPressed: _goBack,
-                          icon: const Icon(Icons.arrow_back_rounded),
+                      Align(
+                        alignment: Alignment.topCenter,
+                        child: IgnorePointer(
+                          child: Container(
+                            width: 42,
+                            height: 5,
+                            margin: const EdgeInsets.only(top: 8),
+                            decoration: BoxDecoration(
+                              color: theme.colorScheme.outlineVariant,
+                              borderRadius: BorderRadius.circular(999),
+                            ),
+                          ),
                         ),
                       ),
-                  ],
+                      if (_termStack.isNotEmpty)
+                        Positioned(
+                          left: 12,
+                          top: 8,
+                          child: IconButton.filledTonal(
+                            tooltip: widget.isZh ? '返回上一个单词' : 'Previous word',
+                            onPressed: _goBack,
+                            icon: const Icon(Icons.arrow_back_rounded),
+                          ),
+                        ),
+                    ],
+                  ),
                 ),
               ),
             ),

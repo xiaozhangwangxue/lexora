@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:fluent_ui/fluent_ui.dart' as fluent;
 import 'package:lexora/app_version.dart';
 import 'package:lexora/l10n/app_localizations.dart';
 import 'package:lexora/main.dart';
@@ -245,6 +246,40 @@ void main() {
     FocusManager.instance.primaryFocus?.unfocus();
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump();
+  });
+
+  testWidgets('Windows uses the Fluent navigation and Chinese font fallback', (
+    tester,
+  ) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.windows;
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(1100, 760);
+    addTearDown(() {
+      debugDefaultTargetPlatformOverride = null;
+      tester.view.resetDevicePixelRatio();
+      tester.view.resetPhysicalSize();
+    });
+    SharedPreferences.setMockInitialValues({
+      'lexora.onboarding.completed.v1': true,
+      'lexora.release-notes.seen.$appVersion': true,
+    });
+
+    await tester.pumpWidget(const LexoraApp(locale: Locale('zh', 'CN')));
+    await pumpUi(tester);
+
+    final navigation = find.byKey(const Key('windows-winui-navigation'));
+    expect(navigation, findsOneWidget);
+    expect(find.byType(fluent.NavigationView), findsOneWidget);
+    final fluentTheme = fluent.FluentTheme.of(tester.element(navigation));
+    expect(fluentTheme.typography.body?.fontFamily, 'Segoe UI Variable');
+    expect(
+      fluentTheme.typography.body?.fontFamilyFallback,
+      contains('Microsoft YaHei UI'),
+    );
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+    debugDefaultTargetPlatformOverride = null;
   });
 
   testWidgets('macOS first-run layout has no phantom native sidebar', (
@@ -548,6 +583,11 @@ void main() {
 
     final sheet = find.byKey(const Key('lexora-word-sheet'));
     expect(sheet, findsOneWidget);
+    final draggable = tester.widget<DraggableScrollableSheet>(
+      find.byType(DraggableScrollableSheet),
+    );
+    expect(draggable.snap, isFalse);
+    expect(draggable.controller, isNotNull);
     final initialHeight = tester.getSize(sheet).height;
     await tester.drag(sheet, const Offset(0, -360));
     await tester.pumpAndSettle();
@@ -559,8 +599,13 @@ void main() {
     );
     expect(termLink, findsOneWidget);
     await tester.tap(termLink);
-    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pump(const Duration(milliseconds: 70));
+    expect(find.byKey(const ValueKey('result-word')), findsOneWidget);
+    expect(find.byKey(const ValueKey('result-term')), findsOneWidget);
+    await tester.pump(const Duration(milliseconds: 260));
     await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('result-word')), findsNothing);
+    expect(find.byKey(const ValueKey('result-term')), findsOneWidget);
     expect(find.byTooltip('返回上一个单词'), findsOneWidget);
     await tester.binding.handlePopRoute();
     await tester.pumpAndSettle();

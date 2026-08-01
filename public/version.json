@@ -1,32 +1,43 @@
 {
-  "version": "4.0.3",
-  "build": 28,
+  "version": "4.0.4",
+  "build": 29,
   "releaseNotes": {
     "zh": [
-      "修复设置页按压遮罩的方形边缘，圆角现在与卡片边界一致。",
-      "加快单词预览弹窗的打开、展开与关闭动画，拖拽反馈更加跟手。",
-      "修复联想面板左右边缘不一致和窄屏越界的问题。"
+      "单词预览弹窗内切换关联词时加入轻快自然的非线性过渡，不再生硬换页。",
+      "弹窗会根据拖拽距离与速度自然吸附到合适高度，展开和收起更加跟手。",
+      "Windows 端采用专用 Fluent/WinUI 风格导航，并统一中英文字体与字重。"
     ],
     "en": [
-      "Fixed square press overlays in Settings so their corners now match the surrounding cards.",
-      "Sped up word-preview opening, expansion, and dismissal for more direct drag feedback.",
-      "Fixed uneven suggestion-panel edges and narrow-screen overflow."
+      "Added a lively nonlinear transition when following linked words inside the preview sheet.",
+      "The preview sheet now settles naturally from drag distance and velocity.",
+      "Windows now uses a dedicated Fluent/WinUI-style navigation layer with consistent bilingual typography."
     ]
   },
   "inAppReleaseNotes": {
     "zh": [
-      "修复设置页按压遮罩的方形边缘，圆角现在与卡片边界一致。",
-      "加快单词预览弹窗的打开、展开与关闭动画，拖拽反馈更加跟手。",
-      "修复联想面板左右边缘不一致和窄屏越界的问题。"
+      "单词预览弹窗内切换关联词时加入轻快自然的非线性过渡，不再生硬换页。",
+      "弹窗会根据拖拽距离与速度自然吸附到合适高度，展开和收起更加跟手。",
+      "Windows 端采用专用 Fluent/WinUI 风格导航，并统一中英文字体与字重。"
     ],
     "en": [
-      "Fixed square press overlays in Settings so their corners now match the surrounding cards.",
-      "Sped up word-preview opening, expansion, and dismissal for more direct drag feedback.",
-      "Fixed uneven suggestion-panel edges and narrow-screen overflow."
+      "Added a lively nonlinear transition when following linked words inside the preview sheet.",
+      "The preview sheet now settles naturally from drag distance and velocity.",
+      "Windows now uses a dedicated Fluent/WinUI-style navigation layer with consistent bilingual typography."
     ]
   },
   "releaseNoteSections": {
     "zh": [
+      {
+        "title": "4.0.4 弹窗动效与 Windows 界面",
+        "items": [
+          "点击单词预览弹窗内的关联词会立即响应，并使用 220ms 的横向共享轴非线性过渡自然切换内容。",
+          "弹窗展开和收起会综合拖拽距离与释放速度预测目标高度，再以 150–235ms 的非线性曲线吸附。",
+          "移除弹窗内关联词单击时无意义的双击等待，让连续查词更直接。",
+          "Windows 宽屏界面改为专用 Fluent/WinUI 风格导航，使用官方 Fluent 图标和更紧凑的 Windows 11 布局。",
+          "Windows 字体统一使用 Segoe UI Variable，并以 Microsoft YaHei UI 作为中文回退，解决字体粗细不一的问题。",
+          "继续支持系统的减少动态效果设置，并新增 Windows 导航、中文字体回退和弹窗过渡测试。"
+        ]
+      },
       {
         "title": "4.0.3 界面与弹窗动效优化",
         "items": [
@@ -132,6 +143,17 @@
     ],
     "en": [
       {
+        "title": "4.0.4 preview motion and Windows interface",
+        "items": [
+          "Linked words inside the preview sheet respond immediately and use a 220ms nonlinear shared-axis transition.",
+          "Sheet expansion and dismissal project a destination from drag distance and release velocity, then settle over 150–235ms.",
+          "Removed the unnecessary double-tap delay from linked words inside the preview sheet.",
+          "Wide Windows layouts now use dedicated Fluent/WinUI-style navigation with official Fluent icons and Windows 11 spacing.",
+          "Windows typography now uses Segoe UI Variable with Microsoft YaHei UI fallback for consistent bilingual weight and shape.",
+          "Reduced-motion remains supported, with new tests for Windows navigation, Chinese font fallback, and sheet transitions."
+        ]
+      },
+      {
         "title": "4.0.3 interface and sheet motion polish",
         "items": [
           "Quick-link press overlays in Settings are clipped to the same rounded geometry as their cards.",
@@ -236,52 +258,52 @@
     ]
   },
   "downloads": {
-    "android": "/downloads/lexora-android-v4.0.3.apk",
-    "macos": "/downloads/lexora-macos-v4.0.3.dmg",
-    "windows": "/downloads/lexora-windows-v4.0.3-setup.exe",
-    "linux": "/downloads/lexora-linux-v4.0.3.tar.gz"
+    "android": "/downloads/lexora-android-v4.0.4.apk",
+    "macos": "/downloads/lexora-macos-v4.0.4.dmg",
+    "windows": "/downloads/lexora-windows-v4.0.4-setup.exe",
+    "linux": "/downloads/lexora-linux-v4.0.4.tar.gz"
   },
   "verifiedDownloads": {
     "android": {
-      "filename": "lexora-android-v4.0.3.apk",
-      "url": "/updates/lexora-android-v4.0.3.apk",
+      "filename": "lexora-android-v4.0.4.apk",
+      "url": "/updates/lexora-android-v4.0.4.apk",
       "sources": [
-        "/updates/lexora-android-v4.0.3.apk",
-        "https://lexora-official.xiaozhangwangxue.workers.dev/updates/lexora-android-v4.0.3.apk",
-        "https://github.com/xiaozhangwangxue/lexora/releases/download/v4.0.3/lexora-android-v4.0.3.apk"
+        "/updates/lexora-android-v4.0.4.apk",
+        "https://lexora-official.xiaozhangwangxue.workers.dev/updates/lexora-android-v4.0.4.apk",
+        "https://github.com/xiaozhangwangxue/lexora/releases/download/v4.0.4/lexora-android-v4.0.4.apk"
       ],
       "sha256": "c508b78e4fa303ed25632fdd160e9da4c6632d7ec9466a48c38acaac18ab0dce",
       "size": 105438645
     },
     "macos": {
-      "filename": "lexora-macos-v4.0.3.dmg",
-      "url": "/updates/lexora-macos-v4.0.3.dmg",
+      "filename": "lexora-macos-v4.0.4.dmg",
+      "url": "/updates/lexora-macos-v4.0.4.dmg",
       "sources": [
-        "/updates/lexora-macos-v4.0.3.dmg",
-        "https://lexora-official.xiaozhangwangxue.workers.dev/updates/lexora-macos-v4.0.3.dmg",
-        "https://github.com/xiaozhangwangxue/lexora/releases/download/v4.0.3/lexora-macos-v4.0.3.dmg"
+        "/updates/lexora-macos-v4.0.4.dmg",
+        "https://lexora-official.xiaozhangwangxue.workers.dev/updates/lexora-macos-v4.0.4.dmg",
+        "https://github.com/xiaozhangwangxue/lexora/releases/download/v4.0.4/lexora-macos-v4.0.4.dmg"
       ],
       "sha256": "4bceb77c5c58298f8c95a7fd2843b809fc750d04820d5ef26210b66b0987d18b",
       "size": 49200622
     },
     "windows": {
-      "filename": "lexora-windows-v4.0.3-setup.exe",
-      "url": "/updates/lexora-windows-v4.0.3-setup.exe",
+      "filename": "lexora-windows-v4.0.4-setup.exe",
+      "url": "/updates/lexora-windows-v4.0.4-setup.exe",
       "sources": [
-        "/updates/lexora-windows-v4.0.3-setup.exe",
-        "https://lexora-official.xiaozhangwangxue.workers.dev/updates/lexora-windows-v4.0.3-setup.exe",
-        "https://github.com/xiaozhangwangxue/lexora/releases/download/v4.0.3/lexora-windows-v4.0.3-setup.exe"
+        "/updates/lexora-windows-v4.0.4-setup.exe",
+        "https://lexora-official.xiaozhangwangxue.workers.dev/updates/lexora-windows-v4.0.4-setup.exe",
+        "https://github.com/xiaozhangwangxue/lexora/releases/download/v4.0.4/lexora-windows-v4.0.4-setup.exe"
       ],
       "sha256": "b467bf9888f33a94dd84c5c085411e626b5078c80f350e6bf1f3737e339d5592",
       "size": 28060118
     },
     "linux": {
-      "filename": "lexora-linux-v4.0.3.tar.gz",
-      "url": "/updates/lexora-linux-v4.0.3.tar.gz",
+      "filename": "lexora-linux-v4.0.4.tar.gz",
+      "url": "/updates/lexora-linux-v4.0.4.tar.gz",
       "sources": [
-        "/updates/lexora-linux-v4.0.3.tar.gz",
-        "https://lexora-official.xiaozhangwangxue.workers.dev/updates/lexora-linux-v4.0.3.tar.gz",
-        "https://github.com/xiaozhangwangxue/lexora/releases/download/v4.0.3/lexora-linux-v4.0.3.tar.gz"
+        "/updates/lexora-linux-v4.0.4.tar.gz",
+        "https://lexora-official.xiaozhangwangxue.workers.dev/updates/lexora-linux-v4.0.4.tar.gz",
+        "https://github.com/xiaozhangwangxue/lexora/releases/download/v4.0.4/lexora-linux-v4.0.4.tar.gz"
       ],
       "sha256": "76d5ea88ce2a20648871410d273f44f1bd6f526f3ee6b923167981fa791c7070",
       "size": 32496052

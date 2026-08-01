@@ -304,9 +304,7 @@ void main() {
               }),
             ),
             200,
-            headers: const {
-              'content-type': 'application/json; charset=utf-8',
-            },
+            headers: const {'content-type': 'application/json; charset=utf-8'},
           );
         }
         await Future<void>.delayed(const Duration(seconds: 2));
@@ -329,60 +327,63 @@ void main() {
     },
   );
 
-  test('slow acceleration server never delays a faster direct lookup', () async {
-    SharedPreferences.setMockInitialValues({});
-    final client = MockClient((request) async {
-      if (request.url.host == 'dict.12323456.xyz') {
-        await Future<void>.delayed(const Duration(seconds: 2));
+  test(
+    'slow acceleration server never delays a faster direct lookup',
+    () async {
+      SharedPreferences.setMockInitialValues({});
+      final client = MockClient((request) async {
+        if (request.url.host == 'dict.12323456.xyz') {
+          await Future<void>.delayed(const Duration(seconds: 2));
+          return http.Response('not found', 404);
+        }
+        if (request.url.host == 'api.dictionaryapi.dev') {
+          return http.Response(
+            jsonEncode([
+              {
+                'word': 'word',
+                'meanings': [
+                  {
+                    'partOfSpeech': 'noun',
+                    'definitions': [
+                      {'definition': 'A unit of language.'},
+                    ],
+                  },
+                ],
+              },
+            ]),
+            200,
+          );
+        }
+        if (request.url.host == 'api.datamuse.com') {
+          return http.Response(
+            request.url.path == '/sug'
+                ? jsonEncode([
+                    {'word': 'word'},
+                  ])
+                : '[]',
+            200,
+          );
+        }
         return http.Response('not found', 404);
-      }
-      if (request.url.host == 'api.dictionaryapi.dev') {
-        return http.Response(
-          jsonEncode([
-            {
-              'word': 'word',
-              'meanings': [
-                {
-                  'partOfSpeech': 'noun',
-                  'definitions': [
-                    {'definition': 'A unit of language.'},
-                  ],
-                },
-              ],
-            },
-          ]),
-          200,
-        );
-      }
-      if (request.url.host == 'api.datamuse.com') {
-        return http.Response(
-          request.url.path == '/sug'
-              ? jsonEncode([
-                  {'word': 'word'},
-                ])
-              : '[]',
-          200,
-        );
-      }
-      return http.Response('not found', 404);
-    });
-    final service = WordService(
-      client: client,
-      serverAcceleration: const _StaticServerAcceleration(true),
-    );
+      });
+      final service = WordService(
+        client: client,
+        serverAcceleration: const _StaticServerAcceleration(true),
+      );
 
-    final lookupStopwatch = Stopwatch()..start();
-    final entry = await service.lookup('word', exampleCount: 0);
-    lookupStopwatch.stop();
-    final suggestionStopwatch = Stopwatch()..start();
-    final suggestions = await service.suggest('wor');
-    suggestionStopwatch.stop();
+      final lookupStopwatch = Stopwatch()..start();
+      final entry = await service.lookup('word', exampleCount: 0);
+      lookupStopwatch.stop();
+      final suggestionStopwatch = Stopwatch()..start();
+      final suggestions = await service.suggest('wor');
+      suggestionStopwatch.stop();
 
-    expect(entry.definition, 'A unit of language.');
-    expect(lookupStopwatch.elapsedMilliseconds, lessThan(1000));
-    expect(suggestions, ['word']);
-    expect(suggestionStopwatch.elapsedMilliseconds, lessThan(1000));
-  });
+      expect(entry.definition, 'A unit of language.');
+      expect(lookupStopwatch.elapsedMilliseconds, lessThan(1000));
+      expect(suggestions, ['word']);
+      expect(suggestionStopwatch.elapsedMilliseconds, lessThan(1000));
+    },
+  );
 
   test(
     'open lexicon normalizes legacy phonetic characters for core search',

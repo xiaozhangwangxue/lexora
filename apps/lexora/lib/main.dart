@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:ui';
 
+import 'package:fluent_ui/fluent_ui.dart' as fluent;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
@@ -74,14 +75,25 @@ class LexoraApp extends StatelessWidget {
       // desktop window is using the light Lexora surface. Keep the Windows
       // shell legible and consistent with its native light desktop chrome.
       themeMode: isWindows ? ThemeMode.light : ThemeMode.system,
-      theme: _theme(seed, Brightness.light, transparent: isApple),
-      darkTheme: _theme(seed, Brightness.dark, transparent: isApple),
+      theme: _theme(
+        seed,
+        Brightness.light,
+        transparent: isApple,
+        windows: isWindows,
+      ),
+      darkTheme: _theme(
+        seed,
+        Brightness.dark,
+        transparent: isApple,
+        windows: isWindows,
+      ),
       supportedLocales: const [Locale('en'), Locale('zh')],
       localizationsDelegates: const [
         AppLocalizationsDelegate(),
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
+        fluent.FluentLocalizations.delegate,
       ],
       navigatorObservers: [_DeveloperNavigationObserver()],
       builder: (context, child) =>
@@ -94,21 +106,53 @@ class LexoraApp extends StatelessWidget {
     Color seed,
     Brightness brightness, {
     required bool transparent,
+    required bool windows,
   }) {
     final scheme = ColorScheme.fromSeed(
       seedColor: seed,
       brightness: brightness,
     );
-    final radius = transparent ? 12.0 : 24.0;
+    final radius = transparent
+        ? 12.0
+        : windows
+        ? 8.0
+        : 24.0;
+    final windowsTextTheme =
+        (brightness == Brightness.light
+                ? Typography.material2021(
+                    platform: TargetPlatform.windows,
+                  ).black
+                : Typography.material2021(
+                    platform: TargetPlatform.windows,
+                  ).white)
+            .apply(
+              fontFamily: 'Segoe UI Variable',
+              fontFamilyFallback: const [
+                'Microsoft YaHei UI',
+                'Microsoft YaHei',
+                'Segoe UI',
+                'Arial',
+              ],
+            );
     return ThemeData(
       useMaterial3: true,
       colorScheme: scheme,
-      fontFamily: transparent ? 'SF Pro Text' : null,
+      fontFamily: transparent
+          ? 'SF Pro Text'
+          : windows
+          ? 'Segoe UI Variable'
+          : null,
+      textTheme: windows ? windowsTextTheme : null,
+      primaryTextTheme: windows ? windowsTextTheme : null,
       visualDensity: transparent
+          ? VisualDensity.compact
+          : windows
           ? VisualDensity.compact
           : VisualDensity.standard,
       scaffoldBackgroundColor: transparent
           ? Colors.transparent
+          : windows
+          ? const Color(0xFFF3F3F3)
           : brightness == Brightness.light
           ? const Color(0xFFF7F8FC)
           : const Color(0xFF101116),
@@ -118,6 +162,8 @@ class LexoraApp extends StatelessWidget {
             ? (brightness == Brightness.light
                   ? Colors.white.withValues(alpha: .72)
                   : const Color(0xFF1A1C23).withValues(alpha: .76))
+            : windows
+            ? const Color(0xFFFFFFFF)
             : brightness == Brightness.light
             ? Colors.white
             : const Color(0xFF1A1C23),
@@ -145,21 +191,44 @@ class LexoraApp extends StatelessWidget {
             ? (brightness == Brightness.light
                   ? Colors.white.withValues(alpha: .68)
                   : const Color(0xFF1A1C23).withValues(alpha: .72))
+            : windows
+            ? const Color(0xFFFBFBFB)
             : brightness == Brightness.light
             ? Colors.white
             : const Color(0xFF1A1C23),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(transparent ? 12 : 20),
+          borderRadius: BorderRadius.circular(
+            transparent
+                ? 12
+                : windows
+                ? 8
+                : 20,
+          ),
           side: BorderSide(color: scheme.outlineVariant.withValues(alpha: .55)),
         ),
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(transparent ? 10 : 20),
+            borderRadius: BorderRadius.circular(
+              transparent
+                  ? 10
+                  : windows
+                  ? 6
+                  : 20,
+            ),
           ),
         ),
       ),
+      pageTransitionsTheme: windows
+          ? const PageTransitionsTheme(
+              builders: {
+                TargetPlatform.windows: FadeForwardsPageTransitionsBuilder(
+                  backgroundColor: Color(0xFFF3F3F3),
+                ),
+              },
+            )
+          : null,
     );
   }
 }
