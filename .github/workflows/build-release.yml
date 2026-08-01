@@ -244,20 +244,7 @@ jobs:
             exit 1
           fi
           node tool/finalize_update_manifest.mjs public/version.json update-version.json lexora-*
-          for file in lexora-*; do
-            curl --fail --show-error --silent --retry 5 --retry-all-errors \
-              --request PUT \
-              -H "X-Lexora-Upload-Token: $DOWNLOAD_UPLOAD_TOKEN" \
-              -H "Content-Type: application/octet-stream" \
-              --data-binary "@$file" \
-              "https://lexora-official.xiaozhangwangxue.workers.dev/api/admin/downloads/$file"
-          done
-          curl --fail --show-error --silent --retry 5 --retry-all-errors \
-            --request PUT \
-            -H "X-Lexora-Upload-Token: $DOWNLOAD_UPLOAD_TOKEN" \
-            -H "Content-Type: application/json" \
-            --data-binary "@update-version.json" \
-            "https://lexora-official.xiaozhangwangxue.workers.dev/api/admin/downloads/version.json"
+          node tool/upload_release_artifacts.mjs lexora-* update-version.json
       - name: Sync finalized checksums to the canonical manifest
         if: ${{ !contains(github.ref_name, '-beta') }}
         run: |

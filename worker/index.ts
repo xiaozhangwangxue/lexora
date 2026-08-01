@@ -31,6 +31,15 @@ const worker = {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
 
+    const authorizedUpload = () => {
+      const token = request.headers.get("x-lexora-upload-token")
+        ?? request.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
+      return Boolean(env.DOWNLOAD_UPLOAD_TOKEN && token === env.DOWNLOAD_UPLOAD_TOKEN);
+    };
+
+    const validDownloadKey = (key: string) =>
+      Boolean(key && !key.includes("/") && !key.includes(".."));
+
     const r2Response = async (key: string, contentDisposition = true) => {
       const object = await env.DOWNLOADS?.get(key);
       if (!object) return null;
@@ -57,17 +66,58 @@ const worker = {
       return new Response(object.body, { headers });
     };
 
+    if (url.pathname.startsWith("/api/admin/downloads-multipart/")) {
+      if (!authorizedUpload()) return new Response("Unauthorized", { status: 401 });
+      if (!env.DOWNLOADS) return new Response("Download storage is unavailable", { status: 503 });
+      const key = decodeURIComponent(
+        url.pathname.slice("/api/admin/downloads-multipart/".length),
+      );
+      if (!validDownloadKey(key)) return new Response("Invalid upload", { status: 400 });
+
+      const uploadId = url.searchParams.get("uploadId");
+      if (request.method === "POST" && !uploadId) {
+        const upload = await env.DOWNLOADS.createMultipartUpload(key, {
+          httpMetadata: {
+            contentType: request.headers.get("content-type") ?? "application/octet-stream",
+            contentDisposition: `attachment; filename="${key}"`,
+            cacheControl: "public, max-age=31536000, immutable",
+          },
+        });
+        return Response.json({ uploadId: upload.uploadId, key });
+      }
+      if (!uploadId) return new Response("Missing uploadId", { status: 400 });
+      const upload = env.DOWNLOADS.resumeMultipartUpload(key, uploadId);
+
+      if (request.method === "PUT" && request.body) {
+        const partNumber = Number(url.searchParams.get("partNumber"));
+        if (!Number.isInteger(partNumber) || partNumber < 1 || partNumber > 10000) {
+          return new Response("Invalid part number", { status: 400 });
+        }
+        const part = await upload.uploadPart(partNumber, request.body);
+        return Response.json(part);
+      }
+      if (request.method === "POST") {
+        const payload = await request.json() as { parts?: R2UploadedPart[] };
+        if (!Array.isArray(payload.parts) || payload.parts.length === 0) {
+          return new Response("Missing uploaded parts", { status: 400 });
+        }
+        const object = await upload.complete(payload.parts);
+        return Response.json({ ok: true, key, etag: object.httpEtag });
+      }
+      if (request.method === "DELETE") {
+        await upload.abort();
+        return Response.json({ ok: true, key, aborted: true });
+      }
+      return new Response("Unsupported multipart operation", { status: 405 });
+    }
+
     if (url.pathname.startsWith("/api/admin/downloads/") && request.method === "PUT") {
       // A dedicated header avoids Cloudflare Access interpreting a normal
       // Authorization bearer token before the request reaches this Worker.
-      const token = request.headers.get("x-lexora-upload-token")
-        ?? request.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
-      if (!env.DOWNLOAD_UPLOAD_TOKEN || token !== env.DOWNLOAD_UPLOAD_TOKEN) {
-        return new Response("Unauthorized", { status: 401 });
-      }
+      if (!authorizedUpload()) return new Response("Unauthorized", { status: 401 });
       if (!env.DOWNLOADS) return new Response("Download storage is unavailable", { status: 503 });
       const key = decodeURIComponent(url.pathname.slice("/api/admin/downloads/".length));
-      if (!key || key.includes("/") || key.includes("..") || !request.body) {
+      if (!validDownloadKey(key) || !request.body) {
         return new Response("Invalid upload", { status: 400 });
       }
       await env.DOWNLOADS.put(key, request.body, {
