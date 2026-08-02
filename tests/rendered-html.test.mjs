@@ -23,6 +23,8 @@ test("server-renders the finished Lexora landing page", async () => {
   assert.match(response.headers.get("content-type") ?? "", /^text\/html\b/i);
   const html = await response.text();
   assert.match(html, /<title>Lexora/);
+  assert.match(html, /免费个人英语词汇书生成器与英汉词典/);
+  assert.match(html, /SoftwareApplication/);
   assert.match(html, /每一次查词，都在写/);
   assert.match(html, /开始生成/);
   assert.match(html, /macOS/);
@@ -47,8 +49,38 @@ test("server-renders the finished Lexora landing page", async () => {
   assert.doesNotMatch(html, /supportInner/);
   assert.match(html, /拖动手柄调整顺序/);
   assert.match(html, /href="\/favicon\.png\?v=5"/);
+  assert.match(html, /href="\/guides"/);
   assert.doesNotMatch(html, /\[object%20Object\]/);
   assert.doesNotMatch(html, /codex-preview|react-loading-skeleton|Starter Project/);
+});
+
+test("server-renders searchable Chinese guide pages", async () => {
+  for (const [path, expected] of [
+    ["/guides", "英语单词整理与个人词汇书制作指南"],
+    ["/guides/personal-vocabulary-book", "如何制作真正适合自己的英语词汇书"],
+    ["/guides/import-word-list", "如何批量导入英语单词和短语"],
+    ["/guides/word-to-pdf", "如何把英语单词表制作成 PDF 词汇书"],
+  ]) {
+    const response = await render(path);
+    assert.equal(response.status, 200);
+    const html = await response.text();
+    assert.match(html, new RegExp(expected));
+    assert.match(html, /免费下载/);
+  }
+});
+
+test("publishes robots, sitemap, and web app manifest", async () => {
+  const robots = await render("/robots.txt");
+  assert.equal(robots.status, 200);
+  assert.match(await robots.text(), /sitemap\.xml/);
+
+  const sitemap = await render("/sitemap.xml");
+  assert.equal(sitemap.status, 200);
+  assert.match(await sitemap.text(), /guides\/word-to-pdf/);
+
+  const manifest = await render("/manifest.webmanifest");
+  assert.equal(manifest.status, 200);
+  assert.match(await manifest.text(), /个人英语词汇书/);
 });
 
 test("server-renders the bilingual donation page", async () => {
