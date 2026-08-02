@@ -9,6 +9,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { path: "/guides/personal-vocabulary-book", priority: 0.8, changeFrequency: "monthly" as const },
     { path: "/guides/import-word-list", priority: 0.8, changeFrequency: "monthly" as const },
     { path: "/guides/word-to-pdf", priority: 0.8, changeFrequency: "monthly" as const },
+    { path: "/vocabulary-book-generator", priority: 0.95, changeFrequency: "monthly" as const },
+    { path: "/en/vocabulary-book-generator", priority: 0.9, changeFrequency: "monthly" as const },
     { path: "/donate", priority: 0.3, changeFrequency: "yearly" as const },
   ];
   return routes.map(({ path, ...entry }) => ({

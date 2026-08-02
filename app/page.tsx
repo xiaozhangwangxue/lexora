@@ -308,6 +308,7 @@ export default function Home() {
         <div className="navLinks">
           <a href="#how">{zh ? "工作方式" : "How it works"}</a>
           <Link href="/guides">{zh ? "使用指南" : "Guides"}</Link>
+          <Link href={zh ? "/vocabulary-book-generator" : "/en/vocabulary-book-generator"}>{zh ? "词汇书生成器" : "Generator"}</Link>
           <a href="#download">{zh ? "下载" : "Download"}</a>
           <Link href="/donate">{zh ? "捐款" : "Donate"}</Link>
           <a className="githubProfileButton" href="https://github.com/xiaozhangwangxue/lexora" target="_blank" rel="noreferrer">
@@ -653,7 +654,7 @@ export default function Home() {
       <footer className="wrap">
         <a className="brand" href="#top"><LexoraWordmark /></a>
         <p>{zh ? "把单词变成值得保存的东西。" : "Make your words worth keeping."}</p>
-        <span>© 2026 Lexora · <Link href="/guides">{zh ? "使用指南" : "Guides"}</Link> · <Link href="/donate">{zh ? "支持项目" : "Support"}</Link></span>
+        <span>© 2026 Lexora · <Link href={zh ? "/vocabulary-book-generator" : "/en/vocabulary-book-generator"}>{zh ? "词汇书生成器" : "Vocabulary generator"}</Link> · <Link href="/guides">{zh ? "使用指南" : "Guides"}</Link> · <Link href="/donate">{zh ? "支持项目" : "Support"}</Link></span>
       </footer>
     </main>
   );

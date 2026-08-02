@@ -69,6 +69,22 @@ test("server-renders searchable Chinese guide pages", async () => {
   }
 });
 
+test("server-renders bilingual vocabulary generator landing pages", async () => {
+  const chinese = await render("/vocabulary-book-generator");
+  assert.equal(chinese.status, 200);
+  const chineseHtml = await chinese.text();
+  assert.match(chineseHtml, /免费的个人英语词汇书生成器/);
+  assert.match(chineseHtml, /FAQPage/);
+  assert.match(chineseHtml, /单词表转换成 PDF/);
+
+  const english = await render("/en/vocabulary-book-generator");
+  assert.equal(english.status, 200);
+  const englishHtml = await english.text();
+  assert.match(englishHtml, /free personal vocabulary book generator/i);
+  assert.match(englishHtml, /FAQPage/);
+  assert.match(englishHtml, /Which formats are supported/);
+});
+
 test("publishes robots, sitemap, and web app manifest", async () => {
   const robots = await render("/robots.txt");
   assert.equal(robots.status, 200);
@@ -76,7 +92,9 @@ test("publishes robots, sitemap, and web app manifest", async () => {
 
   const sitemap = await render("/sitemap.xml");
   assert.equal(sitemap.status, 200);
-  assert.match(await sitemap.text(), /guides\/word-to-pdf/);
+  const sitemapText = await sitemap.text();
+  assert.match(sitemapText, /guides\/word-to-pdf/);
+  assert.match(sitemapText, /vocabulary-book-generator/);
 
   const manifest = await render("/manifest.webmanifest");
   assert.equal(manifest.status, 200);
