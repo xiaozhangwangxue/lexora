@@ -43,18 +43,20 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     image: "https://lexora.12323456.xyz/lexora-icon-512.png",
     description: "免费的英汉词典与个人英语词汇书生成器，支持批量导入并导出 PDF、EPUB、DOCX、分页图片和长图。",
     applicationCategory: "EducationalApplication",
-    operatingSystem: "Android, macOS, Windows, Linux",
+    operatingSystem: "Web, Android, macOS, Windows, Linux",
     softwareVersion: releaseManifest.version,
     offers: { "@type": "Offer", price: "0", priceCurrency: "CNY" },
     downloadUrl: "https://lexora.12323456.xyz/#download",
+    installUrl: "https://lexora.12323456.xyz/web",
     inLanguage: ["zh-CN", "en"],
     isAccessibleForFree: true,
     sameAs: ["https://github.com/xiaozhangwangxue/lexora"],
     featureList: [
       "Bilingual English and Chinese dictionary",
       "Personal vocabulary book generator",
+      "No-account web app",
       "PDF, EPUB, DOCX and image export",
-      "Android, macOS, Windows and Linux support",
+      "Web, Android, macOS, Windows and Linux support",
     ],
   };
   const structuredData = {

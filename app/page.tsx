@@ -306,6 +306,7 @@ export default function Home() {
           <LexoraWordmark />
         </a>
         <div className="navLinks">
+          <Link className="webAppNavButton" href="/web">{zh ? "在线使用" : "Use online"}</Link>
           <a href="#how">{zh ? "工作方式" : "How it works"}</a>
           <Link href="/guides">{zh ? "使用指南" : "Guides"}</Link>
           <Link href={zh ? "/vocabulary-book-generator" : "/en/vocabulary-book-generator"}>{zh ? "词汇书生成器" : "Generator"}</Link>
@@ -332,7 +333,8 @@ export default function Home() {
             : "Get live suggestions and bilingual senses by part of speech, related words, synonyms, antonyms, examples, and collocations. Save what matters, then export PDF, EPUB, editable DOCX, page images, or one long image."}
         </p>
         <div className="heroActions">
-          <a className="primaryButton" href="#download">{zh ? "免费下载" : "Download free"} <span>↓</span></a>
+          <Link className="primaryButton" href="/web">{zh ? "立即在线使用" : "Use Lexora online"} <span>↗</span></Link>
+          <a className="textButton" href="#download">{zh ? "下载应用" : "Download app"} <span>↓</span></a>
           <a className="textButton" href="#demo">{zh ? "试试交互演示" : "Try the live demo"} <span>↘</span></a>
         </div>
 
@@ -612,7 +614,7 @@ export default function Home() {
         </div>
       )}
 
-      <section className="releaseNotes wrap" id="release-notes" data-reveal>
+      <section className="releaseNotes wrap" id="release-notes">
         <div className="releaseNotesIntro">
           <p className="sectionLabel">
             {zh
@@ -654,7 +656,7 @@ export default function Home() {
       <footer className="wrap">
         <a className="brand" href="#top"><LexoraWordmark /></a>
         <p>{zh ? "把单词变成值得保存的东西。" : "Make your words worth keeping."}</p>
-        <span>© 2026 Lexora · <Link href={zh ? "/vocabulary-book-generator" : "/en/vocabulary-book-generator"}>{zh ? "词汇书生成器" : "Vocabulary generator"}</Link> · <Link href="/guides">{zh ? "使用指南" : "Guides"}</Link> · <Link href="/donate">{zh ? "支持项目" : "Support"}</Link></span>
+        <span>© 2026 Lexora · <Link href="/web">{zh ? "在线使用" : "Web app"}</Link> · <Link href={zh ? "/vocabulary-book-generator" : "/en/vocabulary-book-generator"}>{zh ? "词汇书生成器" : "Vocabulary generator"}</Link> · <Link href="/guides">{zh ? "使用指南" : "Guides"}</Link> · <Link href="/donate">{zh ? "支持项目" : "Support"}</Link></span>
       </footer>
     </main>
   );

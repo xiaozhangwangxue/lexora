@@ -10,7 +10,7 @@
   [![License](https://img.shields.io/github/license/xiaozhangwangxue/lexora?style=flat-square)](LICENSE)
   [![Platforms](https://img.shields.io/badge/platform-Android%20%7C%20macOS%20%7C%20Windows%20%7C%20Linux-10131d?style=flat-square)](#download-and-install)
 
-  [Official website](https://lexora.12323456.xyz) · [Free vocabulary book generator](https://lexora.12323456.xyz/en/vocabulary-book-generator) · [Download](https://lexora.12323456.xyz/#download) · [Donate](https://lexora.12323456.xyz/donate) · [简体中文](README.md)
+  [Official website](https://lexora.12323456.xyz) · [Use online](https://lexora.12323456.xyz/web) · [Free vocabulary book generator](https://lexora.12323456.xyz/en/vocabulary-book-generator) · [Download](https://lexora.12323456.xyz/#download) · [Donate](https://lexora.12323456.xyz/donate) · [简体中文](README.md)
 </div>
 
 <p align="center">
@@ -19,10 +19,12 @@
 
 ---
 
-Lexora is a bilingual dictionary for Android, macOS, Windows, and Linux that turns useful lookups into a personal vocabulary book. It offers live suggestions, bilingual senses grouped by part of speech, related words, synonyms, antonyms, examples, and collocations. Save what matters in one tap, then export a compact PDF, EPUB, editable DOCX, page images, or one long image.
+Lexora is a bilingual dictionary for the web, Android, macOS, Windows, and Linux that turns useful lookups into a personal vocabulary book. It offers live suggestions, bilingual senses grouped by part of speech, related words, synonyms, antonyms, examples, and collocations. Save what matters in one tap, then export a compact PDF, EPUB, editable DOCX, page images, or one long image.
+
+The complete web frontend is open source in [`app/web`](app/web). It uses the public [Lexora Open Lexicon](https://github.com/xiaozhangwangxue/lexora-open-lexicon) service for lookup, file import, and document generation. No install or account is required: open [lexora.12323456.xyz/web](https://lexora.12323456.xyz/web).
 
 > [!IMPORTANT]
-> Lexora needs no account. Word lists, history, and generated PDFs stay on the device by default. Only after **Start generating** is selected are words, definitions, and examples sent to public dictionary and translation services.
+> Lexora needs no account. Word lists, history, and generated documents stay on the device by default. The native app sends relevant entries when generating a book; the web app sends them only when the user actively looks up a term or starts generation.
 
 ## Lexora 4.0.4 release notes
 

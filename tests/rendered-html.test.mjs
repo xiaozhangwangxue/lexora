@@ -44,12 +44,16 @@ test("server-renders the finished Lexora landing page", async () => {
   assert.match(html, /lexora-android-v3\.1\.0\.apk/);
   assert.match(html, /4\.0\.0 性能、安全与动画/);
   assert.match(html, /4\.0\.2 搜索与服务器稳定性/);
+  assert.match(html, /id="release-notes"/);
+  assert.doesNotMatch(html, /id="release-notes"[^>]*data-reveal/);
   assert.match(html, /每一次查词/);
   assert.match(html, /分页图片或长图/);
   assert.doesNotMatch(html, /supportInner/);
   assert.match(html, /拖动手柄调整顺序/);
   assert.match(html, /href="\/favicon\.png\?v=5"/);
   assert.match(html, /href="\/guides"/);
+  assert.match(html, /href="\/web"/);
+  assert.match(html, /在线使用/);
   assert.doesNotMatch(html, /\[object%20Object\]/);
   assert.doesNotMatch(html, /codex-preview|react-loading-skeleton|Starter Project/);
 });
@@ -85,6 +89,17 @@ test("server-renders bilingual vocabulary generator landing pages", async () => 
   assert.match(englishHtml, /Which formats are supported/);
 });
 
+test("server-renders the open-source browser app", async () => {
+  const response = await render("/web");
+  assert.equal(response.status, 200);
+  const html = await response.text();
+  assert.match(html, /在线查词，生成你的词汇书/);
+  assert.match(html, /输入单词或短语/);
+  assert.match(html, /导入文件/);
+  assert.match(html, /生成并下载/);
+  assert.match(html, /github\.com\/xiaozhangwangxue\/lexora/);
+});
+
 test("publishes robots, sitemap, and web app manifest", async () => {
   const robots = await render("/robots.txt");
   assert.equal(robots.status, 200);
@@ -95,6 +110,7 @@ test("publishes robots, sitemap, and web app manifest", async () => {
   const sitemapText = await sitemap.text();
   assert.match(sitemapText, /guides\/word-to-pdf/);
   assert.match(sitemapText, /vocabulary-book-generator/);
+  assert.match(sitemapText, /\/web/);
 
   const manifest = await render("/manifest.webmanifest");
   assert.equal(manifest.status, 200);
