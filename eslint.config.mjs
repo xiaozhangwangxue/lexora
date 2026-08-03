@@ -11,6 +11,7 @@ const eslintConfig = defineConfig([
     ".next/**",
     "out/**",
     "build/**",
+    "public/sql-wasm.js",
     "next-env.d.ts",
   ]),
 ]);

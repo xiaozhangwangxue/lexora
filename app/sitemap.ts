@@ -5,7 +5,7 @@ const base = "https://lexora.12323456.xyz";
 export default function sitemap(): MetadataRoute.Sitemap {
   const routes = [
     { path: "", priority: 1, changeFrequency: "weekly" as const },
-    { path: "/web", priority: 0.95, changeFrequency: "weekly" as const },
+    { path: "/app", priority: 0.95, changeFrequency: "weekly" as const },
     { path: "/guides", priority: 0.9, changeFrequency: "monthly" as const },
     { path: "/guides/personal-vocabulary-book", priority: 0.8, changeFrequency: "monthly" as const },
     { path: "/guides/import-word-list", priority: 0.8, changeFrequency: "monthly" as const },

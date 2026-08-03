@@ -52,8 +52,8 @@ test("server-renders the finished Lexora landing page", async () => {
   assert.match(html, /拖动手柄调整顺序/);
   assert.match(html, /href="\/favicon\.png\?v=5"/);
   assert.match(html, /href="\/guides"/);
-  assert.match(html, /href="\/web"/);
-  assert.match(html, /在线使用/);
+  assert.match(html, /href="\/app"/);
+  assert.match(html, /安装网页版/);
   assert.doesNotMatch(html, /\[object%20Object\]/);
   assert.doesNotMatch(html, /codex-preview|react-loading-skeleton|Starter Project/);
 });
@@ -89,15 +89,20 @@ test("server-renders bilingual vocabulary generator landing pages", async () => 
   assert.match(englishHtml, /Which formats are supported/);
 });
 
-test("server-renders the open-source browser app", async () => {
-  const response = await render("/web");
+test("server-renders the installable full Lexora PWA", async () => {
+  const response = await render("/app");
   assert.equal(response.status, 200);
   const html = await response.text();
-  assert.match(html, /在线查词，生成你的词汇书/);
-  assert.match(html, /输入单词或短语/);
-  assert.match(html, /导入文件/);
-  assert.match(html, /生成并下载/);
-  assert.match(html, /github\.com\/xiaozhangwangxue\/lexora/);
+  assert.match(html, /Lexora Web/);
+  assert.match(html, /查一个单词/);
+  assert.match(html, /词汇书/);
+  assert.match(html, /生成记录/);
+  assert.match(html, /历史/);
+  assert.match(html, /设置/);
+  assert.match(html, /manifest\.webmanifest/);
+
+  const removedWeb = await render("/web");
+  assert.equal(removedWeb.status, 404);
 });
 
 test("publishes robots, sitemap, and web app manifest", async () => {
@@ -110,11 +115,23 @@ test("publishes robots, sitemap, and web app manifest", async () => {
   const sitemapText = await sitemap.text();
   assert.match(sitemapText, /guides\/word-to-pdf/);
   assert.match(sitemapText, /vocabulary-book-generator/);
-  assert.match(sitemapText, /\/web/);
+  assert.match(sitemapText, /\/app/);
+  assert.doesNotMatch(sitemapText, /\/web/);
 
-  const manifest = await render("/manifest.webmanifest");
-  assert.equal(manifest.status, 200);
-  assert.match(await manifest.text(), /个人英语词汇书/);
+  const manifestText = await readFile(
+    new URL("../public/manifest.webmanifest", import.meta.url),
+    "utf8",
+  );
+  assert.match(manifestText, /Lexora Web/);
+  assert.match(manifestText, /"start_url": "\/app\?source=pwa"/);
+  assert.match(manifestText, /"display": "standalone"/);
+
+  const appSource = await readFile(
+    new URL("../app/app/lexora-web-app.tsx", import.meta.url),
+    "utf8",
+  );
+  assert.match(appSource, /mobile && !installed/);
+  assert.match(appSource, /请先将 Lexora 添加到主屏幕/);
 });
 
 test("server-renders the bilingual donation page", async () => {

@@ -1,0 +1,17 @@
+{
+  "name": "Lexora Web",
+  "short_name": "Lexora",
+  "description": "集完整双语词典、个人词汇书、多格式导出和历史管理于一体。",
+  "start_url": "/app?source=pwa",
+  "id": "/app",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f5f6fa",
+  "theme_color": "#f5f6fa",
+  "lang": "zh-CN",
+  "icons": [
+    { "src": "/lexora-icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/lexora-icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}
+

@@ -10,7 +10,7 @@
   [![License](https://img.shields.io/github/license/xiaozhangwangxue/lexora?style=flat-square)](LICENSE)
   [![Platforms](https://img.shields.io/badge/platform-Android%20%7C%20macOS%20%7C%20Windows%20%7C%20Linux-10131d?style=flat-square)](#下载与安装)
 
-  [官方网站](https://lexora.12323456.xyz) · [在线使用](https://lexora.12323456.xyz/web) · [免费词汇书生成器](https://lexora.12323456.xyz/vocabulary-book-generator) · [下载应用](https://lexora.12323456.xyz/#download) · [捐款支持](https://lexora.12323456.xyz/donate) · [English](README.en.md)
+  [官方网站](https://lexora.12323456.xyz) · [安装网页版](https://lexora.12323456.xyz/app) · [免费词汇书生成器](https://lexora.12323456.xyz/vocabulary-book-generator) · [下载应用](https://lexora.12323456.xyz/#download) · [捐款支持](https://lexora.12323456.xyz/donate) · [English](README.en.md)
 </div>
 
 <p align="center">
@@ -21,7 +21,7 @@
 
 Lexora 是一款支持浏览器、Android、macOS、Windows 与 Linux、可以生成个人词汇书的双语词典。搜索时会实时联想，并按词性展示英文释义、中文释义、相关词、近义词、反义词、例句与常用搭配；有价值的词可以一键加入词汇书，再排版为紧凑、清晰、适合阅读和打印的 PDF、EPUB、可编辑 DOCX、分页图片或长图。
 
-网页版前端也完整开源在本仓库的 [`app/web`](app/web) 中；它通过公开的 [Lexora Open Lexicon](https://github.com/xiaozhangwangxue/lexora-open-lexicon) 服务完成查词、文件导入和词汇书生成。无需安装或账号，可直接访问 [lexora.12323456.xyz/web](https://lexora.12323456.xyz/web)。
+网页版前端也完整开源在本仓库的 [`app/app`](app/app) 中；它通过公开的 [Lexora Open Lexicon](https://github.com/xiaozhangwangxue/lexora-open-lexicon) 服务完成查词、文件导入和词汇书生成。无需账号，但必须先从 [lexora.12323456.xyz/app](https://lexora.12323456.xyz/app) 添加到主屏幕，再从 Lexora 图标启动。
 
 > [!IMPORTANT]
 > Lexora 不要求账号。单词列表、历史记录和生成的文档默认保存在设备本地；原生应用在生成词汇书时、网页版在用户主动查词或生成时，才会把对应词条发送给公开词典与翻译服务。

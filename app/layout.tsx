@@ -47,7 +47,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     softwareVersion: releaseManifest.version,
     offers: { "@type": "Offer", price: "0", priceCurrency: "CNY" },
     downloadUrl: "https://lexora.12323456.xyz/#download",
-    installUrl: "https://lexora.12323456.xyz/web",
+    installUrl: "https://lexora.12323456.xyz/app",
     inLanguage: ["zh-CN", "en"],
     isAccessibleForFree: true,
     sameAs: ["https://github.com/xiaozhangwangxue/lexora"],
@@ -84,7 +84,11 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return <html lang="zh-CN">
     <head>
       <link rel="icon" type="image/png" sizes="192x192" href="/favicon.png?v=5" />
-      <link rel="apple-touch-icon" sizes="512x512" href="/lexora-icon-512.png?v=5" />
+      <link rel="apple-touch-icon" sizes="180x180" href="/lexora-apple-touch-icon-180.png?v=1" />
+      <meta name="apple-mobile-web-app-capable" content="yes" />
+      <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+      <meta name="apple-mobile-web-app-title" content="Lexora" />
+      <meta name="theme-color" content="#f5f6fa" />
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}

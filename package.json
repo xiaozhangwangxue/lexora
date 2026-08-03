@@ -16,10 +16,13 @@
   "dependencies": {
     "@fontsource-variable/manrope": "^5.2.8",
     "drizzle-orm": "0.45.2",
+    "jszip": "^3.10.1",
+    "mammoth": "^1.12.0",
     "next": "16.2.12",
     "react": "19.2.8",
     "react-dom": "19.2.8",
-    "react-icons": "^5.5.0"
+    "react-icons": "^5.5.0",
+    "sql.js": "^1.14.1"
   },
   "devDependencies": {
     "@cloudflare/vite-plugin": "1.47.0",

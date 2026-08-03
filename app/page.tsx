@@ -306,7 +306,7 @@ export default function Home() {
           <LexoraWordmark />
         </a>
         <div className="navLinks">
-          <Link className="webAppNavButton" href="/web">{zh ? "在线使用" : "Use online"}</Link>
+          <Link className="webAppNavButton" href="/app">{zh ? "网页版" : "Web app"}</Link>
           <a href="#how">{zh ? "工作方式" : "How it works"}</a>
           <Link href="/guides">{zh ? "使用指南" : "Guides"}</Link>
           <Link href={zh ? "/vocabulary-book-generator" : "/en/vocabulary-book-generator"}>{zh ? "词汇书生成器" : "Generator"}</Link>
@@ -333,7 +333,7 @@ export default function Home() {
             : "Get live suggestions and bilingual senses by part of speech, related words, synonyms, antonyms, examples, and collocations. Save what matters, then export PDF, EPUB, editable DOCX, page images, or one long image."}
         </p>
         <div className="heroActions">
-          <Link className="primaryButton" href="/web">{zh ? "立即在线使用" : "Use Lexora online"} <span>↗</span></Link>
+          <Link className="primaryButton" href="/app">{zh ? "安装网页版" : "Install web app"} <span>↗</span></Link>
           <a className="textButton" href="#download">{zh ? "下载应用" : "Download app"} <span>↓</span></a>
           <a className="textButton" href="#demo">{zh ? "试试交互演示" : "Try the live demo"} <span>↘</span></a>
         </div>
@@ -656,7 +656,7 @@ export default function Home() {
       <footer className="wrap">
         <a className="brand" href="#top"><LexoraWordmark /></a>
         <p>{zh ? "把单词变成值得保存的东西。" : "Make your words worth keeping."}</p>
-        <span>© 2026 Lexora · <Link href="/web">{zh ? "在线使用" : "Web app"}</Link> · <Link href={zh ? "/vocabulary-book-generator" : "/en/vocabulary-book-generator"}>{zh ? "词汇书生成器" : "Vocabulary generator"}</Link> · <Link href="/guides">{zh ? "使用指南" : "Guides"}</Link> · <Link href="/donate">{zh ? "支持项目" : "Support"}</Link></span>
+        <span>© 2026 Lexora · <Link href="/app">{zh ? "安装网页版" : "Install web app"}</Link> · <Link href={zh ? "/vocabulary-book-generator" : "/en/vocabulary-book-generator"}>{zh ? "词汇书生成器" : "Vocabulary generator"}</Link> · <Link href="/guides">{zh ? "使用指南" : "Guides"}</Link> · <Link href="/donate">{zh ? "支持项目" : "Support"}</Link></span>
       </footer>
     </main>
   );
