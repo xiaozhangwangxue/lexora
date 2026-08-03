@@ -10,7 +10,7 @@
   [![License](https://img.shields.io/github/license/xiaozhangwangxue/lexora?style=flat-square)](LICENSE)
   [![Platforms](https://img.shields.io/badge/platform-Android%20%7C%20macOS%20%7C%20Windows%20%7C%20Linux-10131d?style=flat-square)](#下载与安装)
 
-  [官方网站](https://lexora.12323456.xyz) · [下载应用](https://lexora.12323456.xyz/#download) · [捐款支持](https://lexora.12323456.xyz/donate) · [English](README.en.md)
+  [官方网站](https://lexora.12323456.xyz) · [免费词汇书生成器](https://lexora.12323456.xyz/vocabulary-book-generator) · [下载应用](https://lexora.12323456.xyz/#download) · [捐款支持](https://lexora.12323456.xyz/donate) · [English](README.en.md)
 </div>
 
 <p align="center">
