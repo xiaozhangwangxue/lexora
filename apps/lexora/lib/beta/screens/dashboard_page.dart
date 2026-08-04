@@ -27,7 +27,8 @@ class DashboardPage extends StatelessWidget {
       settings: data.settings,
       now: now,
       mode: data.settings.defaultStudyMode,
-      session: controller.activeSession,
+      session: controller.activeSessionFor(SessionFocus.newWords),
+      focus: SessionFocus.newWords,
     );
     final dueCount = data.reviewStates.values
         .where(
@@ -56,7 +57,7 @@ class DashboardPage extends StatelessWidget {
         })
         .map((word) => word.id)
         .toSet();
-    final active = controller.activeSession;
+    final active = controller.activeSessionFor(SessionFocus.newWords);
 
     return CustomScrollView(
       slivers: [
@@ -132,7 +133,9 @@ class DashboardPage extends StatelessWidget {
                         ),
                         const SizedBox(height: 6),
                         Text(
-                          active == null
+                          controller.pendingEnrichmentCount > 0 && queue.isEmpty
+                              ? '正在联网补全 ${controller.pendingEnrichmentCount} 个词条，释义就绪后才会开始复习。'
+                              : active == null
                               ? queue.isEmpty
                                     ? '今天的到期任务已经完成。'
                                     : '已准备 ${queue.length} 张主动回忆卡片。'
@@ -149,7 +152,9 @@ class DashboardPage extends StatelessWidget {
                       onPressed: queue.isEmpty && active == null
                           ? null
                           : () async {
-                              await controller.startStudy();
+                              await controller.startStudy(
+                                focus: SessionFocus.newWords,
+                              );
                               onOpenStudy();
                             },
                       icon: Icon(

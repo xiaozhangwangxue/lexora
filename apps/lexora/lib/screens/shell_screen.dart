@@ -316,6 +316,7 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
         'fontSize': settings.fontSize.name,
         'exampleAmount': settings.exampleAmount.name,
         'smartReorder': settings.smartReorder,
+        'minimalMode': settings.minimalMode,
         'searchTextScale': settings.searchTextScale,
         'typography': {
           'word': settings.typography.word,
@@ -397,6 +398,7 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
     'preset': settings.fontSize.name,
     'exampleAmount': settings.exampleAmount.name,
     'smartReorder': settings.smartReorder,
+    'minimalMode': settings.minimalMode,
     'word': settings.typography.word,
     'phonetic': settings.typography.phonetic,
     'definition': settings.typography.definition,
@@ -430,6 +432,7 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
         fallback.exampleAmount,
       ),
       smartReorder: values['smartReorder'] as bool? ?? fallback.smartReorder,
+      minimalMode: values['minimalMode'] as bool? ?? fallback.minimalMode,
       searchTextScale: fallback.searchTextScale,
       typography: PdfTypography(
         word: number('word', fallback.typography.word),
@@ -459,6 +462,7 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
         'pageSize': settings.pageSize.name,
         'fontSize': settings.fontSize.name,
         'smartReorder': settings.smartReorder,
+        'minimalMode': settings.minimalMode,
       },
     );
     _generationProgress.start(terms.length);
@@ -493,6 +497,7 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
         typography: settings.typography,
         pageSize: settings.pageSize,
         smartReorder: settings.smartReorder,
+        minimalMode: settings.minimalMode,
       );
       await _historyService.save(book);
       await _historyService.recordWords(result.entries, book.createdAt);
@@ -882,12 +887,13 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
           _selectPage(1, animate: false);
         },
       ),
+      BetaLearningScreen(active: _index == 4),
       SettingsScreen(
         settings: _settings!,
         onChanged: _updateSettings,
         onOpenTypography: _showPdfCustomizer,
+        onClearSearchCache: _wordService.clearCaches,
       ),
-      BetaLearningScreen(active: _index == 5),
     ];
     final pageContent = _isAndroid
         ? ColoredBox(
@@ -971,15 +977,15 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
         selectedIcon: const Icon(Icons.history_rounded),
         label: Text(strings.history),
       ),
-      NavigationRailDestination(
-        icon: const Icon(Icons.settings_outlined),
-        selectedIcon: const Icon(Icons.settings_rounded),
-        label: Text(strings.settings),
-      ),
       const NavigationRailDestination(
         icon: Icon(Icons.school_outlined),
         selectedIcon: Icon(Icons.school_rounded),
         label: Text('学习 Beta'),
+      ),
+      NavigationRailDestination(
+        icon: const Icon(Icons.settings_outlined),
+        selectedIcon: const Icon(Icons.settings_rounded),
+        label: Text(strings.settings),
       ),
     ];
 
@@ -1002,8 +1008,8 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
           strings.vocabularyBookLabel,
           strings.generationRecords,
           strings.history,
-          strings.settings,
           '学习 Beta',
+          strings.settings,
         ],
         onSelected: _selectPage,
         onSearchRepeated: _resetSearchHome,
@@ -1108,12 +1114,12 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
             NavigationDestination(
               icon: destinations[4].icon,
               selectedIcon: destinations[4].selectedIcon,
-              label: strings.settings,
+              label: '学习',
             ),
             NavigationDestination(
               icon: destinations[5].icon,
               selectedIcon: destinations[5].selectedIcon,
-              label: '学习',
+              label: strings.settings,
             ),
           ],
         ),

@@ -83,10 +83,13 @@ List<StudySessionItem> buildStudyQueue({
   StudySession? session,
   Set<String>? restrictToWordIds,
   bool includeNewWords = true,
+  SessionFocus focus = SessionFocus.mixed,
 }) {
   final validWords = {
     for (final word in words)
-      if (restrictToWordIds == null || restrictToWordIds.contains(word.id))
+      if (word.isStudyReady &&
+          _learningSourceEnabled(word, settings) &&
+          (restrictToWordIds == null || restrictToWordIds.contains(word.id)))
         word.id: word,
   };
   final existingPending = <String>{
@@ -98,9 +101,13 @@ List<StudySessionItem> buildStudyQueue({
   for (final word in validWords.values) {
     final state = reviewStates[word.id];
     if (state == null || existingPending.contains(word.id)) continue;
-    if (state.status == LearningStatus.newWord && includeNewWords) {
+    if (state.status == LearningStatus.newWord &&
+        includeNewWords &&
+        focus != SessionFocus.reviews) {
       fresh.add(word);
-    } else if (!state.dueAt.isAfter(now)) {
+    } else if (state.status != LearningStatus.newWord &&
+        !state.dueAt.isAfter(now) &&
+        focus != SessionFocus.newWords) {
       due.add(word);
     }
   }
@@ -130,15 +137,42 @@ List<StudySessionItem> buildStudyQueue({
       .toList();
 }
 
+bool _learningSourceEnabled(LearningWord word, BetaSettings settings) {
+  final enabled = settings.enabledLearningSources.toSet();
+  if (enabled.contains('all')) return true;
+  if (enabled.contains('manual') &&
+      (word.sources.isEmpty ||
+          word.sources.any((source) => source.title == 'Lexora 词典'))) {
+    return true;
+  }
+  if (enabled.contains('generated') &&
+      word.sources.any((source) => source.title.contains('词汇书生成记录'))) {
+    return true;
+  }
+  if (enabled.contains('historySelected') &&
+      settings.selectedHistoryWordIds.contains(word.id)) {
+    return true;
+  }
+  for (final source in word.sources) {
+    if (source.title.startsWith('预设词库:') &&
+        enabled.contains('preset:${source.title.substring('预设词库:'.length)}')) {
+      return true;
+    }
+  }
+  return false;
+}
+
 StudySession createStudySession({
   required List<StudySessionItem> items,
   required StudyMode mode,
   required DateTime now,
+  SessionFocus focus = SessionFocus.mixed,
 }) => StudySession(
   id: 'session-${now.microsecondsSinceEpoch}',
   localDateKey: localDateKey(now),
   status: SessionStatus.active,
   mode: mode,
+  focus: focus,
   items: items,
   currentIndex: 0,
   startedAt: now,

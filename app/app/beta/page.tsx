@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import { BetaApp } from "./beta-app";
 
 export const metadata: Metadata = {
-  title: "Lexora Beta｜大学英语四级词汇学习系统",
-  description: "把单词来源、主动回忆、间隔重复、五种练习模式和学习统计连接成完整闭环。",
+  title: "Lexora Beta｜词典、个人词汇书与学习系统",
+  description: "在一个页面使用 Lexora 词典、个人词汇书生成、历史记录和间隔重复学习系统。",
   alternates: { canonical: "/app/beta" },
   manifest: "/beta-manifest.webmanifest",
   appleWebApp: { capable: true, statusBarStyle: "default", title: "Lexora Beta" },

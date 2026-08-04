@@ -46,7 +46,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Validate synchronized release metadata
-        run: node ../../tool/sync_release_metadata.mjs --check
+        run: node ../../tool/sync_release_metadata.mjs --check --channel=${{ contains(github.ref_name, '-beta') && 'beta' || 'stable' }}
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
@@ -113,6 +113,7 @@ jobs:
           /usr/libexec/PlistBuddy -c "Add :com.apple.security.files.user-selected.read-write bool true" macos/Runner/Release.entitlements || /usr/libexec/PlistBuddy -c "Set :com.apple.security.files.user-selected.read-write true" macos/Runner/Release.entitlements
           /usr/libexec/PlistBuddy -c "Add :NSPhotoLibraryUsageDescription string Lexora needs photo library access only when you export vocabulary-book pages as images." macos/Runner/Info.plist || /usr/libexec/PlistBuddy -c "Set :NSPhotoLibraryUsageDescription Lexora needs photo library access only when you export vocabulary-book pages as images." macos/Runner/Info.plist
           /usr/libexec/PlistBuddy -c "Add :NSPhotoLibraryAddUsageDescription string Lexora saves exported vocabulary-book pages to your photo library when you choose an image format." macos/Runner/Info.plist || /usr/libexec/PlistBuddy -c "Set :NSPhotoLibraryAddUsageDescription Lexora saves exported vocabulary-book pages to your photo library when you choose an image format." macos/Runner/Info.plist
+          /usr/libexec/PlistBuddy -c "Add :LexoraReleaseVersion string ${RELEASE_VERSION#v}" macos/Runner/Info.plist || /usr/libexec/PlistBuddy -c "Set :LexoraReleaseVersion ${RELEASE_VERSION#v}" macos/Runner/Info.plist
       - run: flutter pub get
       - run: dart run flutter_launcher_icons
       - run: flutter analyze
@@ -222,7 +223,7 @@ jobs:
       - name: Prepare bilingual release notes
         run: |
           if [[ "$RELEASE_VERSION" == *-beta* ]]; then
-            cp release-notes/v1.3.0-beta.md release-notes.md
+            node tool/generate_release_notes.mjs --beta
           else
             node tool/generate_release_notes.mjs
           fi
@@ -236,7 +237,6 @@ jobs:
           body_path: release-notes.md
           files: lexora-*
       - name: Mirror downloads to Cloudflare R2
-        if: ${{ !contains(github.ref_name, '-beta') }}
         env:
           DOWNLOAD_UPLOAD_TOKEN: ${{ secrets.DOWNLOAD_UPLOAD_TOKEN }}
         run: |
@@ -244,8 +244,14 @@ jobs:
             echo "DOWNLOAD_UPLOAD_TOKEN is not configured."
             exit 1
           fi
-          node tool/finalize_update_manifest.mjs public/version.json update-version.json lexora-*
-          node tool/upload_release_artifacts.mjs lexora-* update-version.json
+          if [[ "$RELEASE_VERSION" == *-beta* ]]; then
+            node tool/finalize_update_manifest.mjs public/beta-version.json beta-version.json lexora-*
+            node tool/upload_release_artifacts.mjs lexora-* beta-version.json
+            node tool/prune_r2_release_objects.mjs --keep v4.1.0-beta.2 v4.0.4 v3.1.0
+          else
+            node tool/finalize_update_manifest.mjs public/version.json update-version.json lexora-*
+            node tool/upload_release_artifacts.mjs lexora-* update-version.json
+          fi
       - name: Sync finalized checksums to the canonical manifest
         if: ${{ !contains(github.ref_name, '-beta') }}
         run: |

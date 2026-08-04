@@ -1,4 +1,4 @@
-import type { BetaSettings, ReviewMode, ReviewState, StudyMode, StudySession, StudySessionItem, Word } from "./types";
+import type { BetaSettings, ReviewMode, ReviewState, SessionFocus, StudyMode, StudySession, StudySessionItem, Word } from "./types";
 import { localDateKey } from "./time";
 
 function hasCloze(word: Word) {
@@ -32,7 +32,25 @@ type BuildQueueInput = {
   session?: StudySession | null;
   now: Date;
   mode?: StudyMode;
+  focus?: SessionFocus;
+  forceSelected?: boolean;
 };
+
+export function isStudyReady(word: Word) {
+  return word.meanings.some((meaning) => meaning.definitionZh.trim() && (meaning.definitionEn ?? "").trim());
+}
+
+export function learningSourceEnabled(word: Word, settings: BetaSettings) {
+  const enabled = new Set(settings.enabledLearningSources);
+  if (enabled.has("all")) return true;
+  if (enabled.has("manual") && (word.sources.length === 0 || word.sources.some((source) => source.title === "Lexora 词典"))) return true;
+  if (enabled.has("generated") && word.sources.some((source) => {
+    if (!source.title.startsWith("词汇书生成记录:")) return false;
+    return settings.selectedGeneratedBookIds.includes(source.title.slice("词汇书生成记录:".length));
+  })) return true;
+  if (enabled.has("historySelected") && settings.selectedHistoryWordIds.includes(word.id)) return true;
+  return word.sources.some((source) => source.title.startsWith("预设词库:") && enabled.has(`preset:${source.title.slice("预设词库:".length)}`));
+}
 
 function priority(state: ReviewState, now: Date) {
   if (state.status === "learning" || state.status === "lapsed") return 0;
@@ -40,7 +58,21 @@ function priority(state: ReviewState, now: Date) {
   return 3;
 }
 
-export function buildStudyQueue({ words, reviewStates, settings, session, now, mode = settings.defaultStudyMode }: BuildQueueInput): StudySessionItem[] {
+export function buildStudyQueue({ words, reviewStates, settings, session, now, mode = settings.defaultStudyMode, focus = "mixed", forceSelected = false }: BuildQueueInput): StudySessionItem[] {
+  words = words.filter((word) => isStudyReady(word) && learningSourceEnabled(word, settings));
+  if (forceSelected) {
+    return words.map((word) => {
+      const state = reviewStates[word.id];
+      if (!state) return null;
+      return {
+        id: `${word.id}:${now.toISOString()}:${mode}:focused`,
+        wordId: word.id,
+        reviewMode: selectReviewMode(word, state, settings, mode),
+        dueKey: `${word.id}:focused:${now.toISOString()}`,
+        state: "pending" as const,
+      };
+    }).filter((item): item is StudySessionItem => Boolean(item));
+  }
   const wordById = new Map(words.map((word) => [word.id, word]));
   const completedKeys = new Set((session?.items ?? []).filter((item) => item.state === "completed").map((item) => item.dueKey));
   const pendingWordIds = new Set((session?.items ?? []).filter((item) => item.state !== "completed").map((item) => item.wordId));
@@ -58,7 +90,8 @@ export function buildStudyQueue({ words, reviewStates, settings, session, now, m
     .sort((a, b) => new Date(a.word.createdAt).getTime() - new Date(b.word.createdAt).getTime())
     .slice(0, Math.max(0, Math.min(100, settings.dailyNewWordLimit)));
 
-  return [...due, ...newWords]
+  const selected = focus === "new" ? newWords : focus === "review" ? due : [...due, ...newWords];
+  return selected
     .filter(({ word }) => wordById.has(word.id))
     .map(({ word, state }) => ({
       id: `${word.id}:${state.dueAt}:${mode}`,
@@ -69,13 +102,14 @@ export function buildStudyQueue({ words, reviewStates, settings, session, now, m
     }));
 }
 
-export function createStudySession(items: StudySessionItem[], now: Date, mode: StudyMode): StudySession {
+export function createStudySession(items: StudySessionItem[], now: Date, mode: StudyMode, focus: SessionFocus = "mixed"): StudySession {
   const timestamp = now.toISOString();
   return {
     id: `session-${timestamp}-${Math.random().toString(36).slice(2, 8)}`,
     localDateKey: localDateKey(now),
     status: "active",
     mode,
+    focus,
     items,
     currentIndex: 0,
     startedAt: timestamp,

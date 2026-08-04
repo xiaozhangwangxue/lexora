@@ -293,7 +293,7 @@ const worker = {
       } else {
         headers.delete("content-disposition");
       }
-      if (key === "version.json") {
+      if (key === "version.json" || key.endsWith("manifest.json") || key === "beta-version.json") {
         // Existing clients rely on the response charset when decoding Chinese
         // release notes. R2's default application/octet-stream would make the
         // Dart HTTP client decode them as Latin-1.
@@ -310,7 +310,7 @@ const worker = {
 
     if (
       url.pathname.startsWith("/api/admin/downloads/") &&
-      request.method === "PUT"
+      (request.method === "PUT" || request.method === "DELETE")
     ) {
       // A dedicated header avoids Cloudflare Access interpreting a normal
       // Authorization bearer token before the request reaches this Worker.
@@ -325,9 +325,17 @@ const worker = {
       const key = decodeURIComponent(
         url.pathname.slice("/api/admin/downloads/".length),
       );
-      if (!key || key.includes("/") || key.includes("..") || !request.body) {
+      if (!key || key.includes("/") || key.includes("..")) {
         return new Response("Invalid upload", { status: 400 });
       }
+      if (request.method === "DELETE") {
+        if (!key.startsWith("lexora-")) {
+          return new Response("Only Lexora objects may be removed", { status: 400 });
+        }
+        await env.DOWNLOADS.delete(key);
+        return Response.json({ ok: true, deleted: key });
+      }
+      if (!request.body) return new Response("Invalid upload", { status: 400 });
       await env.DOWNLOADS.put(key, request.body, {
         httpMetadata: {
           contentType:
@@ -336,6 +344,26 @@ const worker = {
         },
       });
       return Response.json({ ok: true, key });
+    }
+
+    if (url.pathname === "/api/admin/downloads" && request.method === "GET") {
+      const token = request.headers.get("x-lexora-upload-token");
+      if (!env.DOWNLOAD_UPLOAD_TOKEN || token !== env.DOWNLOAD_UPLOAD_TOKEN) {
+        return new Response("Unauthorized", { status: 401 });
+      }
+      if (!env.DOWNLOADS) {
+        return new Response("Download storage is unavailable", { status: 503 });
+      }
+      const listed = await env.DOWNLOADS.list({
+        prefix: "lexora-",
+        cursor: url.searchParams.get("cursor") ?? undefined,
+        limit: 1000,
+      });
+      return Response.json({
+        keys: listed.objects.map((object) => object.key),
+        truncated: listed.truncated,
+        cursor: listed.truncated ? listed.cursor : null,
+      });
     }
 
     if (url.pathname === "/version.json") {

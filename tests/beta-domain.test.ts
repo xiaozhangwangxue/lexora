@@ -68,6 +68,32 @@ test("队列：新词上限 0 时仍保留到期任务", () => { const w = word(
 test("队列：同一单词不重复加入已有 pending", () => { const w = word(); const reviews = { [w.id]: state("review") }; const item = buildStudyQueue({ words: [w], reviewStates: reviews, settings: defaultBetaSettings(NOW), now: NOW })[0]; const session = createStudySession([item], NOW, "mixed"); assert.equal(buildStudyQueue({ words: [w], reviewStates: reviews, settings: defaultBetaSettings(NOW), session, now: NOW }).length, 0); });
 test("队列：新词按照 createdAt 排序", () => { const words = [word("word-b", "2026-08-02T00:00:00.000Z"), word("word-a", "2026-08-01T00:00:00.000Z")]; const reviews = Object.fromEntries(words.map((item) => [item.id, { ...state("new"), wordId: item.id }])); assert.deepEqual(buildStudyQueue({ words, reviewStates: reviews, settings: defaultBetaSettings(NOW), now: NOW }).map((item) => item.wordId), ["word-a", "word-b"]); });
 test("队列：缺失 ReviewState 的单词不会导致崩溃", () => { assert.deepEqual(buildStudyQueue({ words: [word()], reviewStates: {}, settings: defaultBetaSettings(NOW), now: NOW }), []); });
+test("队列：今日学习只包含新词，今日复习只包含到期老词", () => {
+  const fresh = word("word-new"); const old = word("word-old");
+  const reviews = { [fresh.id]: { ...state("new"), wordId: fresh.id }, [old.id]: { ...state("review"), wordId: old.id } };
+  const settings = defaultBetaSettings(NOW);
+  assert.deepEqual(buildStudyQueue({ words: [fresh, old], reviewStates: reviews, settings, now: NOW, focus: "new" }).map((item) => item.wordId), [fresh.id]);
+  assert.deepEqual(buildStudyQueue({ words: [fresh, old], reviewStates: reviews, settings, now: NOW, focus: "review" }).map((item) => item.wordId), [old.id]);
+});
+test("队列：没有完整中英文释义的占位词不会提前进入学习", () => {
+  const placeholder = word("word-alpha");
+  placeholder.meanings = [{ ...placeholder.meanings[0], definitionZh: "", definitionEn: "" }];
+  assert.equal(buildStudyQueue({ words: [placeholder], reviewStates: { [placeholder.id]: { ...state("new"), wordId: placeholder.id } }, settings: defaultBetaSettings(NOW), now: NOW, focus: "new" }).length, 0);
+});
+test("队列：未启用的预设词库不会混入学习内容", () => {
+  const preset = word("word-preset");
+  preset.sources = [{ id: "preset-cet4", sourceType: "other", title: "预设词库:cet4", createdAt: NOW.toISOString(), updatedAt: NOW.toISOString() }];
+  const reviews = { [preset.id]: { ...state("new"), wordId: preset.id } };
+  assert.equal(buildStudyQueue({ words: [preset], reviewStates: reviews, settings: defaultBetaSettings(NOW), now: NOW }).length, 0);
+  assert.equal(buildStudyQueue({ words: [preset], reviewStates: reviews, settings: { ...defaultBetaSettings(NOW), enabledLearningSources: ["preset:cet4"] }, now: NOW }).length, 1);
+});
+test("专项复习：显式选择的词条无需等待到期即可进入队列", () => {
+  const selected = word("word-focused");
+  const review = { ...state("review"), wordId: selected.id, dueAt: "2026-08-10T10:00:00.000Z" };
+  const result = buildStudyQueue({ words: [selected], reviewStates: { [selected.id]: review }, settings: defaultBetaSettings(NOW), now: NOW, forceSelected: true });
+  assert.equal(result.length, 1);
+  assert.equal(result[0].wordId, selected.id);
+});
 
 function log(rating: ReviewLog["rating"], overrides: Partial<ReviewLog> = {}): ReviewLog {
   return { id: Math.random().toString(), submissionId: Math.random().toString(), wordId: "word-1", rating, reviewMode: "word-to-meaning", usedHint: false, previousStatus: "review", nextStatus: rating === "again" ? "lapsed" : "review", previousIntervalMinutes: 10, nextIntervalMinutes: 20, previousDueAt: NOW.toISOString(), nextDueAt: NOW.toISOString(), reviewedAt: NOW.toISOString(), localDateKey: "2026-08-05", ...overrides };

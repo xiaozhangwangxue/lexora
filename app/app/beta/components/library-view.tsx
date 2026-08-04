@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { FiBookOpen, FiChevronRight, FiEdit3, FiFilter, FiHeadphones, FiPlus, FiSearch, FiStar, FiTrash2, FiVolume2, FiX } from "react-icons/fi";
 import { createClozeSentence } from "../domain/answers";
+import { isStudyReady } from "../domain/queue";
 import { formatDueTime } from "../domain/time";
 import { groupReviewLogsByWord } from "../domain/stats";
 import { isWeakWord } from "../domain/weak";
@@ -26,7 +27,7 @@ function blankWord(): Word {
 }
 
 export function LibraryView({ startStudy }: { startStudy(): void }) {
-  const { state, loaded, saveWord, deleteWord, toggleImportant, importDictionaryWord, startStudy: createSession } = useBetaStore();
+  const { state, libraryWords, loaded, saveWord, deleteWord, toggleImportant, importDictionaryWord, startStudy: createSession } = useBetaStore();
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
   const [tag, setTag] = useState<SkillTag | "all">("all");
@@ -42,7 +43,7 @@ export function LibraryView({ startStudy }: { startStudy(): void }) {
 
   const words = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
-    const matches = state.words.filter((word) => {
+    const matches = libraryWords.filter((word) => {
       const review = state.reviewStates[word.id];
       const logs = (logsByWord.get(word.id) ?? []).slice(-10);
       const searchable = [word.text, word.note, ...word.meanings.flatMap((meaning) => [meaning.definitionZh, meaning.definitionEn, ...meaning.examples.flatMap((example) => [example.sentence, example.translation])]), ...word.collocations.flatMap((item) => [item.text, item.meaningZh]), ...word.sources.flatMap((source) => [source.title, source.originalSentence]), ...word.customTags].filter(Boolean).join(" ").toLowerCase();
@@ -73,7 +74,7 @@ export function LibraryView({ startStudy }: { startStudy(): void }) {
       if (sort === "alphabetical") return a.normalizedText.localeCompare(b.normalizedText);
       return b.createdAt.localeCompare(a.createdAt);
     });
-  }, [filter, logsByWord, now, query, sort, sourceType, state.reviewStates, state.words, tag]);
+  }, [filter, libraryWords, logsByWord, now, query, sort, sourceType, state.reviewStates, tag]);
 
   async function lookupWord() {
     const term = lookup.trim();
@@ -90,21 +91,25 @@ export function LibraryView({ startStudy }: { startStudy(): void }) {
 
   if (!loaded) return <div className={styles.loadingState}>正在打开单词库…</div>;
   if (editing) return <WordEditor initial={editing} onCancel={() => setEditing(null)} onSave={(word) => { try { saveWord(word); setEditing(null); setSelected(word); setMessage("词条已保存"); } catch (cause) { setMessage(cause instanceof Error ? cause.message : "保存失败"); } }} />;
-  if (selected) return <WordDetail word={state.words.find((word) => word.id === selected.id) ?? selected} close={() => setSelected(null)} edit={() => setEditing(structuredClone(selected))} remove={() => { if (confirm(`确定删除 ${selected.text} 吗？相关学习状态和日志也会一起删除。`)) { deleteWord(selected.id); setSelected(null); } }} start={() => { const session = createSession(undefined, [selected.id]); if (session) startStudy(); else setMessage("这个单词尚未到期，暂时没有可复习卡片。"); }} />;
+  if (selected) {
+    const current = libraryWords.find((word) => word.id === selected.id) ?? selected;
+    const persisted = state.words.some((word) => word.id === current.id);
+    return <WordDetail word={current} close={() => setSelected(null)} edit={persisted ? () => setEditing(structuredClone(current)) : undefined} remove={persisted ? () => { if (confirm(`确定删除 ${current.text} 吗？相关学习状态和日志也会一起删除。`)) { deleteWord(current.id); setSelected(null); } } : undefined} start={() => { const session = createSession(undefined, [current.id], "new"); if (session) startStudy(); else setMessage("该词条缺少完整双语释义，请先在学习设置中联网补全。"); }} />;
+  }
 
   return <div className={styles.page}>
-    <div className={styles.pageTitle}><div><span className={styles.betaPill}>语境词库</span><h1>单词库</h1><p>多释义、多来源、固定搭配和学习状态都保存在同一个词条中。</p></div><button className={styles.primaryButton} onClick={() => setEditing(blankWord())}><FiPlus />手动添加</button></div>
+    <div className={styles.pageTitle}><div><span className={styles.betaPill}>已选学习内容</span><h1>单词库</h1><p>这里完整展示学习设置中选中的生成词汇书、预设词汇书和单独词条。</p></div><button className={styles.primaryButton} onClick={() => setEditing(blankWord())}><FiPlus />手动添加</button></div>
     <section className={styles.lookupBar}><div><FiSearch /><input value={lookup} onChange={(event) => setLookup(event.target.value)} onKeyDown={(event) => event.key === "Enter" && void lookupWord()} placeholder="输入单词或短语，从词典补全资料" /><button onClick={() => void lookupWord()} disabled={lookupBusy}>{lookupBusy ? "正在查询…" : "查询并添加"}</button></div>{message && <p role="status">{message}</p>}</section>
     <section className={styles.libraryTools}><label><FiSearch /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="搜索单词、释义、例句、来源或标签" /></label><select value={filter} onChange={(event) => setFilter(event.target.value as Filter)} aria-label="筛选单词"><option value="all">全部状态</option><option value="new">新单词</option><option value="learning">学习中</option><option value="review">复习中</option><option value="mastered">已掌握</option><option value="lapsed">遗忘重学</option><option value="weak">薄弱词</option><option value="important">重点词</option><option value="due">今天到期</option><option value="has-example">有例句</option><option value="no-example">无例句</option><option value="has-source">有来源</option><option value="no-source">无来源</option><option value="has-collocation">有固定搭配</option><option value="no-collocation">无固定搭配</option></select><select value={tag} onChange={(event) => setTag(event.target.value as SkillTag | "all")} aria-label="四级标签"><option value="all">全部四级标签</option>{Object.entries(skillTagLabels).map(([value, label]) => <option value={value} key={value}>{label}</option>)}</select><select value={sourceType} onChange={(event) => setSourceType(event.target.value as SourceType | "all")} aria-label="来源类型"><option value="all">全部来源</option>{Object.entries(sourceTypeLabels).map(([value, label]) => <option value={value} key={value}>{label}</option>)}</select><select value={sort} onChange={(event) => setSort(event.target.value as Sort)} aria-label="排序"><option value="recent">最近添加</option><option value="oldest">最早添加</option><option value="due">最早到期</option><option value="lapses">遗忘次数最多</option><option value="reviews-desc">复习次数最多</option><option value="reviews-asc">复习次数最少</option><option value="alphabetical">字母顺序</option></select></section>
-    <div className={styles.librarySummary}><FiFilter />当前显示 {words.length} / {state.words.length} 个词条</div>
+    <div className={styles.librarySummary}><FiFilter />当前显示 {words.length} / {libraryWords.length} 个已选词条</div>
     {words.length ? <div className={styles.wordGrid}>{words.map((word) => {
       const review = state.reviewStates[word.id]; const logs = (logsByWord.get(word.id) ?? []).slice(-10); const weak = review && isWeakWord(review, logs);
       return <article className={styles.wordCard} key={word.id} onClick={() => setSelected(word)}><div><h2>{word.text}</h2><button aria-label={word.isImportant ? "取消重点" : "标记重点"} className={word.isImportant ? styles.starred : ""} onClick={(event) => { event.stopPropagation(); toggleImportant(word.id); }}><FiStar /></button></div><p>{word.meanings[0]?.definitionZh || word.meanings[0]?.definitionEn || "等待补充释义"}</p><div className={styles.wordMeta}>{review && <span>{statusLabels[review.status]}</span>}{review && <span>{formatDueTime(review.dueAt)}</span>}{weak && <b>薄弱</b>}<span>{word.sources.length} 个来源</span></div><div className={styles.tagRow}>{word.tags.slice(0, 3).map((item) => <span key={item}>{skillTagLabels[item]}</span>)}</div><FiChevronRight className={styles.cardChevron} /></article>;
-    })}</div> : <div className={styles.emptyState}><FiBookOpen /><h2>{state.words.length ? "没有符合条件的单词" : "单词库还是空的"}</h2><p>{state.words.length ? "换一个筛选条件试试。" : "输入单词从在线词典补全，或手动记录真实语境。"}</p></div>}
+    })}</div> : <div className={styles.emptyState}><FiBookOpen /><h2>{libraryWords.length ? "没有符合条件的单词" : "还没有选择学习内容"}</h2><p>{libraryWords.length ? "换一个筛选条件试试。" : "请先到学习设置选择生成过的词汇书、预设词库或单独词条。"}</p></div>}
   </div>;
 }
 
-function WordDetail({ word, close, edit, remove, start }: { word: Word; close(): void; edit(): void; remove(): void; start(): void }) {
+function WordDetail({ word, close, edit, remove, start }: { word: Word; close(): void; edit?(): void; remove?(): void; start(): void }) {
   const { state } = useBetaStore(); const review = state.reviewStates[word.id]; const logs = state.reviewLogs.filter((log) => log.wordId === word.id).slice(-10).reverse();
   const [speechError, setSpeechError] = useState("");
   async function play(text: string, accent: "us" | "uk") {
@@ -116,8 +121,8 @@ function WordDetail({ word, close, edit, remove, start }: { word: Word; close():
       setSpeechError(cause instanceof Error ? cause.message : "系统语音暂时无法播放");
     }
   }
-  return <div className={styles.page}><div className={styles.detailHeader}><button className={styles.backButton} onClick={close}><FiX />关闭</button><div><button onClick={() => void play(word.text, "us")}><FiHeadphones />美式</button><button onClick={() => void play(word.text, "uk")}><FiHeadphones />英式</button><button onClick={edit}><FiEdit3 />编辑</button><button className={styles.dangerButton} onClick={remove}><FiTrash2 />删除</button></div></div>{speechError && <p className={styles.inlineError} role="alert">朗读失败：{speechError}</p>}<section className={styles.wordDetailHero}><div><span className={styles.betaPill}>词条详情</span><h1>{word.text}</h1><p>{word.phoneticUS && `US /${word.phoneticUS.replaceAll("/", "")}/`} {word.phoneticUK && `· UK /${word.phoneticUK.replaceAll("/", "")}/`}</p></div><button className={styles.primaryButton} onClick={start}>专项复习</button></section>
-    <div className={styles.detailGrid}><section className={styles.panel}><h2>释义与真实语境</h2>{word.meanings.map((meaning) => <article className={styles.detailMeaning} key={meaning.id}><span>{meaning.partOfSpeech || "释义"}</span><h3>{meaning.definitionZh || "暂无中文释义"}</h3>{meaning.definitionEn && <p>{meaning.definitionEn}</p>}{meaning.examples.map((example) => <blockquote key={example.id}><b>{example.sentence}</b>{example.translation && <span>{example.translation}</span>}<button aria-label="朗读例句" onClick={() => void play(example.sentence, state.settings.preferredAccent)}><FiVolume2 /></button></blockquote>)}</article>)}</section><section className={styles.panel}><h2>学习状态</h2>{review ? <dl className={styles.dataList}><dt>当前状态</dt><dd>{statusLabels[review.status]}</dd><dt>下次复习</dt><dd>{new Date(review.dueAt).toLocaleString("zh-CN")}</dd><dt>当前间隔</dt><dd>{review.intervalMinutes} 分钟</dd><dt>连续认识</dt><dd>{review.consecutiveGoodCount}</dd><dt>总复习</dt><dd>{review.totalReviews}</dd><dt>不认识 / 模糊 / 认识</dt><dd>{review.againCount} / {review.hardCount} / {review.goodCount}</dd><dt>遗忘次数</dt><dd>{review.lapseCount}</dd></dl> : <p>等待初始化</p>}</section></div>
+  return <div className={styles.page}><div className={styles.detailHeader}><button className={styles.backButton} onClick={close}><FiX />关闭</button><div><button onClick={() => void play(word.text, "us")}><FiHeadphones />美式</button><button onClick={() => void play(word.text, "uk")}><FiHeadphones />英式</button>{edit && <button onClick={edit}><FiEdit3 />编辑</button>}{remove && <button className={styles.dangerButton} onClick={remove}><FiTrash2 />删除</button>}</div></div>{speechError && <p className={styles.inlineError} role="alert">朗读失败：{speechError}</p>}<section className={styles.wordDetailHero}><div><span className={styles.betaPill}>词条详情</span><h1>{word.text}</h1><p>{word.phoneticUS && `US /${word.phoneticUS.replaceAll("/", "")}/`} {word.phoneticUK && `· UK /${word.phoneticUK.replaceAll("/", "")}/`}</p></div><button className={styles.primaryButton} onClick={start} disabled={!isStudyReady(word)} title={isStudyReady(word) ? "立即开始这个词的专项复习" : "请先补全中英文释义"}>{isStudyReady(word) ? "专项复习" : "等待双语释义"}</button></section>
+    <div className={styles.detailGrid}><section className={styles.panel}><h2>释义与真实语境</h2>{word.meanings.map((meaning) => <article className={styles.detailMeaning} key={meaning.id}><span>{meaning.partOfSpeech || "释义"}</span>{meaning.definitionEn && <p>{meaning.definitionEn}</p>}<h3>{meaning.definitionZh || "中文释义等待联网补全"}</h3>{meaning.examples.filter((example) => example.translation).map((example) => <blockquote key={example.id}><b>{example.sentence}</b><span>{example.translation}</span><button aria-label="朗读例句" onClick={() => void play(example.sentence, state.settings.preferredAccent)}><FiVolume2 /></button></blockquote>)}</article>)}</section><section className={styles.panel}><h2>学习状态</h2>{review ? <dl className={styles.dataList}><dt>当前状态</dt><dd>{statusLabels[review.status]}</dd><dt>下次复习</dt><dd>{new Date(review.dueAt).toLocaleString("zh-CN")}</dd><dt>当前间隔</dt><dd>{review.intervalMinutes} 分钟</dd><dt>连续认识</dt><dd>{review.consecutiveGoodCount}</dd><dt>总复习</dt><dd>{review.totalReviews}</dd><dt>不认识 / 模糊 / 认识</dt><dd>{review.againCount} / {review.hardCount} / {review.goodCount}</dd><dt>遗忘次数</dt><dd>{review.lapseCount}</dd></dl> : <p className={styles.muted}>首次专项复习后会建立学习状态</p>}</section></div>
     <div className={styles.detailGrid}><section className={styles.panel}><h2>固定搭配</h2>{word.collocations.length ? word.collocations.map((item) => <article key={item.id} className={styles.contextItem}><b>{item.text}</b><span>{item.meaningZh}</span><p>{item.exampleSentence}</p></article>) : <p className={styles.muted}>尚未记录固定搭配</p>}</section><section className={styles.panel}><h2>来源</h2>{word.sources.length ? word.sources.map((source) => <article key={source.id} className={styles.contextItem}><b>{sourceTypeLabels[source.sourceType]} · {source.title}</b><span>{[source.examYear, source.examMonth && `${source.examMonth} 月`, source.section, source.questionNumber && `第 ${source.questionNumber} 题`].filter(Boolean).join(" · ")}</span><p>{source.originalSentence}</p></article>) : <p className={styles.muted}>尚未记录来源</p>}</section></div>
     <section className={styles.panel}><h2>最近学习记录</h2>{logs.length ? <div className={styles.logTable}>{logs.map((log) => <div key={log.id}><span>{new Date(log.reviewedAt).toLocaleString("zh-CN")}</span><b>{log.reviewMode}</b><span>{log.userAnswer || "—"}</span><span>{log.rating}</span><span>{statusLabels[log.previousStatus]} → {statusLabels[log.nextStatus]}</span></div>)}</div> : <p className={styles.muted}>还没有评分记录。浏览词条不会计入学习。</p>}</section>
   </div>;

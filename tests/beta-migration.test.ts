@@ -23,6 +23,21 @@ test("迁移：相同旧词不会重复", () => { const state = migrateToBetaSta
 test("迁移：重复执行 schemaVersion 3 数据保持幂等", () => { const first = migrateToBetaState(null, legacy, NOW); const second = migrateToBetaState(first, legacy, NOW); assert.deepEqual(second, first); });
 test("迁移：非法单项不会导致整个迁移崩溃", () => { const state = migrateToBetaState(null, { words: [null, {}, { term: "valid" }] }, NOW); assert.equal(state.words.length, 1); assert.equal(state.words[0].text, "valid"); });
 test("迁移：多释义、多搭配和音标得到结构化保存", () => { const word = dictionaryEntryToWord({ word: "expand", us_phonetic: "ɪkˈspænd", display_senses: [{ part_of_speech: "verb", definitions: [{ definition_zh: "扩大", definition: "become larger" }, { definition_zh: "展开", definition: "spread out" }] }], phrase_entries: [{ phrase: "expand into", meaning_zh: "扩展到" }] }, "expand", NOW); assert.equal(word.meanings.length, 2); assert.equal(word.collocations.length, 1); assert.equal(word.phoneticUS, "ɪkˈspænd"); });
+test("迁移：词典换行按词性配对且不会把字面换行符显示给用户", () => {
+  const word = dictionaryEntryToWord({
+    word: "access",
+    senses: [{ partOfSpeech: "n", definitions: [{
+      definition: "n. the right to use something\\nn. a way of entering",
+      definitionZh: "n. 使用权；通路\\nvt. 访问；存取\\n[计] 访问",
+    }] }],
+  }, "access", NOW);
+  assert.equal(word.meanings[0].partOfSpeech, "n");
+  assert.equal(word.meanings[0].definitionEn, "the right to use something\na way of entering");
+  assert.equal(word.meanings[0].definitionZh, "使用权；通路");
+  assert.equal(word.meanings[1].partOfSpeech, "vt");
+  assert.equal(word.meanings[1].definitionZh, "访问；存取");
+  assert.ok(word.meanings.every((meaning) => !meaning.definitionZh.includes("\\n") && !(meaning.definitionEn ?? "").includes("\\n")));
+});
 test("迁移：自动挖空只替换完整目标单词", () => { const word = dictionaryEntryToWord({ word: "address", examples: ["We address it; the addressee agrees."] }, "address", NOW); assert.equal(word.meanings[0].examples[0].clozeSentence, "We ______ it; the addressee agrees."); });
 test("迁移：修复孤立状态、日志和会话项", () => {
   const state = migrateToBetaState(null, legacy, NOW);

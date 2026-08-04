@@ -645,6 +645,22 @@ class WordService {
     _retainedLookupKey = null;
   }
 
+  Future<void> clearCaches() async {
+    _retainedLookupKey = null;
+    _memoryCache.clear();
+    _suggestionCache.clear();
+    _translationCache.clear();
+    _sourceCache.clear();
+    _providerCache.clear();
+    _coreCache.clear();
+    _englishCache.clear();
+    final preferences = await SharedPreferences.getInstance();
+    final keys = preferences.getKeys().where(
+      (key) => key.startsWith('lexora.word.'),
+    );
+    await Future.wait(keys.map(preferences.remove));
+  }
+
   /// Keeps only the selected result after an explicit search.
   ///
   /// In-flight suggestion requests check the retained key before writing, so a

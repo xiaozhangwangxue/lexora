@@ -85,7 +85,8 @@ void main() {
       LearningStatus.review,
     );
     expect(repository.saved.reviewLogs, hasLength(1));
-    expect(find.text('当前任务已完成'), findsOneWidget);
+    expect(find.text('今日学习已完成'), findsOneWidget);
+    expect(find.text('进入今日复习'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 

@@ -8,6 +8,7 @@ import '../domain/learning_stats.dart';
 import '../domain/review_scheduler.dart';
 import '../domain/study_queue.dart';
 import '../models/learning_models.dart';
+import '../services/learning_pack_service.dart';
 
 class DuplicateLearningWordException implements Exception {
   const DuplicateLearningWordException(this.wordId);
@@ -16,23 +17,43 @@ class DuplicateLearningWordException implements Exception {
 }
 
 class BetaController extends ChangeNotifier {
-  BetaController({BetaRepository? repository, WordService? wordService})
-    : _repository = repository ?? BetaRepository(),
-      _wordService = wordService ?? WordService();
+  BetaController({
+    BetaRepository? repository,
+    WordService? wordService,
+    LearningPackService? learningPackService,
+  }) : _repository = repository ?? BetaRepository(),
+       _wordService = wordService ?? WordService(),
+       _learningPackService = learningPackService ?? LearningPackService();
 
   final BetaRepository _repository;
   final WordService _wordService;
+  final LearningPackService _learningPackService;
   final Set<String> _submissionsInFlight = {};
+  final Set<String> _enrichmentInFlight = {};
+  final Set<String> _enrichmentFailed = {};
   BetaData _data = BetaData.empty();
   bool _loading = true;
   bool _saving = false;
   bool _disposed = false;
   Object? _error;
+  List<LearningPackDescriptor> _availablePacks = const [];
+  Map<String, InstalledLearningPack> _installedPacks = const {};
+  String? _packInFlight;
+  double? _packProgress;
 
   BetaData get data => _data;
   bool get loading => _loading;
   bool get saving => _saving;
   Object? get error => _error;
+  bool get enriching => _enrichmentInFlight.isNotEmpty;
+  int get pendingEnrichmentCount =>
+      _data.words.where((word) => !word.isStudyReady).length;
+  Set<String> get enrichmentFailed => Set.unmodifiable(_enrichmentFailed);
+  List<LearningPackDescriptor> get availablePacks => _availablePacks;
+  Map<String, InstalledLearningPack> get installedPacks =>
+      Map.unmodifiable(_installedPacks);
+  String? get packInFlight => _packInFlight;
+  double? get packProgress => _packProgress;
 
   StudySession? get activeSession {
     final active =
@@ -47,6 +68,20 @@ class BetaController extends ChangeNotifier {
     return active.firstOrNull;
   }
 
+  StudySession? activeSessionFor(SessionFocus focus) {
+    final sessions =
+        _data.sessions
+            .where(
+              (session) =>
+                  session.status == SessionStatus.active &&
+                  session.focus == focus &&
+                  session.localDateKey == localDateKey(DateTime.now()),
+            )
+            .toList()
+          ..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+    return sessions.firstOrNull;
+  }
+
   Future<void> initialize() async {
     if (_disposed) return;
     _loading = true;
@@ -57,6 +92,8 @@ class BetaController extends ChangeNotifier {
       if (_disposed) return;
       _data = loaded;
       await _ensureTodaySummary(DateTime.now());
+      unawaited(refreshLearningPacks());
+      unawaited(enrichIncompleteWords());
     } catch (error) {
       if (!_disposed) _error = error;
     } finally {
@@ -128,6 +165,188 @@ class BetaController extends ChangeNotifier {
     await _persist();
   }
 
+  Future<void> enrichIncompleteWords({Iterable<String>? wordIds}) async {
+    final selected = wordIds?.toSet();
+    final pending = _data.words
+        .where(
+          (word) =>
+              !word.isStudyReady &&
+              !_enrichmentInFlight.contains(word.id) &&
+              (selected == null || selected.contains(word.id)),
+        )
+        .toList(growable: false);
+    if (pending.isEmpty || _disposed) return;
+
+    // Small batches keep the UI responsive and allow WordService to use its
+    // existing parallel/offline/server race without creating an unbounded
+    // request burst after a large history migration.
+    for (var offset = 0; offset < pending.length && !_disposed; offset += 8) {
+      final batch = pending.skip(offset).take(8).toList(growable: false);
+      _enrichmentInFlight.addAll(batch.map((word) => word.id));
+      notifyListeners();
+      try {
+        final result = await _wordService.lookupAll(
+          batch.map((word) => word.text).toList(growable: false),
+          exampleCount: 3,
+        );
+        final byTerm = {
+          for (final entry in result.entries)
+            entry.word.trim().toLowerCase().replaceAll(RegExp(r'\s+'), ' '):
+                entry,
+        };
+        final words = [..._data.words];
+        var changed = false;
+        for (final original in batch) {
+          final entry = byTerm[original.normalizedText];
+          if (entry == null) {
+            _enrichmentFailed.add(original.id);
+            continue;
+          }
+          final enriched =
+              learningWordFromEntry(
+                entry,
+                createdAt: original.createdAt,
+                sourceTitle: original.sources.firstOrNull?.title ?? 'Lexora 词典',
+              ).copyWith(
+                isImportant: original.isImportant,
+                customTags: original.customTags,
+                note: original.note,
+                updatedAt: DateTime.now(),
+              );
+          if (!enriched.isStudyReady) {
+            _enrichmentFailed.add(original.id);
+            continue;
+          }
+          final index = words.indexWhere((word) => word.id == original.id);
+          if (index >= 0) {
+            words[index] = enriched;
+            changed = true;
+            _enrichmentFailed.remove(original.id);
+          }
+        }
+        if (changed) {
+          _data = _data.copyWith(words: words, updatedAt: DateTime.now());
+          await _repository.save(_data);
+        }
+      } catch (_) {
+        _enrichmentFailed.addAll(batch.map((word) => word.id));
+      } finally {
+        _enrichmentInFlight.removeAll(batch.map((word) => word.id));
+        if (!_disposed) notifyListeners();
+      }
+    }
+  }
+
+  Future<void> refreshLearningPacks() async {
+    try {
+      final values = await Future.wait([
+        _learningPackService.fetchManifest(),
+        _learningPackService.installed(),
+      ]);
+      _availablePacks = values[0] as List<LearningPackDescriptor>;
+      _installedPacks = values[1] as Map<String, InstalledLearningPack>;
+    } catch (_) {
+      _installedPacks = await _learningPackService.installed();
+    }
+    if (!_disposed) notifyListeners();
+  }
+
+  Future<void> installLearningPack(LearningPackDescriptor pack) async {
+    if (_packInFlight != null) return;
+    _packInFlight = pack.id;
+    _packProgress = 0;
+    notifyListeners();
+    try {
+      final entries = await _learningPackService.install(
+        pack,
+        onProgress: (value) {
+          _packProgress = value;
+          if (!_disposed) notifyListeners();
+        },
+      );
+      final words = [..._data.words];
+      final states = {..._data.reviewStates};
+      final now = DateTime.now();
+      for (final entry in entries) {
+        final imported = learningWordFromEntry(
+          entry,
+          createdAt: now,
+          sourceTitle: '预设词库:${pack.id}',
+        );
+        final index = words.indexWhere(
+          (word) => word.normalizedText == imported.normalizedText,
+        );
+        if (index < 0) {
+          words.add(imported);
+          states[imported.id] = createReviewState(imported.id, now);
+        } else {
+          final existing = words[index];
+          final hasSource = existing.sources.any(
+            (source) => source.title == '预设词库:${pack.id}',
+          );
+          if (!hasSource) {
+            words[index] = existing.copyWith(
+              meanings: existing.isStudyReady
+                  ? existing.meanings
+                  : imported.meanings,
+              phoneticUS: existing.phoneticUS?.isNotEmpty == true
+                  ? existing.phoneticUS
+                  : imported.phoneticUS,
+              phoneticUK: existing.phoneticUK?.isNotEmpty == true
+                  ? existing.phoneticUK
+                  : imported.phoneticUK,
+              sources: [...existing.sources, ...imported.sources],
+              updatedAt: now,
+            );
+          }
+        }
+      }
+      _data = _data.copyWith(
+        words: words,
+        reviewStates: states,
+        updatedAt: now,
+      );
+      await _repository.save(_data);
+      _installedPacks = await _learningPackService.installed();
+    } finally {
+      _packInFlight = null;
+      _packProgress = null;
+      if (!_disposed) notifyListeners();
+    }
+  }
+
+  Future<void> uninstallLearningPack(String packId) async {
+    await _learningPackService.uninstall(packId);
+    final sourceTitle = '预设词库:$packId';
+    final words = <LearningWord>[];
+    final removedIds = <String>{};
+    for (final word in _data.words) {
+      final remainingSources = word.sources
+          .where((source) => source.title != sourceTitle)
+          .toList(growable: false);
+      if (remainingSources.isEmpty &&
+          word.sources.any((source) => source.title == sourceTitle)) {
+        removedIds.add(word.id);
+      } else {
+        words.add(word.copyWith(sources: remainingSources));
+      }
+    }
+    final states = {..._data.reviewStates}
+      ..removeWhere((wordId, _) => removedIds.contains(wordId));
+    final logs = _data.reviewLogs
+        .where((log) => !removedIds.contains(log.wordId))
+        .toList(growable: false);
+    _data = _data.copyWith(
+      words: words,
+      reviewStates: states,
+      reviewLogs: logs,
+      updatedAt: DateTime.now(),
+    );
+    await _repository.save(_data);
+    _installedPacks = await _learningPackService.installed();
+    if (!_disposed) notifyListeners();
+  }
+
   Future<void> toggleImportant(String wordId) async {
     final words = [
       for (final word in _data.words)
@@ -170,8 +389,9 @@ class BetaController extends ChangeNotifier {
   Future<StudySession?> startStudy({
     StudyMode? mode,
     Set<String>? restrictToWordIds,
+    SessionFocus focus = SessionFocus.mixed,
   }) async {
-    final existing = activeSession;
+    final existing = activeSessionFor(focus);
     if (existing != null && restrictToWordIds == null) return existing;
     final now = DateTime.now();
     final selectedMode = mode ?? _data.settings.defaultStudyMode;
@@ -182,12 +402,14 @@ class BetaController extends ChangeNotifier {
       now: now,
       mode: selectedMode,
       restrictToWordIds: restrictToWordIds,
+      focus: focus,
     );
     if (items.isEmpty) return null;
     final session = createStudySession(
       items: items,
       mode: selectedMode,
       now: now,
+      focus: focus,
     );
     final previousSessions = [
       for (final value in _data.sessions)
@@ -305,6 +527,7 @@ class BetaController extends ChangeNotifier {
       mode: session.mode,
       session: session,
       includeNewWords: false,
+      focus: session.focus,
     );
     final sessions = [...data.sessions];
     sessions[index] = appended.isEmpty

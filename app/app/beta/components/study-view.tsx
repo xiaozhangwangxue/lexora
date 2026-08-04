@@ -6,7 +6,7 @@ import { evaluateAnswer } from "../domain/answers";
 import { laterDueCount } from "../domain/queue";
 import { previewSchedules } from "../domain/scheduler";
 import { formatInterval, localDateKey } from "../domain/time";
-import { modeLabels, sourceTypeLabels, skillTagLabels, type AnswerResult, type BetaSettings, type ReviewMode, type ReviewRating, type Word } from "../domain/types";
+import { modeLabels, sourceTypeLabels, skillTagLabels, type AnswerResult, type BetaSettings, type ReviewMode, type ReviewRating, type SessionFocus, type Word } from "../domain/types";
 import { playWord, speakText, stopSpeech } from "../services/speech";
 import { useBetaStore } from "../store";
 import styles from "../beta.module.css";
@@ -28,16 +28,16 @@ function promptFor(word: Word, mode: ReviewMode) {
   return { eyebrow: "英译中", title: word.text, detail: [word.phoneticUS && `US /${word.phoneticUS.replaceAll("/", "")}/`, word.phoneticUK && `UK /${word.phoneticUK.replaceAll("/", "")}/`].filter(Boolean).join(" · ") };
 }
 
-export function StudyView({ goHome }: { goHome(): void }) {
+export function StudyView({ goHome, focus, title, openReview }: { goHome(): void; focus: SessionFocus; title: string; openReview?(): void }) {
   const { state, activeSession } = useBetaStore();
-  const recentSession = useMemo(() => activeSession ?? [...state.sessions].reverse().find((session) => session.localDateKey === localDateKey()) ?? null, [activeSession, state.sessions]);
+  const recentSession = useMemo(() => activeSession?.focus === focus ? activeSession : [...state.sessions].reverse().find((session) => session.localDateKey === localDateKey() && session.focus === focus) ?? null, [activeSession, focus, state.sessions]);
   const currentItem = recentSession?.items[recentSession.currentIndex];
-  return <StudySessionView key={currentItem?.id ?? recentSession?.id ?? "empty"} goHome={goHome} />;
+  return <StudySessionView key={currentItem?.id ?? recentSession?.id ?? `empty-${focus}`} goHome={goHome} focus={focus} title={title} openReview={openReview} />;
 }
 
-function StudySessionView({ goHome }: { goHome(): void }) {
-  const { state, activeSession, revealItem, submitReview, refreshCompletedSession, toggleImportant } = useBetaStore();
-  const recentSession = useMemo(() => activeSession ?? [...state.sessions].reverse().find((session) => session.localDateKey === localDateKey()) ?? null, [activeSession, state.sessions]);
+function StudySessionView({ goHome, focus, title, openReview }: { goHome(): void; focus: SessionFocus; title: string; openReview?(): void }) {
+  const { state, activeSession, startStudy, pendingEnrichmentCount, enriching, refreshEnrichment, revealItem, submitReview, refreshCompletedSession, toggleImportant } = useBetaStore();
+  const recentSession = useMemo(() => activeSession?.focus === focus ? activeSession : [...state.sessions].reverse().find((session) => session.localDateKey === localDateKey() && session.focus === focus) ?? null, [activeSession, focus, state.sessions]);
   const currentItem = recentSession?.items[recentSession.currentIndex];
   const word = state.words.find((item) => item.id === currentItem?.wordId);
   const review = word ? state.reviewStates[word.id] : undefined;
@@ -107,10 +107,10 @@ function StudySessionView({ goHome }: { goHome(): void }) {
     return () => window.removeEventListener("keydown", handler);
   });
 
-  if (!recentSession) return <EmptyStudy goHome={goHome} />;
+  if (!recentSession) return <EmptyStudy goHome={goHome} focus={focus} title={title} pending={pendingEnrichmentCount} enriching={enriching} retry={() => void refreshEnrichment()} start={() => startStudy(undefined, undefined, focus)} />;
   if (recentSession.status === "completed" || !currentItem) {
     const later = laterDueCount(state.reviewStates, new Date());
-    return <div className={styles.studyPage}><button className={styles.backButton} onClick={goHome}><FiArrowLeft />返回首页</button><section className={styles.completionCard}><FiPause /><span className={styles.betaPill}>当前任务已完成</span><h1>这轮回忆已经结束。</h1>{later.count ? <p>今天稍后还有 {later.count} 个单词需要复习。最近一次：{later.nextDueAt ? new Date(later.nextDueAt).toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" }) : "—"}</p> : <p>今天没有更多到期任务，明天再见。</p>}<div><button className={styles.primaryButton} onClick={() => refreshCompletedSession(recentSession.id)}>检查新到期任务</button><button className={styles.secondaryButton} onClick={goHome}>完成</button></div></section></div>;
+    return <div className={styles.studyPage}><button className={styles.backButton} onClick={goHome}><FiArrowLeft />返回首页</button><section className={styles.completionCard}><FiPause /><span className={styles.betaPill}>{title}已完成</span><h1>这轮回忆已经结束。</h1>{later.count ? <p>今天稍后还有 {later.count} 个单词需要复习。最近一次：{later.nextDueAt ? new Date(later.nextDueAt).toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" }) : "—"}</p> : <p>今天没有更多到期任务，明天再见。</p>}<div>{focus === "new" && openReview && <button className={styles.primaryButton} onClick={openReview}>进入今日复习</button>}<button className={styles.secondaryButton} onClick={() => refreshCompletedSession(recentSession.id)}>检查新到期任务</button><button className={styles.secondaryButton} onClick={goHome}>完成</button></div></section></div>;
   }
   if (!word || !review) return <div className={styles.emptyState}><h2>当前单词不存在</h2><p>这张卡片已跳过，其他学习数据没有受到影响。</p><button onClick={goHome}>返回首页</button></div>;
 
@@ -159,6 +159,6 @@ function RatingButton({ tone, label, interval, onClick }: { tone: string; label:
   return <button className={styles[tone]} onClick={onClick}><b>{label}</b><span>{interval}</span></button>;
 }
 
-function EmptyStudy({ goHome }: { goHome(): void }) {
-  return <div className={styles.studyPage}><button className={styles.backButton} onClick={goHome}><FiArrowLeft />返回首页</button><div className={styles.emptyState}><FiZap /><h2>还没有可学习的卡片</h2><p>先在单词库添加词条，或等待已学单词到期。</p></div></div>;
+function EmptyStudy({ goHome, focus, title, pending, enriching, retry, start }: { goHome(): void; focus: SessionFocus; title: string; pending: number; enriching: boolean; retry(): void; start(): void }) {
+  return <div className={styles.studyPage}><button className={styles.backButton} onClick={goHome}><FiArrowLeft />返回首页</button><div className={styles.emptyState}><FiZap /><h2>{pending > 0 && focus === "new" ? "正在补全学习内容" : `暂无${title}任务`}</h2><p>{pending > 0 && focus === "new" ? `有 ${pending} 个词条正在联网查找可靠的中英文释义，补全前不会进入学习。` : focus === "new" ? "已选内容中没有尚未学习的新词。" : "已学单词尚未到复习时间。"}</p>{pending > 0 && <button className={styles.secondaryButton} onClick={retry}>{enriching ? "正在联网补全…" : "重新联网补全"}</button>}<button className={styles.primaryButton} onClick={start}>{focus === "new" ? "开始今日学习" : "检查今日复习"}</button></div></div>;
 }

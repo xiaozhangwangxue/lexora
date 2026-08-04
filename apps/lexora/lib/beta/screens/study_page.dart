@@ -12,9 +12,18 @@ import '../services/beta_speech_service.dart';
 import '../widgets/beta_ui.dart';
 
 class StudyPage extends StatefulWidget {
-  const StudyPage({super.key, required this.controller});
+  const StudyPage({
+    super.key,
+    required this.controller,
+    required this.focus,
+    required this.title,
+    this.onOpenReview,
+  });
 
   final BetaController controller;
+  final SessionFocus focus;
+  final String title;
+  final VoidCallback? onOpenReview;
 
   @override
   State<StudyPage> createState() => _StudyPageState();
@@ -49,9 +58,14 @@ class _StudyPageState extends State<StudyPage> {
   @override
   Widget build(BuildContext context) {
     final controller = widget.controller;
-    final session = controller.activeSession;
+    final session = controller.activeSessionFor(widget.focus);
     if (session == null || session.currentIndex >= session.items.length) {
-      return _CompletedState(controller: controller);
+      return _CompletedState(
+        controller: controller,
+        focus: widget.focus,
+        title: widget.title,
+        onOpenReview: widget.onOpenReview,
+      );
     }
     final item = session.items[session.currentIndex];
     final word = controller.wordForId(item.wordId);
@@ -111,7 +125,7 @@ class _StudyPageState extends State<StudyPage> {
               sliver: SliverList.list(
                 children: [
                   BetaSectionTitle(
-                    '今日学习',
+                    widget.title,
                     subtitle:
                         '已完成 $completed / ${session.items.length} · 稍后复习 ${laterDueCount(controller.data.reviewStates, DateTime.now())}',
                     trailing: IconButton(
@@ -801,9 +815,17 @@ class _RatingButton extends StatelessWidget {
 }
 
 class _CompletedState extends StatelessWidget {
-  const _CompletedState({required this.controller});
+  const _CompletedState({
+    required this.controller,
+    required this.focus,
+    required this.title,
+    this.onOpenReview,
+  });
 
   final BetaController controller;
+  final SessionFocus focus;
+  final String title;
+  final VoidCallback? onOpenReview;
 
   @override
   Widget build(BuildContext context) {
@@ -817,6 +839,14 @@ class _CompletedState extends StatelessWidget {
             )
             .toList()
           ..sort((a, b) => a.dueAt.compareTo(b.dueAt));
+    final readyQueue = buildStudyQueue(
+      words: controller.data.words,
+      reviewStates: controller.data.reviewStates,
+      settings: controller.data.settings,
+      now: now,
+      focus: focus,
+    );
+    final pending = controller.pendingEnrichmentCount;
     return Center(
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 480),
@@ -826,25 +856,58 @@ class _CompletedState extends StatelessWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.task_alt_rounded, size: 54),
+                Icon(
+                  pending > 0 && readyQueue.isEmpty
+                      ? Icons.cloud_sync_rounded
+                      : Icons.task_alt_rounded,
+                  size: 54,
+                ),
                 const SizedBox(height: 14),
                 Text(
-                  '当前任务已完成',
+                  pending > 0 && readyQueue.isEmpty ? '正在补全学习内容' : '$title已完成',
                   style: Theme.of(context).textTheme.headlineSmall,
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  later.isEmpty
+                  pending > 0 && readyQueue.isEmpty
+                      ? '还有 $pending 个词条正在联网查找中英文释义。内容完整前不会进入评分。'
+                      : later.isEmpty
                       ? '今天暂时没有更多到期任务。'
                       : '今天稍后还有 ${later.length} 个单词需要复习\n最近一次：${TimeOfDay.fromDateTime(later.first.dueAt).format(context)}',
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 18),
-                FilledButton.icon(
-                  onPressed: () => controller.startStudy(),
-                  icon: const Icon(Icons.refresh_rounded),
-                  label: const Text('重新检查到期任务'),
-                ),
+                if (pending > 0 && readyQueue.isEmpty)
+                  FilledButton.icon(
+                    onPressed: controller.enriching
+                        ? null
+                        : controller.enrichIncompleteWords,
+                    icon: controller.enriching
+                        ? const SizedBox.square(
+                            dimension: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.refresh_rounded),
+                    label: Text(controller.enriching ? '正在联网补全' : '重新尝试补全'),
+                  )
+                else ...[
+                  FilledButton.icon(
+                    onPressed: () => controller.startStudy(focus: focus),
+                    icon: const Icon(Icons.refresh_rounded),
+                    label: Text(
+                      focus == SessionFocus.newWords ? '开始今日学习' : '重新检查到期任务',
+                    ),
+                  ),
+                  if (focus == SessionFocus.newWords &&
+                      onOpenReview != null) ...[
+                    const SizedBox(height: 8),
+                    OutlinedButton.icon(
+                      onPressed: onOpenReview,
+                      icon: const Icon(Icons.replay_rounded),
+                      label: const Text('进入今日复习'),
+                    ),
+                  ],
+                ],
               ],
             ),
           ),

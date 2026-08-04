@@ -24,11 +24,13 @@ class SettingsScreen extends StatefulWidget {
     required this.settings,
     required this.onChanged,
     required this.onOpenTypography,
+    required this.onClearSearchCache,
   });
 
   final PdfSettings settings;
   final ValueChanged<PdfSettings> onChanged;
   final VoidCallback onOpenTypography;
+  final Future<void> Function() onClearSearchCache;
 
   @override
   State<SettingsScreen> createState() => _SettingsScreenState();
@@ -41,6 +43,166 @@ class _SettingsScreenState extends State<SettingsScreen> {
   PdfSettings get settings => widget.settings;
   ValueChanged<PdfSettings> get onChanged => widget.onChanged;
   VoidCallback get onOpenTypography => widget.onOpenTypography;
+
+  Future<void> _showClearCacheDialog(BuildContext context) async {
+    final strings = AppLocalizations.of(context);
+    var searchCache = true;
+    var installerCache = false;
+    var offlineLexicons = false;
+    var busy = false;
+    String? result;
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          Future<void> clearSelected() async {
+            if (!searchCache && !installerCache && !offlineLexicons) return;
+            setDialogState(() {
+              busy = true;
+              result = null;
+            });
+            try {
+              if (searchCache) await widget.onClearSearchCache();
+              if (installerCache) {
+                await UpdateService.cleanupCachedInstallers();
+              }
+              if (offlineLexicons) await _offlineLexicon.removeAll();
+              setDialogState(() {
+                result = strings.isZh
+                    ? '所选缓存已清除。词汇书、生成记录、搜索历史和学习进度均已保留。'
+                    : 'Selected caches were cleared. Books, history, and learning progress were preserved.';
+              });
+            } catch (error) {
+              setDialogState(() {
+                result = strings.isZh
+                    ? '清除失败：$error'
+                    : 'Cleanup failed: $error';
+              });
+            } finally {
+              setDialogState(() => busy = false);
+            }
+          }
+
+          return AlertDialog(
+            icon: const Icon(Icons.cleaning_services_rounded),
+            title: Text(strings.isZh ? '自定义清除缓存' : 'Choose caches to clear'),
+            content: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 480),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      strings.isZh
+                          ? '只选择需要重新下载或重新查询的内容。用户数据不会被列入清理范围。'
+                          : 'Only select content that can be downloaded or queried again. User data is excluded.',
+                    ),
+                    const SizedBox(height: 12),
+                    CheckboxListTile(
+                      contentPadding: EdgeInsets.zero,
+                      value: searchCache,
+                      onChanged: busy
+                          ? null
+                          : (value) => setDialogState(
+                              () => searchCache = value ?? false,
+                            ),
+                      title: Text(
+                        strings.isZh
+                            ? '查词与翻译缓存'
+                            : 'Dictionary and translation cache',
+                      ),
+                      subtitle: Text(
+                        strings.isZh
+                            ? '下次查询时会重新从词典服务获取。'
+                            : 'Dictionary data will be fetched again on the next lookup.',
+                      ),
+                    ),
+                    CheckboxListTile(
+                      contentPadding: EdgeInsets.zero,
+                      value: installerCache,
+                      onChanged: busy
+                          ? null
+                          : (value) => setDialogState(
+                              () => installerCache = value ?? false,
+                            ),
+                      title: Text(
+                        strings.isZh ? '更新安装包缓存' : 'Update installer cache',
+                      ),
+                      subtitle: Text(
+                        strings.isZh
+                            ? '只清除已经下载到临时目录的安装文件。'
+                            : 'Only removes installers saved in the temporary folder.',
+                      ),
+                    ),
+                    CheckboxListTile(
+                      contentPadding: EdgeInsets.zero,
+                      value: offlineLexicons,
+                      onChanged: busy || _offlineLexicon.downloading
+                          ? null
+                          : (value) => setDialogState(
+                              () => offlineLexicons = value ?? false,
+                            ),
+                      title: Text(
+                        strings.isZh
+                            ? '已下载的离线词典包'
+                            : 'Downloaded offline dictionaries',
+                      ),
+                      subtitle: Text(
+                        strings.isZh
+                            ? '删除极速版和完整版；联网查词不受影响。'
+                            : 'Removes Fast and Full editions; online lookup remains available.',
+                      ),
+                    ),
+                    if (result != null) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        result!,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color:
+                              result!.startsWith('清除失败') ||
+                                  result!.startsWith('Cleanup failed')
+                              ? Theme.of(context).colorScheme.error
+                              : Theme.of(context).colorScheme.primary,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: busy
+                    ? null
+                    : () => Navigator.of(dialogContext).pop(),
+                child: Text(strings.close),
+              ),
+              FilledButton.icon(
+                onPressed:
+                    busy ||
+                        (!searchCache && !installerCache && !offlineLexicons)
+                    ? null
+                    : clearSelected,
+                icon: busy
+                    ? const SizedBox.square(
+                        dimension: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.delete_sweep_rounded),
+                label: Text(
+                  strings.isZh
+                      ? (busy ? '正在清除…' : '清除所选缓存')
+                      : (busy ? 'Clearing…' : 'Clear selected'),
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
 
   @override
   void initState() {
@@ -832,6 +994,25 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               child: Text(strings.isZh ? '恢复默认' : 'Reset'),
                             ),
                           ],
+                        ),
+                      ),
+                      const SizedBox(height: 18),
+                      _SettingsSection(
+                        title: strings.isZh ? '缓存管理' : 'Cache management',
+                        icon: Icons.cleaning_services_rounded,
+                        child: ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          leading: const Icon(Icons.delete_sweep_outlined),
+                          title: Text(
+                            strings.isZh ? '自定义清除缓存' : 'Choose caches to clear',
+                          ),
+                          subtitle: Text(
+                            strings.isZh
+                                ? '选择清除查词、更新安装包或离线词典缓存；不会删除个人数据。'
+                                : 'Clear lookup, installer, or offline dictionary caches without deleting personal data.',
+                          ),
+                          trailing: const Icon(Icons.chevron_right_rounded),
+                          onTap: () => _showClearCacheDialog(context),
                         ),
                       ),
                       const SizedBox(height: 18),

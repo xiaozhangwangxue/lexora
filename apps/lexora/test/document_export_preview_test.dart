@@ -88,6 +88,27 @@ void main() {
     expect(exportColumnCount(BookPageSize.a4, medium), 2);
     expect(exportColumnCount(BookPageSize.a4, large), 1);
   });
+
+  test('极简模式只保留最多五个核心中文释义', () async {
+    const meanings = '名词：词义一；词义二，词义三、词义四；词义五；词义六';
+    final compact = coreChineseMeanings(meanings);
+    expect(compact, '词义一 · 词义二 · 词义三 · 词义四 · 词义五');
+
+    final docx = await DocumentExportService().buildDocxBytes(
+      [_entry('compact', meanings)],
+      minimalMode: true,
+      generatedAt: DateTime.utc(2026, 8, 5),
+    );
+    final documentXml = utf8.decode(
+      ZipDecoder()
+          .decodeBytes(docx, verify: true)
+          .findFile('word/document.xml')!
+          .content,
+    );
+    expect(documentXml, contains(compact));
+    expect(documentXml, isNot(contains('A concise English definition')));
+    expect(documentXml, isNot(contains('a useful phrase')));
+  });
 }
 
 WordEntry _entry(String word, String chinese, {String? originalTerm}) =>

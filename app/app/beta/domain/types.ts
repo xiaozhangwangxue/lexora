@@ -2,6 +2,7 @@ export type LearningStatus = "new" | "learning" | "review" | "mastered" | "lapse
 export type ReviewRating = "again" | "hard" | "good";
 export type ReviewMode = "word-to-meaning" | "meaning-to-word" | "spelling" | "cloze" | "collocation";
 export type StudyMode = "mixed" | ReviewMode;
+export type SessionFocus = "mixed" | "new" | "review";
 export type SourceType = "cet4-listening" | "cet4-reading" | "cet4-writing" | "cet4-translation" | "textbook" | "manual" | "other";
 export type SkillTag = "listening" | "reading" | "writing" | "translation" | "high-frequency" | "collocation" | "confusing" | "familiar-word-new-meaning";
 
@@ -125,6 +126,7 @@ export type StudySession = {
   localDateKey: string;
   status: "active" | "paused" | "completed";
   mode: StudyMode;
+  focus?: SessionFocus;
   items: StudySessionItem[];
   currentIndex: number;
   startedAt: string;
@@ -141,6 +143,10 @@ export type BetaSettings = {
   autoPlayWordAudio: boolean;
   autoPlayExampleAudio: boolean;
   showNextReviewTime: boolean;
+  enabledLearningSources: string[];
+  selectedHistoryWordIds: string[];
+  selectedGeneratedBookIds: string[];
+  installedLearningPacks: string[];
   updatedAt: string;
 };
 
@@ -187,6 +193,10 @@ export const defaultBetaSettings = (now = new Date()): BetaSettings => ({
   autoPlayWordAudio: false,
   autoPlayExampleAudio: false,
   showNextReviewTime: true,
+  enabledLearningSources: ["generated", "manual"],
+  selectedHistoryWordIds: [],
+  selectedGeneratedBookIds: [],
+  installedLearningPacks: [],
   updatedAt: now.toISOString(),
 });
 

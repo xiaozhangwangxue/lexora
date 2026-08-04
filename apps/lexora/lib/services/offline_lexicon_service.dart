@@ -272,6 +272,21 @@ class OfflineLexiconService extends ChangeNotifier
     notifyListeners();
   }
 
+  Future<void> removeAll() async {
+    await initialize();
+    if (_downloading) {
+      throw StateError('An offline lexicon download is still running.');
+    }
+    final files = _installed.values.map((item) => File(item.path)).toList();
+    _activeEdition = null;
+    _installed.clear();
+    await _saveRegistry();
+    for (final file in files) {
+      if (await file.exists()) await file.delete();
+    }
+    notifyListeners();
+  }
+
   Future<void> download(
     OfflineLexiconEdition edition, {
     void Function(double? progress)? onProgress,

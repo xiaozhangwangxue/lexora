@@ -6,6 +6,7 @@ import Link from "next/link";
 import type { IconType } from "react-icons";
 import { FaAndroid, FaApple, FaDownload, FaLinux, FaWindows } from "react-icons/fa6";
 import releaseManifest from "../public/version.json";
+import betaReleaseManifest from "../public/beta-version.json";
 import { LexoraWordmark } from "./lexora-wordmark";
 import { useSiteLanguage } from "./use-site-language";
 
@@ -21,12 +22,20 @@ const donationCodes = {
 };
 
 const currentVersion = `v${releaseManifest.version}`;
-const platforms: Array<{ key: PlatformKey; name: string; noteZh: string; noteEn: string; Icon: IconType; file: string }> = [
+const betaVersion = `v${betaReleaseManifest.version}`;
+type PlatformDownload = { key: PlatformKey; name: string; noteZh: string; noteEn: string; Icon: IconType; file: string };
+const stablePlatforms: PlatformDownload[] = [
   { key: "macos", name: "macOS", noteZh: "macOS 12+ · 拖动安装 DMG", noteEn: "macOS 12+ · Drag-to-install DMG", Icon: FaApple, file: `lexora-macos-${currentVersion}.dmg` },
   { key: "windows", name: "Windows", noteZh: "Windows 10 / 11 · 安装程序", noteEn: "Windows 10 / 11 · Installer", Icon: FaWindows, file: `lexora-windows-${currentVersion}-setup.exe` },
   { key: "linux", name: "Linux", noteZh: "64 位 Linux · tar.gz", noteEn: "64-bit Linux · tar.gz", Icon: FaLinux, file: `lexora-linux-${currentVersion}.tar.gz` },
   { key: "android", name: "Android", noteZh: "Android 8+ · APK", noteEn: "Android 8+ · APK", Icon: FaAndroid, file: `lexora-android-${currentVersion}.apk` },
 ];
+const betaPlatforms: PlatformDownload[] = stablePlatforms.map((platform) => ({
+  ...platform,
+  noteZh: `${platform.noteZh} · Beta`,
+  noteEn: `${platform.noteEn} · Beta`,
+  file: platform.file.replace(currentVersion, betaVersion),
+}));
 
 function detectPlatform(): DetectedPlatform {
   const nav = navigator as Navigator & { userAgentData?: { platform?: string } };
@@ -70,6 +79,7 @@ export default function Home() {
   const { language, setLanguage, zh } = useSiteLanguage();
   const [progress, setProgress] = useState<number | null>(null);
   const [downloadChoice, setDownloadChoice] = useState<PlatformKey | null>(null);
+  const [downloadChannel, setDownloadChannel] = useState<"stable" | "beta">("stable");
   const [installClosing, setInstallClosing] = useState(false);
   const [detectedPlatform, setDetectedPlatform] = useState<DetectedPlatform | null>(null);
   const [demoPage, setDemoPage] = useState<"search" | "book" | "history">("book");
@@ -83,13 +93,14 @@ export default function Home() {
   const [draggingWord, setDraggingWord] = useState<string | null>(null);
   const [dropTargetWord, setDropTargetWord] = useState<string | null>(null);
   const [dragPreview, setDragPreview] = useState<DragPreview | null>(null);
+  const platforms = downloadChannel === "beta" ? betaPlatforms : stablePlatforms;
   const selectedPlatform = platforms.find((platform) => platform.key === downloadChoice);
   const recommendedPlatform = platforms.find((platform) => platform.key === detectedPlatform);
   const RecommendedIcon = recommendedPlatform?.Icon ?? (detectedPlatform === "ios" ? FaApple : FaDownload);
   const orderedPlatforms = useMemo(() => {
     if (!recommendedPlatform) return platforms;
     return [recommendedPlatform, ...platforms.filter((platform) => platform.key !== recommendedPlatform.key)];
-  }, [recommendedPlatform]);
+  }, [recommendedPlatform, platforms]);
 
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => {
@@ -519,6 +530,31 @@ export default function Home() {
         </article>
       </section>
 
+      <section className="betaRelease wrap" id="beta" data-reveal>
+        <div className="betaReleaseIntro">
+          <p className="sectionLabel">Lexora {betaVersion}</p>
+          <h2>{zh ? "从查词、整理，到真正记住。" : "From looking words up to truly remembering them."}</h2>
+          <p>{zh ? "新的学习 Beta 已把完整词典、个人词汇书和间隔重复学习合并到同一个流畅界面中。网页端可立即体验，应用端可选择 Beta 安装包。" : "The new learning Beta unifies the full dictionary, personal vocabulary books, and spaced repetition in one fluid experience. Try it on the web or install a Beta build."}</p>
+          <div className="betaReleaseActions">
+            <Link href="/app/beta">{zh ? "打开网页端 Beta" : "Open the web Beta"} <span>↗</span></Link>
+            <button onClick={() => { setDownloadChannel("beta"); document.querySelector("#download")?.scrollIntoView({ behavior: "smooth" }); }}>{zh ? "下载应用 Beta" : "Download app Beta"} <span>↓</span></button>
+          </div>
+        </div>
+        <div className="betaReleaseGrid">
+          {(zh ? [
+            ["01", "完整学习闭环", "今日新词与今日复习分开安排，评分会形成真实的间隔复习计划。"],
+            ["02", "自由组合词库", "从生成记录、搜索历史、单独词条和可下载预设词库选择学习内容。"],
+            ["03", "跨端统一体验", "网页、Android、Windows、Linux 与 macOS 使用一致的信息结构；macOS 保留原生 SwiftUI 与 Liquid Glass。"],
+            ["04", "更安全的本地管理", "双语释义补全后才进入学习，并新增可逐项选择的缓存清理。"],
+          ] : [
+            ["01", "A complete learning loop", "Separate new learning from due review and build a real spaced-repetition schedule from every rating."],
+            ["02", "Mix your own sources", "Study generated books, search history, individual entries, and downloadable preset packs."],
+            ["03", "One cross-platform structure", "Web, Android, Windows, Linux, and macOS share one information model, with native SwiftUI and Liquid Glass on macOS."],
+            ["04", "Safer local management", "Learning waits for bilingual definitions and cache cleanup is fully selectable."],
+          ]).map(([number, title, body]) => <article key={number}><span>{number}</span><h3>{title}</h3><p>{body}</p></article>)}
+        </div>
+      </section>
+
       <section className="download wrap" id="download" data-reveal>
         <div>
           <p className="sectionLabel">{zh ? "所有设备" : "Every device"}</p>
@@ -526,6 +562,14 @@ export default function Home() {
           <p>{zh ? "Lexora 会在本地识别你的设备并推荐对应版本；设备信息不会上传。你也可以随时选择其他平台。" : "Lexora detects your device locally and recommends the matching build without uploading device data. You can still choose another platform."}</p>
         </div>
         <div className="downloadChoices">
+          <div className="downloadChannel" role="group" aria-label={zh ? "下载版本" : "Download channel"}>
+            <button className={downloadChannel === "stable" ? "active" : undefined} onClick={() => setDownloadChannel("stable")}>
+              {zh ? `稳定版 ${currentVersion}` : `Stable ${currentVersion}`}
+            </button>
+            <button className={downloadChannel === "beta" ? "active" : undefined} onClick={() => setDownloadChannel("beta")}>
+              Beta {betaVersion}
+            </button>
+          </div>
           <div className={`recommendedDownload${recommendedPlatform ? " isReady" : ""}`} aria-live="polite">
             <div className="recommendedDownloadCopy">
               <span className="recommendedBadge">{zh ? "为你的设备推荐" : "Recommended for your device"}</span>
@@ -576,7 +620,7 @@ export default function Home() {
             <p>{zh ? "需要回退时，可继续下载以前的稳定版本。安装前请先备份重要生成文件。" : "Need to roll back? Previous stable versions remain available. Back up important generated files before installing."}</p>
             {releaseManifest.historicalDownloads.map((release) => (
               <div className="historicalGrid" key={release.version}>
-                {platforms.map((platform) => {
+                {stablePlatforms.map((platform) => {
                   const PlatformIcon = platform.Icon;
                   const href = release.downloads[platform.key];
                   return (

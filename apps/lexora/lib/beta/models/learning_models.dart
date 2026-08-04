@@ -286,6 +286,16 @@ class LearningWord {
   final DateTime createdAt;
   final DateTime updatedAt;
 
+  /// A word is never allowed into a review session until the dictionary
+  /// enrichment has produced real bilingual content.  Legacy generation
+  /// history used to create an empty placeholder meaning, which made the
+  /// study screen show a word and rating buttons with no answer.
+  bool get isStudyReady => meanings.any(
+    (meaning) =>
+        meaning.definitionZh.trim().isNotEmpty &&
+        (meaning.definitionEn?.trim().isNotEmpty ?? false),
+  );
+
   LearningWord copyWith({
     String? text,
     String? normalizedText,
@@ -587,6 +597,8 @@ class ReviewLog {
 
 enum SessionStatus { active, paused, completed }
 
+enum SessionFocus { mixed, newWords, reviews }
+
 enum SessionItemState { pending, revealed, completed }
 
 class StudySessionItem {
@@ -645,6 +657,7 @@ class StudySession {
     required this.localDateKey,
     required this.status,
     required this.mode,
+    this.focus = SessionFocus.mixed,
     required this.items,
     required this.currentIndex,
     required this.startedAt,
@@ -656,6 +669,7 @@ class StudySession {
   final String localDateKey;
   final SessionStatus status;
   final StudyMode mode;
+  final SessionFocus focus;
   final List<StudySessionItem> items;
   final int currentIndex;
   final DateTime startedAt;
@@ -673,6 +687,7 @@ class StudySession {
     localDateKey: localDateKey,
     status: status ?? this.status,
     mode: mode,
+    focus: focus,
     items: items ?? this.items,
     currentIndex: currentIndex ?? this.currentIndex,
     startedAt: startedAt,
@@ -685,6 +700,7 @@ class StudySession {
     'localDateKey': localDateKey,
     'status': status.name,
     'mode': mode.name,
+    'focus': focus.name,
     'items': items.map((value) => value.toJson()).toList(),
     'currentIndex': currentIndex,
     'startedAt': startedAt.toIso8601String(),
@@ -701,6 +717,7 @@ class StudySession {
       SessionStatus.paused,
     ),
     mode: _enumValue(StudyMode.values, json['mode'], StudyMode.mixed),
+    focus: _enumValue(SessionFocus.values, json['focus'], SessionFocus.mixed),
     items: (json['items'] as List? ?? const [])
         .whereType<Map>()
         .map(
@@ -730,6 +747,8 @@ class BetaSettings {
     this.autoPlayWordAudio = false,
     this.autoPlayExampleAudio = false,
     this.showNextReviewTime = true,
+    this.enabledLearningSources = const ['generated', 'manual'],
+    this.selectedHistoryWordIds = const [],
     required this.updatedAt,
   });
 
@@ -741,6 +760,8 @@ class BetaSettings {
   final bool autoPlayWordAudio;
   final bool autoPlayExampleAudio;
   final bool showNextReviewTime;
+  final List<String> enabledLearningSources;
+  final List<String> selectedHistoryWordIds;
   final DateTime updatedAt;
 
   BetaSettings copyWith({
@@ -752,6 +773,8 @@ class BetaSettings {
     bool? autoPlayWordAudio,
     bool? autoPlayExampleAudio,
     bool? showNextReviewTime,
+    List<String>? enabledLearningSources,
+    List<String>? selectedHistoryWordIds,
     DateTime? updatedAt,
   }) => BetaSettings(
     dailyNewWordLimit: dailyNewWordLimit ?? this.dailyNewWordLimit,
@@ -762,6 +785,10 @@ class BetaSettings {
     autoPlayWordAudio: autoPlayWordAudio ?? this.autoPlayWordAudio,
     autoPlayExampleAudio: autoPlayExampleAudio ?? this.autoPlayExampleAudio,
     showNextReviewTime: showNextReviewTime ?? this.showNextReviewTime,
+    enabledLearningSources:
+        enabledLearningSources ?? this.enabledLearningSources,
+    selectedHistoryWordIds:
+        selectedHistoryWordIds ?? this.selectedHistoryWordIds,
     updatedAt: updatedAt ?? this.updatedAt,
   );
 
@@ -776,6 +803,8 @@ class BetaSettings {
     'autoPlayWordAudio': autoPlayWordAudio,
     'autoPlayExampleAudio': autoPlayExampleAudio,
     'showNextReviewTime': showNextReviewTime,
+    'enabledLearningSources': enabledLearningSources,
+    'selectedHistoryWordIds': selectedHistoryWordIds,
     'updatedAt': updatedAt.toIso8601String(),
   };
 
@@ -804,6 +833,17 @@ class BetaSettings {
     autoPlayWordAudio: json['autoPlayWordAudio'] == true,
     autoPlayExampleAudio: json['autoPlayExampleAudio'] == true,
     showNextReviewTime: json['showNextReviewTime'] != false,
+    enabledLearningSources:
+        (json['enabledLearningSources'] as List? ??
+                const ['generated', 'manual'])
+            .map((value) => value.toString())
+            .toSet()
+            .toList(),
+    selectedHistoryWordIds:
+        (json['selectedHistoryWordIds'] as List? ?? const [])
+            .map((value) => value.toString())
+            .toSet()
+            .toList(),
     updatedAt:
         DateTime.tryParse(json['updatedAt']?.toString() ?? '') ??
         DateTime.now(),

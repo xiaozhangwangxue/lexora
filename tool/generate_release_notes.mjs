@@ -1,6 +1,12 @@
 import { readFile, writeFile } from "node:fs/promises";
 
-const metadata = JSON.parse(await readFile("public/version.json", "utf8"));
+const channel = process.argv.includes("--beta") ? "beta" : "stable";
+const metadata = JSON.parse(
+  await readFile(
+    channel === "beta" ? "public/beta-version.json" : "public/version.json",
+    "utf8",
+  ),
+);
 const version = `v${metadata.version}`;
 const bullets = (items) => items.map((item) => `- ${item}`).join("\n");
 const sections = (items) =>

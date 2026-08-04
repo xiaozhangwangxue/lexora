@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 
 import '../controllers/beta_controller.dart';
+import '../models/learning_models.dart';
 import 'dashboard_page.dart';
 import 'learning_settings_page.dart';
 import 'library_page.dart';
@@ -79,7 +80,17 @@ class _BetaLearningScreenState extends State<BetaLearningScreen>
       }
       final pages = [
         DashboardPage(controller: _controller, onOpenStudy: () => _select(1)),
-        StudyPage(controller: _controller),
+        StudyPage(
+          controller: _controller,
+          focus: SessionFocus.newWords,
+          title: '今日学习',
+          onOpenReview: () => _select(2),
+        ),
+        StudyPage(
+          controller: _controller,
+          focus: SessionFocus.reviews,
+          title: '今日复习',
+        ),
         LibraryPage(controller: _controller),
         StatsPage(controller: _controller),
         LearningSettingsPage(controller: _controller),
@@ -129,6 +140,11 @@ class _BetaLearningScreenState extends State<BetaLearningScreen>
                   icon: Icon(Icons.school_outlined),
                   selectedIcon: Icon(Icons.school_rounded),
                   label: '学习',
+                ),
+                NavigationDestination(
+                  icon: Icon(Icons.replay_outlined),
+                  selectedIcon: Icon(Icons.replay_rounded),
+                  label: '复习',
                 ),
                 NavigationDestination(
                   icon: Icon(Icons.menu_book_outlined),
@@ -209,7 +225,7 @@ class _Header extends StatelessWidget {
               ),
               if (MediaQuery.sizeOf(context).width >= 720)
                 TextButton.icon(
-                  onPressed: () => onSelected(2),
+                  onPressed: () => onSelected(3),
                   icon: const Icon(Icons.add_rounded),
                   label: const Text('添加单词'),
                 ),
@@ -234,6 +250,7 @@ class _DesktopTabs extends StatelessWidget {
   static const _items = [
     ('首页', Icons.space_dashboard_outlined, Icons.space_dashboard_rounded),
     ('今日学习', Icons.school_outlined, Icons.school_rounded),
+    ('今日复习', Icons.replay_outlined, Icons.replay_rounded),
     ('单词库', Icons.menu_book_outlined, Icons.menu_book_rounded),
     ('统计', Icons.insights_outlined, Icons.insights_rounded),
     ('学习设置', Icons.tune_outlined, Icons.tune_rounded),

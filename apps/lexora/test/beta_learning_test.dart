@@ -312,6 +312,65 @@ void main() {
   });
 
   group('今日队列', () {
+    test('中英文释义未补全的旧生成记录绝不进入复习', () {
+      final placeholder = LearningWord(
+        id: 'placeholder-alpha',
+        text: 'alpha',
+        normalizedText: 'alpha',
+        meanings: const [
+          WordMeaning(
+            id: 'placeholder-meaning',
+            partOfSpeech: '',
+            definitionZh: '',
+          ),
+        ],
+        createdAt: now,
+        updatedAt: now,
+      );
+      expect(placeholder.isStudyReady, isFalse);
+      expect(
+        buildStudyQueue(
+          words: [placeholder],
+          reviewStates: {
+            placeholder.id: createReviewState(placeholder.id, now),
+          },
+          settings: BetaSettings(updatedAt: now),
+          now: now,
+        ),
+        isEmpty,
+      );
+    });
+
+    test('今日学习与今日复习队列互不混入', () {
+      final fresh = _word('fresh', now);
+      final due = _word('due', now);
+      final states = {
+        fresh.id: _state(LearningStatus.newWord, now),
+        due.id: _state(LearningStatus.review, now),
+      };
+      final settings = BetaSettings(updatedAt: now);
+      expect(
+        buildStudyQueue(
+          words: [fresh, due],
+          reviewStates: states,
+          settings: settings,
+          now: now,
+          focus: SessionFocus.newWords,
+        ).map((item) => item.wordId),
+        [fresh.id],
+      );
+      expect(
+        buildStudyQueue(
+          words: [fresh, due],
+          reviewStates: states,
+          settings: settings,
+          now: now,
+          focus: SessionFocus.reviews,
+        ).map((item) => item.wordId),
+        [due.id],
+      );
+    });
+
     test('未来任务不进入，等于 now 的任务进入', () {
       final words = [_word('a', now), _word('b', now)];
       final states = {
@@ -750,7 +809,21 @@ LearningWord _word(String text, DateTime createdAt) => LearningWord(
   text: text,
   normalizedText: text,
   meanings: [
-    WordMeaning(id: 'meaning-$text', partOfSpeech: 'n.', definitionZh: '含义'),
+    WordMeaning(
+      id: 'meaning-$text',
+      partOfSpeech: 'n.',
+      definitionZh: '含义',
+      definitionEn: 'A meaning.',
+    ),
+  ],
+  sources: [
+    WordSource(
+      id: 'source-$text',
+      sourceType: SourceType.other,
+      title: 'Lexora 词典',
+      createdAt: createdAt,
+      updatedAt: createdAt,
+    ),
   ],
   createdAt: createdAt,
   updatedAt: createdAt,

@@ -1,4 +1,4 @@
-import { readOfflineLexicon, saveOfflineLexicon } from "./storage";
+import { deleteOfflineLexicon, readOfflineLexicon, saveOfflineLexicon } from "./storage";
 import type { DictionaryEntry } from "./types";
 
 let activeEdition: string | null = null;
@@ -71,6 +71,16 @@ export async function downloadOfflineLexicon(
   onProgress(100);
 }
 
+export async function clearOfflineLexiconCache() {
+  await Promise.all([
+    deleteOfflineLexicon("top20k"),
+    deleteOfflineLexicon("full"),
+  ]);
+  localStorage.removeItem("lexora-offline-edition");
+  activeEdition = null;
+  activeDatabase = null;
+}
+
 async function database(edition: string) {
   if (activeEdition === edition && activeDatabase) return activeDatabase;
   const data = await readOfflineLexicon(edition);
@@ -120,4 +130,3 @@ export async function offlineLookup(
   }
   return row as DictionaryEntry;
 }
-
