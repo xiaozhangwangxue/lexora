@@ -346,7 +346,14 @@ export function LexoraWebApp() {
   useEffect(() => {
     if (!loaded || (mobile && !installed)) return;
     fetch("/api/web/quota", { headers: { "x-lexora-device": deviceId() } })
-      .then((r) => (r.ok ? r.json() : null))
+      .then((r) =>
+        r.ok
+          ? (r.json() as Promise<{
+              lookupsRemaining: number;
+              pdfsRemaining: number;
+            }>)
+          : null,
+      )
       .then((v) => v && setQuota(v))
       .catch(() => undefined);
   }, [installed, loaded, mobile]);

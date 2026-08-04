@@ -38,6 +38,10 @@ const WEB_LOOKUP_MINUTE_LIMIT = 300;
 const WEB_PDF_MINUTE_LIMIT = 8;
 const WEB_MAX_BODY_BYTES = 2 * 1024 * 1024;
 
+function defaultCache(): Cache {
+  return (caches as CacheStorage & { readonly default: Cache }).default;
+}
+
 async function sha256(value: string) {
   const digest = await crypto.subtle.digest(
     "SHA-256",
@@ -371,7 +375,7 @@ const worker = {
       if (!/^[a-z][a-z' -]{0,79}$/.test(term)) {
         return Response.json({ error: "Invalid term" }, { status: 400 });
       }
-      const cache = caches.default;
+      const cache = defaultCache();
       const cacheKey = new Request(
         `https://lexora-core-cache.invalid/v1/${encodeURIComponent(term)}`,
       );
@@ -445,7 +449,7 @@ const worker = {
       if (!/^[a-z][a-z' -]{0,79}$/.test(term)) {
         return Response.json({ error: "Invalid term" }, { status: 400 });
       }
-      const cache = caches.default;
+      const cache = defaultCache();
       const cacheKey = new Request(
         `https://lexora-full-cache.invalid/v1/${encodeURIComponent(term)}`,
       );
@@ -535,7 +539,7 @@ const worker = {
           },
         );
       }
-      const cache = caches.default;
+      const cache = defaultCache();
       const cacheKeyFor = async (text: string) => {
         const encoded = new TextEncoder().encode(text);
         const digest = await crypto.subtle.digest("SHA-256", encoded);

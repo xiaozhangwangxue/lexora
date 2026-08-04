@@ -105,6 +105,22 @@ test("server-renders the installable full Lexora PWA", async () => {
   assert.equal(removedWeb.status, 404);
 });
 
+test("server-renders the separate installable Lexora learning Beta", async () => {
+  const response = await render("/app/beta");
+  assert.equal(response.status, 200);
+  const html = await response.text();
+  assert.match(html, /Lexora Beta/);
+  assert.match(html, /正在读取学习数据/);
+  assert.match(html, /今日学习/);
+  assert.match(html, /单词库/);
+  assert.match(html, /学习统计/);
+  assert.match(html, /beta-manifest\.webmanifest/);
+
+  const stable = await render("/app");
+  assert.equal(stable.status, 200);
+  assert.match(await stable.text(), /Lexora Web/);
+});
+
 test("publishes robots, sitemap, and web app manifest", async () => {
   const robots = await render("/robots.txt");
   assert.equal(robots.status, 200);
@@ -116,6 +132,7 @@ test("publishes robots, sitemap, and web app manifest", async () => {
   assert.match(sitemapText, /guides\/word-to-pdf/);
   assert.match(sitemapText, /vocabulary-book-generator/);
   assert.match(sitemapText, /\/app/);
+  assert.match(sitemapText, /\/app\/beta/);
   assert.doesNotMatch(sitemapText, /\/web/);
 
   const manifestText = await readFile(
@@ -132,6 +149,16 @@ test("publishes robots, sitemap, and web app manifest", async () => {
   );
   assert.match(appSource, /mobile && !installed/);
   assert.match(appSource, /请先将 Lexora 添加到主屏幕/);
+
+  const betaManifest = JSON.parse(
+    await readFile(
+      new URL("../public/beta-manifest.webmanifest", import.meta.url),
+      "utf8",
+    ),
+  );
+  assert.equal(betaManifest.start_url, "/app/beta?source=pwa");
+  assert.equal(betaManifest.id, "/app/beta");
+  assert.equal(betaManifest.scope, "/app/beta");
 });
 
 test("server-renders the bilingual donation page", async () => {

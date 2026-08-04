@@ -23,6 +23,7 @@ import '../services/pdf_settings_service.dart';
 import '../services/word_service.dart';
 import '../widgets/github_button.dart';
 import '../widgets/release_notes_content.dart';
+import '../beta/screens/beta_learning_screen.dart';
 import 'history_screen.dart';
 import 'history_hub_screen.dart';
 import 'home_screen.dart';
@@ -141,7 +142,7 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
     }
     if (call.method != 'selectPage') return;
     final page = call.arguments as int?;
-    if (page == null || page < 0 || page > 4 || !mounted) return;
+    if (page == null || page < 0 || page > 5 || !mounted) return;
     if (_readerOpen && Navigator.of(context).canPop()) {
       Navigator.of(context).popUntil((route) => route.isFirst);
       _readerOpen = false;
@@ -886,6 +887,7 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
         onChanged: _updateSettings,
         onOpenTypography: _showPdfCustomizer,
       ),
+      BetaLearningScreen(active: _index == 5),
     ];
     final pageContent = _isAndroid
         ? ColoredBox(
@@ -974,6 +976,11 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
         selectedIcon: const Icon(Icons.settings_rounded),
         label: Text(strings.settings),
       ),
+      const NavigationRailDestination(
+        icon: Icon(Icons.school_outlined),
+        selectedIcon: Icon(Icons.school_rounded),
+        label: Text('学习 Beta'),
+      ),
     ];
 
     if (Platform.isMacOS && _nativeMacShellAvailable == true) {
@@ -996,6 +1003,7 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
           strings.generationRecords,
           strings.history,
           strings.settings,
+          '学习 Beta',
         ],
         onSelected: _selectPage,
         onSearchRepeated: _resetSearchHome,
@@ -1101,6 +1109,11 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
               icon: destinations[4].icon,
               selectedIcon: destinations[4].selectedIcon,
               label: strings.settings,
+            ),
+            NavigationDestination(
+              icon: destinations[5].icon,
+              selectedIcon: destinations[5].selectedIcon,
+              label: '学习',
             ),
           ],
         ),
@@ -1212,6 +1225,7 @@ class _WindowsFluentShellState extends State<_WindowsFluentShell> {
       fluent.FluentIcons.document,
       fluent.FluentIcons.history,
       fluent.FluentIcons.settings,
+      fluent.FluentIcons.education,
     ];
     return fluent.FluentTheme(
       data: fluentTheme,

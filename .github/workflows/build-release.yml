@@ -106,6 +106,7 @@ jobs:
         run: |
           cp packaging/macos/MainFlutterWindow.swift macos/Runner/MainFlutterWindow.swift
           cmp -s packaging/macos/MainFlutterWindow.swift macos/Runner/MainFlutterWindow.swift
+          cp packaging/macos/Podfile macos/Podfile
           sed -i '' 's/MACOSX_DEPLOYMENT_TARGET = 10.15/MACOSX_DEPLOYMENT_TARGET = 12.0/g' macos/Runner.xcodeproj/project.pbxproj
           dart run tool/configure_macos_lipo.dart
           /usr/libexec/PlistBuddy -c "Add :com.apple.security.network.client bool true" macos/Runner/Release.entitlements || /usr/libexec/PlistBuddy -c "Set :com.apple.security.network.client true" macos/Runner/Release.entitlements

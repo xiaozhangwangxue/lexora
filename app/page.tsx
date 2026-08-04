@@ -307,6 +307,7 @@ export default function Home() {
         </a>
         <div className="navLinks">
           <Link className="webAppNavButton" href="/app">{zh ? "网页版" : "Web app"}</Link>
+          <Link className="betaNavButton" href="/app/beta">{zh ? "学习 Beta" : "Learning Beta"}</Link>
           <a href="#how">{zh ? "工作方式" : "How it works"}</a>
           <Link href="/guides">{zh ? "使用指南" : "Guides"}</Link>
           <Link href={zh ? "/vocabulary-book-generator" : "/en/vocabulary-book-generator"}>{zh ? "词汇书生成器" : "Generator"}</Link>
@@ -334,6 +335,7 @@ export default function Home() {
         </p>
         <div className="heroActions">
           <Link className="primaryButton" href="/app">{zh ? "安装网页版" : "Install web app"} <span>↗</span></Link>
+          <Link className="betaHeroButton" href="/app/beta">{zh ? "体验四级学习 Beta" : "Try learning Beta"} <span>β</span></Link>
           <a className="textButton" href="#download">{zh ? "下载应用" : "Download app"} <span>↓</span></a>
           <a className="textButton" href="#demo">{zh ? "试试交互演示" : "Try the live demo"} <span>↘</span></a>
         </div>

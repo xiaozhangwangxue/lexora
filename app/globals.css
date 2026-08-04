@@ -114,3 +114,13 @@ footer{border-top:1px solid var(--line);min-height:120px;display:flex;align-item
 @media(max-width:760px){.navLinks a.webAppNavButton{display:inline-flex}.webAppNavButton{padding:9px 12px}.webAppPage{padding-bottom:35px}.webAppTopbar{height:68px}.webAppTopbar nav>a{display:none}.webAppTopbar nav{gap:8px}.webAppHero{padding-top:32px}.webAppHero h1{font-size:43px}.webSearch{height:61px;border-radius:20px}.webSuggestions{top:68px}.webAppGrid{width:100%;gap:10px}.webLookupPanel,.webBookPanel{border-left:0;border-right:0;border-radius:0}.webResult{padding:25px 20px}.webResult h2{font-size:38px}.webEmpty{padding:38px 24px}.webBookPanel{padding:22px 20px}.webWordList{max-height:320px}}
 @media(max-width:430px){.nav .githubProfileButton{display:none}.nav{height:72px}.webAppNavButton{font-size:12px}}
 @media(prefers-reduced-motion:reduce){.webSuggestions{animation:none}.webAppNavButton,.webSaveButton{transition:none}}
+
+/* The learning Beta remains visually and structurally separate from /app. */
+.betaNavButton{padding:9px 14px;border-radius:999px;background:#e9ecff;color:#34449e!important;font-weight:800;border:1px solid #cfd5fa;transition:transform var(--motion-fast) var(--ease-out),background-color var(--motion-state) var(--ease-out)}
+.betaHeroButton{display:flex;gap:16px;align-items:center;color:#34449e;background:#edf0ff;border:1px solid #d4d9fa;padding:14px 16px 14px 22px;border-radius:999px;font-weight:800;text-decoration:none;transition:transform var(--motion-fast) var(--ease-out),background-color var(--motion-state) var(--ease-out)}
+.betaHeroButton span{display:grid;place-items:center;width:28px;height:28px;border-radius:50%;background:#5365cb;color:#fff}
+.betaNavButton:active,.betaHeroButton:active{transform:scale(.97)}
+@media(hover:hover) and (pointer:fine){.betaNavButton:hover,.betaHeroButton:hover{transform:translateY(-2px)}}
+@media(max-width:760px){.navLinks a.betaNavButton{display:inline-flex!important}.betaNavButton{padding:9px 12px}.heroActions .betaHeroButton{display:flex}}
+@media(max-width:430px){.betaNavButton{font-size:12px;padding:8px 10px}.navLinks a.webAppNavButton{display:none}}
+@media(prefers-reduced-motion:reduce){.betaNavButton,.betaHeroButton{transition:none!important;transform:none!important}}

@@ -26,6 +26,20 @@ The complete web frontend is open source in [`app/app`](app/app). It uses the pu
 > [!IMPORTANT]
 > Lexora needs no account. Word lists, history, and generated documents stay on the device by default. The native app sends relevant entries when generating a book; the web app sends them only when the user actively looks up a term or starts generation.
 
+## Lexora Learning Beta
+
+Lexora now adds a practical CET-4 vocabulary-learning loop alongside its existing dictionary, vocabulary-book generation, and document-reading tools. The web Beta lives at [lexora.12323456.xyz/app/beta](https://lexora.12323456.xyz/app/beta); the stable `/app` remains unchanged.
+
+- Active recall hides the full answer until the learner thinks or submits an answer.
+- Deterministic spaced repetition schedules Again, Hard, and Good reviews without a heavyweight FSRS dependency.
+- Five exercise modes cover word-to-meaning, meaning-to-word, spelling, cloze, and collocations with safe fallbacks.
+- Every rating atomically updates the review state and appends a review log, powering queues, resumable sessions, weak-word detection, streaks, and statistics.
+- Rich entries support multiple meanings, examples, sources, collocations, CET-4 tags, notes, and importance markers.
+- Web data uses versioned local storage and a recovery copy; native apps use the application documents directory plus a local recovery copy.
+- The macOS window, sidebar, and document-customization sheet use native SwiftUI materials and Liquid Glass while respecting Reduce Motion.
+
+Mobile browsers are guided to install the Beta on the Home Screen for an independent, reliable learning experience. Beta data does not overwrite the stable app, and migrated words are never marked as mastered automatically.
+
 ## Lexora 4.0.4 release notes
 
 <!-- release-notes:en:start -->
