@@ -65,6 +65,21 @@ int exportColumnCount(BookPageSize pageSize, PdfTypography typography) {
   return readableInTwoColumns ? 2 : 1;
 }
 
+String coreChineseMeanings(String value) {
+  final cleaned = value
+      .replaceAll(RegExp(r'\[[^\]]+\]'), ' ')
+      .replaceAll(RegExp(r'\b[a-z]{1,6}\.\s*', caseSensitive: false), ' ')
+      .replaceAll(RegExp(r'^(?:名词|动词|形容词|副词|介词|连词|代词|数词|感叹词)\s*[:：]\s*'), '');
+  final values = cleaned
+      .split(RegExp(r'[\n；;,，。、]+'))
+      .map((item) => item.trim())
+      .where((item) => item.isNotEmpty)
+      .toSet()
+      .take(5)
+      .toList(growable: false);
+  return values.isEmpty ? value.trim() : values.join(' · ');
+}
+
 class PdfTypography {
   const PdfTypography({
     required this.word,
@@ -178,6 +193,7 @@ class PdfService {
     PdfTypography? typography,
     BookPageSize pageSize = BookPageSize.a4,
     bool smartReorder = false,
+    bool minimalMode = false,
     bool showPageFurniture = true,
     DateTime? generatedAt,
   }) async {
@@ -261,6 +277,7 @@ class PdfService {
             resolvedTypography,
             columnCount: columnCount,
             smartReorder: smartReorder,
+            minimalMode: minimalMode,
           ),
         ],
       ),
@@ -276,6 +293,7 @@ class PdfService {
     PdfTypography typography, {
     required int columnCount,
     required bool smartReorder,
+    required bool minimalMode,
   }) {
     final orderedEntries = smartReorder
         ? (entries.toList()
@@ -291,6 +309,7 @@ class PdfService {
             ipa,
             typography,
             denseHeader: false,
+            minimalMode: minimalMode,
           ),
           if (index != orderedEntries.length - 1) pw.SizedBox(height: 4),
         ],
@@ -315,6 +334,7 @@ class PdfService {
             ipa,
             typography,
             denseHeader: columnCount == 3,
+            minimalMode: minimalMode,
           ),
         ),
       );
@@ -358,6 +378,7 @@ class PdfService {
     pw.Font ipa,
     PdfTypography typography, {
     required bool denseHeader,
+    required bool minimalMode,
   }) {
     pw.Widget pill(String text, PdfColor color) => pw.Container(
       padding: const pw.EdgeInsets.symmetric(horizontal: 7, vertical: 3),
@@ -413,7 +434,7 @@ class PdfService {
                   ],
                 ),
               ),
-              if (!denseHeader) ...[
+              if (!minimalMode && !denseHeader) ...[
                 pill(entry.difficulty, PdfColors.indigo100),
                 pw.SizedBox(width: 5),
                 pill(
@@ -423,7 +444,7 @@ class PdfService {
               ],
             ],
           ),
-          if (denseHeader) ...[
+          if (!minimalMode && denseHeader) ...[
             pw.SizedBox(height: 2),
             pw.Wrap(
               spacing: 4,
@@ -436,58 +457,64 @@ class PdfService {
               ],
             ),
           ],
+          if (!minimalMode) ...[
+            pw.SizedBox(height: 3),
+            pw.Wrap(
+              crossAxisAlignment: pw.WrapCrossAlignment.center,
+              children: [
+                pw.Text(
+                  'US 美式  ',
+                  style: pw.TextStyle(
+                    fontSize: typography.phonetic - 1,
+                    color: PdfColors.grey700,
+                  ),
+                ),
+                pw.Text(
+                  entry.usPhonetic,
+                  style: pw.TextStyle(
+                    font: ipa,
+                    fontSize: typography.phonetic,
+                    color: PdfColors.grey700,
+                  ),
+                ),
+                pw.SizedBox(width: 10),
+                pw.Text(
+                  'UK 英式  ',
+                  style: pw.TextStyle(
+                    fontSize: typography.phonetic - 1,
+                    color: PdfColors.grey700,
+                  ),
+                ),
+                pw.Text(
+                  entry.ukPhonetic,
+                  style: pw.TextStyle(
+                    font: ipa,
+                    fontSize: typography.phonetic,
+                    color: PdfColors.grey700,
+                  ),
+                ),
+              ],
+            ),
+          ],
           pw.SizedBox(height: 3),
-          pw.Wrap(
-            crossAxisAlignment: pw.WrapCrossAlignment.center,
-            children: [
-              pw.Text(
-                'US 美式  ',
-                style: pw.TextStyle(
-                  fontSize: typography.phonetic - 1,
-                  color: PdfColors.grey700,
-                ),
-              ),
-              pw.Text(
-                entry.usPhonetic,
-                style: pw.TextStyle(
-                  font: ipa,
-                  fontSize: typography.phonetic,
-                  color: PdfColors.grey700,
-                ),
-              ),
-              pw.SizedBox(width: 10),
-              pw.Text(
-                'UK 英式  ',
-                style: pw.TextStyle(
-                  fontSize: typography.phonetic - 1,
-                  color: PdfColors.grey700,
-                ),
-              ),
-              pw.Text(
-                entry.ukPhonetic,
-                style: pw.TextStyle(
-                  font: ipa,
-                  fontSize: typography.phonetic,
-                  color: PdfColors.grey700,
-                ),
-              ),
-            ],
-          ),
-          pw.SizedBox(height: 3),
+          if (!minimalMode)
+            pw.Text(
+              entry.definition,
+              style: pw.TextStyle(fontSize: typography.definition),
+            ),
+          if (!minimalMode) pw.SizedBox(height: 2),
           pw.Text(
-            entry.definition,
-            style: pw.TextStyle(fontSize: typography.definition),
-          ),
-          pw.SizedBox(height: 2),
-          pw.Text(
-            entry.definitionZh,
+            minimalMode
+                ? coreChineseMeanings(entry.definitionZh)
+                : entry.definitionZh,
             style: pw.TextStyle(
               font: bold,
               fontSize: typography.definition,
               color: PdfColors.indigo900,
             ),
           ),
-          if (entry.synonyms.isNotEmpty || entry.antonyms.isNotEmpty) ...[
+          if (!minimalMode &&
+              (entry.synonyms.isNotEmpty || entry.antonyms.isNotEmpty)) ...[
             pw.SizedBox(height: 3),
             if (entry.synonyms.isNotEmpty) ...[
               pw.Text(
@@ -519,7 +546,7 @@ class PdfService {
                 ),
             ],
           ],
-          if (entry.examples.isNotEmpty) ...[
+          if (!minimalMode && entry.examples.isNotEmpty) ...[
             pw.SizedBox(height: 3),
             pw.Container(
               padding: const pw.EdgeInsets.only(left: 6),
@@ -550,7 +577,7 @@ class PdfService {
               ),
             ),
           ],
-          if (entry.phrases.isNotEmpty) ...[
+          if (!minimalMode && entry.phrases.isNotEmpty) ...[
             pw.SizedBox(height: 3),
             pw.Text(
               'Phrases / 常用短语',

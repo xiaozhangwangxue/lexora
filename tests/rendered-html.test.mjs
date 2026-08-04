@@ -39,6 +39,7 @@ test("server-renders the finished Lexora landing page", async () => {
   assert.match(html, new RegExp(manifest.verifiedDownloads.android.filename));
   assert.match(html, new RegExp(manifest.verifiedDownloads.macos.filename));
   assert.match(html, new RegExp(manifest.verifiedDownloads.windows.filename));
+  assert.match(html, /Beta\s*(?:<!-- -->)?v4\.1\.0-beta\.2/);
   assert.match(html, /历史版本/);
   assert.match(html, /lexora-android-v3\.2\.5\.apk/);
   assert.match(html, /lexora-android-v3\.1\.0\.apk/);
@@ -105,6 +106,25 @@ test("server-renders the installable full Lexora PWA", async () => {
   assert.equal(removedWeb.status, 404);
 });
 
+test("server-renders the unified installable Lexora Beta", async () => {
+  const response = await render("/app/beta");
+  assert.equal(response.status, 200);
+  const html = await response.text();
+  assert.match(html, /Lexora Beta/);
+  assert.match(html, /Lexora 主要功能/);
+  assert.match(html, /查一个单词/);
+  assert.match(html, /词汇书/);
+  assert.match(html, /生成记录/);
+  assert.match(html, /历史/);
+  assert.match(html, /学习/);
+  assert.match(html, /设置/);
+  assert.match(html, /beta-manifest\.webmanifest/);
+
+  const stable = await render("/app");
+  assert.equal(stable.status, 200);
+  assert.match(await stable.text(), /Lexora Web/);
+});
+
 test("publishes robots, sitemap, and web app manifest", async () => {
   const robots = await render("/robots.txt");
   assert.equal(robots.status, 200);
@@ -116,6 +136,7 @@ test("publishes robots, sitemap, and web app manifest", async () => {
   assert.match(sitemapText, /guides\/word-to-pdf/);
   assert.match(sitemapText, /vocabulary-book-generator/);
   assert.match(sitemapText, /\/app/);
+  assert.match(sitemapText, /\/app\/beta/);
   assert.doesNotMatch(sitemapText, /\/web/);
 
   const manifestText = await readFile(
@@ -132,6 +153,23 @@ test("publishes robots, sitemap, and web app manifest", async () => {
   );
   assert.match(appSource, /mobile && !installed/);
   assert.match(appSource, /请先将 Lexora 添加到主屏幕/);
+
+  const betaManifest = JSON.parse(
+    await readFile(
+      new URL("../public/beta-manifest.webmanifest", import.meta.url),
+      "utf8",
+    ),
+  );
+  assert.equal(betaManifest.start_url, "/app/beta?source=pwa");
+  assert.equal(betaManifest.id, "/app/beta");
+  assert.equal(betaManifest.scope, "/app/beta");
+
+  const betaVersion = JSON.parse(
+    await readFile(new URL("../public/beta-version.json", import.meta.url), "utf8"),
+  );
+  assert.equal(betaVersion.version, "4.1.0-beta.2");
+  assert.equal(betaVersion.build, 30);
+  assert.match(betaVersion.verifiedDownloads.android.filename, /v4\.1\.0-beta\.2\.apk$/);
 });
 
 test("server-renders the bilingual donation page", async () => {

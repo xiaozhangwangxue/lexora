@@ -233,8 +233,21 @@ function logEvent(event: string, detail: Record<string, unknown> = {}) {
   });
   localStorage.setItem(key, JSON.stringify(rows.slice(-3000)));
 }
-export function LexoraWebApp() {
-  const [tab, setTab] = useState<AppTab>("search");
+export function LexoraWebApp({
+  embedded = false,
+  activeTab,
+  onActiveTabChange,
+}: {
+  embedded?: boolean;
+  activeTab?: AppTab;
+  onActiveTabChange?(tab: AppTab): void;
+} = {}) {
+  const [internalTab, setInternalTab] = useState<AppTab>("search");
+  const tab = activeTab ?? internalTab;
+  const setTab = useCallback((next: AppTab) => {
+    setInternalTab(next);
+    onActiveTabChange?.(next);
+  }, [onActiveTabChange]);
   const [installed, setInstalled] = useState(false);
   const [mobile, setMobile] = useState(false);
   const [ios, setIos] = useState(false);
@@ -346,7 +359,14 @@ export function LexoraWebApp() {
   useEffect(() => {
     if (!loaded || (mobile && !installed)) return;
     fetch("/api/web/quota", { headers: { "x-lexora-device": deviceId() } })
-      .then((r) => (r.ok ? r.json() : null))
+      .then((r) =>
+        r.ok
+          ? (r.json() as Promise<{
+              lookupsRemaining: number;
+              pdfsRemaining: number;
+            }>)
+          : null,
+      )
       .then((v) => v && setQuota(v))
       .catch(() => undefined);
   }, [installed, loaded, mobile]);
@@ -384,7 +404,7 @@ export function LexoraWebApp() {
     if ((await installPrompt.userChoice).outcome === "accepted")
       setInstallPrompt(null);
   }
-  const installGate = mobile && !installed;
+  const installGate = !embedded && mobile && !installed;
   if (installGate)
     return (
       <InstallGate
@@ -451,6 +471,16 @@ export function LexoraWebApp() {
       />
     ),
   };
+
+  if (embedded) {
+    return (
+      <div className={styles.embeddedApp} data-active-tab={tab}>
+        {views[tab]}
+        {!onboardingDone && <Onboarding close={() => setOnboardingDone(true)} />}
+        {toast && <div className={styles.toast} role="status">{toast}</div>}
+      </div>
+    );
+  }
 
   return (
     <main className={styles.appShell}>
@@ -1649,6 +1679,7 @@ function BookView({
         previewWords: batch
           .slice(0, 6)
           .map((word) => word.matched || word.term),
+        words: batch.map((word) => word.matched || word.term),
         format: settings.format,
         mime: blob.type,
         size: blob.size,

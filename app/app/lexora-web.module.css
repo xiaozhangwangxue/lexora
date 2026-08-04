@@ -19,6 +19,20 @@
   display: grid;
   grid-template-columns: 220px minmax(0, 1fr);
 }
+.embeddedApp {
+  --ink: #11131b;
+  --blue: #5369b0;
+  --blue-deep: #253b91;
+  --mint: #61d9bd;
+  --paper: #f6f7fb;
+  --card: #fff;
+  --line: #dfe2ec;
+  --muted: #6d7382;
+  min-height: calc(100dvh - 5.25rem);
+  color: var(--ink);
+  background: transparent;
+  font-family: var(--font-manrope), "Noto Sans SC", system-ui, sans-serif;
+}
 .sidebar {
   height: 100dvh;
   position: sticky;
@@ -1780,7 +1794,7 @@ button:active,
     grid-template-columns: 1fr;
   }
   .historyHeader {
-    grid-template-columns: 1fr auto auto;
+    grid-template-columns: minmax(3.5rem, 1fr) auto minmax(3.5rem, 1fr);
   }
   .historyHeader > span {
     display: none;
@@ -1870,18 +1884,7 @@ button:active,
   .recordActions button:nth-child(2) {
     display: none;
   }
-  .historySwitch {
-    grid-row: 2;
-    grid-column: 1/-1;
-    margin-top: 15px;
-  }
-  .historyHeader {
-    display: grid;
-  }
-  .historySelect {
-    grid-column: 2;
-    grid-row: 1;
-  }
+  .historySwitch { justify-self: center; }
   .toolbar {
     font-size: 10px;
   }
@@ -1929,4 +1932,3 @@ button:active,
     scroll-behavior: auto !important;
   }
 }
-

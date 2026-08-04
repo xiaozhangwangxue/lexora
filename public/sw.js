@@ -1,5 +1,5 @@
-const CACHE = "lexora-web-v4";
-const SHELL = ["/app", "/manifest.webmanifest", "/favicon.png", "/lexora-icon-192.png", "/lexora-icon-512.png", "/lexora-apple-touch-icon-180.png"];
+const CACHE = "lexora-web-v5-beta";
+const SHELL = ["/app", "/app/beta", "/manifest.webmanifest", "/beta-manifest.webmanifest", "/favicon.png", "/lexora-icon-192.png", "/lexora-icon-512.png", "/lexora-apple-touch-icon-180.png"];
 self.addEventListener("install", (event) => event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(SHELL)).then(() => self.skipWaiting())));
 self.addEventListener("activate", (event) => event.waitUntil(caches.keys().then((keys) => Promise.all(keys.filter((key) => key !== CACHE).map((key) => caches.delete(key)))).then(() => self.clients.claim())));
 self.addEventListener("fetch", (event) => {
@@ -20,4 +20,3 @@ self.addEventListener("fetch", (event) => {
     return Response.error();
   })));
 });
-

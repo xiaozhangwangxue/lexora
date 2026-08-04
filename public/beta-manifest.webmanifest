@@ -1,0 +1,16 @@
+{
+  "name": "Lexora Beta - 四级词汇学习",
+  "short_name": "Lexora Beta",
+  "description": "主动回忆、真实语境与间隔重复组成的大学英语四级词汇学习系统。",
+  "start_url": "/app/beta?source=pwa",
+  "id": "/app/beta",
+  "scope": "/app/beta",
+  "display": "standalone",
+  "background_color": "#f6f7fb",
+  "theme_color": "#f6f7fb",
+  "lang": "zh-CN",
+  "icons": [
+    { "src": "/lexora-icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/lexora-icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}

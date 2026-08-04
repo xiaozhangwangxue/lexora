@@ -26,6 +26,7 @@ class DocumentExportService {
     required PdfTypography typography,
     required BookPageSize pageSize,
     bool smartReorder = false,
+    bool minimalMode = false,
   }) async {
     final now = DateTime.now();
     final id = const Uuid().v4();
@@ -39,6 +40,7 @@ class DocumentExportService {
             typography: typography,
             pageSize: pageSize,
             smartReorder: smartReorder,
+            minimalMode: minimalMode,
             showPageFurniture: format != BookFormat.longImage,
             generatedAt: now,
           )
@@ -70,6 +72,7 @@ class DocumentExportService {
         typography: typography,
         pageSize: pageSize,
         smartReorder: smartReorder,
+        minimalMode: minimalMode,
         generatedAt: now,
       ),
       BookFormat.docx => await buildDocxBytes(
@@ -78,6 +81,7 @@ class DocumentExportService {
         typography: typography,
         pageSize: pageSize,
         smartReorder: smartReorder,
+        minimalMode: minimalMode,
         generatedAt: now,
       ),
       BookFormat.epub => await buildEpubBytes(
@@ -86,6 +90,7 @@ class DocumentExportService {
         typography: typography,
         pageSize: pageSize,
         smartReorder: smartReorder,
+        minimalMode: minimalMode,
         generatedAt: now,
       ),
       BookFormat.images || BookFormat.longImage => null,
@@ -237,6 +242,7 @@ class DocumentExportService {
     PdfTypography? typography,
     BookPageSize pageSize = BookPageSize.a4,
     bool smartReorder = false,
+    bool minimalMode = false,
     DateTime? generatedAt,
   }) async {
     final date = generatedAt ?? DateTime.now();
@@ -256,7 +262,7 @@ class DocumentExportService {
     final orderedEntries = smartReorder ? _smartOrder(entries) : entries;
     add(
       'word/document.xml',
-      _docxDocument(orderedEntries, date, type, pageSize),
+      _docxDocument(orderedEntries, date, type, pageSize, minimalMode),
     );
     final latinFont = await rootBundle.load(
       'assets/fonts/NotoSans-Regular.ttf',
@@ -310,6 +316,7 @@ class DocumentExportService {
     PdfTypography? typography,
     BookPageSize pageSize = BookPageSize.a4,
     bool smartReorder = false,
+    bool minimalMode = false,
     DateTime? generatedAt,
   }) async {
     final date = generatedAt ?? DateTime.now();
@@ -335,7 +342,7 @@ class DocumentExportService {
       ..addFile(
         ArchiveFile.string(
           'EPUB/book.xhtml',
-          _epubDocument(orderedEntries, date, type),
+          _epubDocument(orderedEntries, date, type, minimalMode),
         ),
       )
       ..addFile(
@@ -414,6 +421,7 @@ class DocumentExportService {
     int number,
     PdfTypography type,
     int width,
+    bool minimalMode,
   ) {
     final related = entry.synonyms.isEmpty && entry.antonyms.isEmpty
         ? ''
@@ -440,13 +448,13 @@ class DocumentExportService {
         '<w:right w:w="140" w:type="dxa"/></w:tcMar></w:tcPr>'
         '${_paragraph('$number  ${entry.word}', style: 'EntryTitle', bold: true, size: type.word, keepNext: true)}'
         '${entry.isFuzzyMatch ? _paragraph('(${entry.originalTerm})', style: 'Meta', color: '737780', size: type.related) : ''}'
-        '${_paragraph('${entry.difficulty}   ·   freq ${entry.frequency.toStringAsFixed(1)}', style: 'Meta', color: '4E5B8C', size: type.related)}'
-        '${_paragraph('US 美式  ${entry.usPhonetic}    UK 英式  ${entry.ukPhonetic}', style: 'Phonetic', color: '5C6270', size: type.phonetic)}'
-        '${_paragraph(entry.definition, size: type.definition)}'
-        '${_paragraph(entry.definitionZh, style: 'Chinese', bold: true, color: '243A8F', size: type.definition)}'
-        '${_paragraph(related, style: 'Compact', size: type.related)}'
-        '${_paragraph(examples.join('\n'), style: 'Example', size: type.example)}'
-        '${_paragraph(phrases.isEmpty ? '' : 'Phrases / 常用短语\n${phrases.join('\n')}', style: 'Compact', size: type.phrase)}'
+        '${minimalMode ? '' : _paragraph('${entry.difficulty}   ·   freq ${entry.frequency.toStringAsFixed(1)}', style: 'Meta', color: '4E5B8C', size: type.related)}'
+        '${minimalMode ? '' : _paragraph('US 美式  ${entry.usPhonetic}    UK 英式  ${entry.ukPhonetic}', style: 'Phonetic', color: '5C6270', size: type.phonetic)}'
+        '${minimalMode ? '' : _paragraph(entry.definition, size: type.definition)}'
+        '${_paragraph(minimalMode ? coreChineseMeanings(entry.definitionZh) : entry.definitionZh, style: 'Chinese', bold: true, color: '243A8F', size: type.definition)}'
+        '${minimalMode ? '' : _paragraph(related, style: 'Compact', size: type.related)}'
+        '${minimalMode ? '' : _paragraph(examples.join('\n'), style: 'Example', size: type.example)}'
+        '${minimalMode ? '' : _paragraph(phrases.isEmpty ? '' : 'Phrases / 常用短语\n${phrases.join('\n')}', style: 'Compact', size: type.phrase)}'
         '</w:tc>';
   }
 
@@ -455,6 +463,7 @@ class DocumentExportService {
     DateTime date,
     PdfTypography type,
     BookPageSize pageSize,
+    bool minimalMode,
   ) {
     final columns = exportColumnCount(pageSize, type);
     final margin = pageSize.marginTwips;
@@ -467,7 +476,13 @@ class DocumentExportService {
         final entryIndex = index + column;
         if (entryIndex < entries.length) {
           rows.write(
-            _entryCell(entries[entryIndex], entryIndex + 1, type, cellWidth),
+            _entryCell(
+              entries[entryIndex],
+              entryIndex + 1,
+              type,
+              cellWidth,
+              minimalMode,
+            ),
           );
         } else {
           rows.write(
@@ -519,6 +534,7 @@ class DocumentExportService {
     List<WordEntry> entries,
     DateTime date,
     PdfTypography type,
+    bool minimalMode,
   ) {
     final cards = StringBuffer();
     for (var index = 0; index < entries.length; index++) {
@@ -527,21 +543,21 @@ class DocumentExportService {
         '<article class="entry"><p class="number">${index + 1}</p>'
         '<h2 xml:lang="en">${_xml(entry.word)}</h2>'
         '${entry.isFuzzyMatch ? '<p class="original">(${_xml(entry.originalTerm!)})</p>' : ''}'
-        '<p class="meta"><span>${_xml(entry.difficulty)}</span><span>freq ${entry.frequency.toStringAsFixed(1)}</span></p>'
-        '<p class="phonetic"><span>US 美式</span> ${_xml(entry.usPhonetic)}<br/><span>UK 英式</span> ${_xml(entry.ukPhonetic)}</p>'
-        '<p xml:lang="en">${_xml(entry.definition)}</p><p class="zh strong" xml:lang="zh-CN">${_xml(entry.definitionZh)}</p>',
+        '${minimalMode ? '' : '<p class="meta"><span>${_xml(entry.difficulty)}</span><span>freq ${entry.frequency.toStringAsFixed(1)}</span></p>'}'
+        '${minimalMode ? '' : '<p class="phonetic"><span>US 美式</span> ${_xml(entry.usPhonetic)}<br/><span>UK 英式</span> ${_xml(entry.ukPhonetic)}</p><p xml:lang="en">${_xml(entry.definition)}</p>'}'
+        '<p class="zh strong" xml:lang="zh-CN">${_xml(minimalMode ? coreChineseMeanings(entry.definitionZh) : entry.definitionZh)}</p>',
       );
-      if (entry.synonyms.isNotEmpty) {
+      if (!minimalMode && entry.synonyms.isNotEmpty) {
         cards.write(
           '<p class="compact"><strong>Synonyms / 近义词</strong>&#160; ${_xml(entry.synonyms.join(' · '))}<br/><span class="zh">${_xml(entry.synonymsZh)}</span></p>',
         );
       }
-      if (entry.antonyms.isNotEmpty) {
+      if (!minimalMode && entry.antonyms.isNotEmpty) {
         cards.write(
           '<p class="compact"><strong>Antonyms / 反义词</strong>&#160; ${_xml(entry.antonyms.join(' · '))}<br/><span class="zh">${_xml(entry.antonymsZh)}</span></p>',
         );
       }
-      if (entry.examples.isNotEmpty) {
+      if (!minimalMode && entry.examples.isNotEmpty) {
         cards.write('<div class="examples">');
         for (var item = 0; item < entry.examples.length; item++) {
           cards.write(
@@ -550,7 +566,7 @@ class DocumentExportService {
         }
         cards.write('</div>');
       }
-      if (entry.phrases.isNotEmpty) {
+      if (!minimalMode && entry.phrases.isNotEmpty) {
         cards.write('<div class="phrases"><strong>Phrases / 常用短语</strong>');
         for (final phrase in entry.phrases) {
           cards.write(

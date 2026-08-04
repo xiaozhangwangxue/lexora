@@ -318,6 +318,32 @@ class _PdfCustomizationDialogState extends State<_PdfCustomizationDialog> {
                                         ],
                                       ),
                                     ),
+                                    const SizedBox(height: 16),
+                                    SwitchListTile(
+                                      contentPadding:
+                                          const EdgeInsets.symmetric(
+                                            horizontal: 14,
+                                          ),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(16),
+                                        side: BorderSide(
+                                          color:
+                                              theme.colorScheme.outlineVariant,
+                                        ),
+                                      ),
+                                      tileColor:
+                                          theme.colorScheme.surfaceContainerLow,
+                                      title: const Text('极简模式'),
+                                      subtitle: const Text(
+                                        '每个词条仅保留单词和约 5 个核心汉译，最多约四行。',
+                                      ),
+                                      value: _settings.minimalMode,
+                                      onChanged: (value) => setState(
+                                        () => _settings = _settings.copyWith(
+                                          minimalMode: value,
+                                        ),
+                                      ),
+                                    ),
                                     const SizedBox(height: 20),
                                     Row(
                                       children: [

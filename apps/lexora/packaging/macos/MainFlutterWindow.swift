@@ -150,7 +150,7 @@ private final class LexoraNavigationModel: ObservableObject {
       return
     }
     lastSearchTap = page == 0 ? now : .distantPast
-    withAnimation(.timingCurve(0.23, 1, 0.32, 1, duration: 0.16)) {
+    withAnimation(.timingCurve(0.2, 0.82, 0.2, 1, duration: 0.18)) {
       selectedPage = page
     }
     channel.invokeMethod("selectPage", arguments: page)
@@ -196,7 +196,7 @@ private struct LexoraNativeShell: View {
           .animation(
             isLiveResizing || reduceMotion
               ? nil
-              : .timingCurve(0.77, 0, 0.175, 1, duration: 0.26),
+              : .timingCurve(0.2, 0.82, 0.2, 1, duration: 0.20),
             value: expanded
           )
         FlutterControllerContainer(controller: flutterViewController)
@@ -235,11 +235,7 @@ private struct LexoraNativeShell: View {
   private func nativeSidebar(expanded: Bool, canExpand: Bool) -> some View {
     let content = VStack(alignment: .leading, spacing: 8) {
       HStack(spacing: 10) {
-        Image(nsImage: NSApp.applicationIconImage)
-          .resizable()
-          .scaledToFit()
-          .frame(width: 36, height: 36)
-          .clipShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
+        NativeAppMark()
         if expanded {
           Text("Lexora")
             .font(.system(size: 18, weight: .semibold, design: .rounded))
@@ -264,7 +260,7 @@ private struct LexoraNativeShell: View {
 
       if canExpand {
         Button {
-          withAnimation(.timingCurve(0.77, 0, 0.175, 1, duration: 0.26)) {
+          withAnimation(.timingCurve(0.2, 0.82, 0.2, 1, duration: 0.20)) {
             prefersExpandedSidebar.toggle()
           }
         } label: {
@@ -286,8 +282,9 @@ private struct LexoraNativeShell: View {
       }
 
       Text(
-        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString")
-          as? String ?? ""
+        Bundle.main.object(forInfoDictionaryKey: "LexoraReleaseVersion") as? String
+          ?? Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
+          ?? ""
       )
         .font(.caption2.monospacedDigit())
         .foregroundStyle(.tertiary)
@@ -361,7 +358,7 @@ private struct LexoraNativeShell: View {
     .help(localized(item.zh, item.en))
     if #available(macOS 26.0, *), selected {
       button.glassEffect(
-        .clear.interactive(),
+        .regular.interactive(),
         in: RoundedRectangle(cornerRadius: 10, style: .continuous)
       )
     } else {
@@ -375,6 +372,7 @@ private struct LexoraNativeShell: View {
       NavigationItem(zh: "词汇书", en: "Vocabulary Book", symbol: "book.closed", selectedSymbol: "book.closed.fill"),
       NavigationItem(zh: "生成记录", en: "Generated", symbol: "doc.text", selectedSymbol: "doc.text.fill"),
       NavigationItem(zh: "历史", en: "History", symbol: "clock.arrow.circlepath", selectedSymbol: "clock.arrow.circlepath"),
+      NavigationItem(zh: "学习 Beta", en: "Study Beta", symbol: "graduationcap", selectedSymbol: "graduationcap.fill"),
       NavigationItem(zh: "设置", en: "Settings", symbol: "gearshape", selectedSymbol: "gearshape.fill"),
     ]
   }
@@ -391,6 +389,7 @@ private struct LexoraCustomization: Identifiable {
   var preset: String
   var exampleAmount: String
   var smartReorder: Bool
+  var minimalMode: Bool
   var word: Double
   var phonetic: Double
   var definition: Double
@@ -405,6 +404,7 @@ private struct LexoraCustomization: Identifiable {
       let preset = arguments["preset"] as? String,
       let exampleAmount = arguments["exampleAmount"] as? String,
       let smartReorder = arguments["smartReorder"] as? Bool,
+      let minimalMode = arguments["minimalMode"] as? Bool,
       let word = (arguments["word"] as? NSNumber)?.doubleValue,
       let phonetic = (arguments["phonetic"] as? NSNumber)?.doubleValue,
       let definition = (arguments["definition"] as? NSNumber)?.doubleValue,
@@ -417,6 +417,7 @@ private struct LexoraCustomization: Identifiable {
     self.preset = preset
     self.exampleAmount = exampleAmount
     self.smartReorder = smartReorder
+    self.minimalMode = minimalMode
     self.word = word
     self.phonetic = phonetic
     self.definition = definition
@@ -432,6 +433,7 @@ private struct LexoraCustomization: Identifiable {
       "preset": preset,
       "exampleAmount": exampleAmount,
       "smartReorder": smartReorder,
+      "minimalMode": minimalMode,
       "word": word,
       "phonetic": phonetic,
       "definition": definition,
@@ -524,6 +526,22 @@ private struct LexoraCustomizationSheet: View {
           .padding(12)
           .background(Color.primary.opacity(0.045), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
 
+          Toggle(isOn: $draft.minimalMode) {
+            VStack(alignment: .leading, spacing: 2) {
+              Text(localized("极简模式", "Minimal mode"))
+                .font(.headline)
+              Text(localized("仅保留单词和约 5 个核心汉译，每个词条最多约四行", "Keep only the word and about five core Chinese meanings"))
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            }
+          }
+          .padding(12)
+          .background(Color.primary.opacity(0.045), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+
+          Text(localized("生成字体预览", "Typography preview"))
+            .font(.headline)
+          documentPreview
+
           Text(localized("精细字号", "Fine typography"))
             .font(.headline)
           sliderCollection
@@ -552,8 +570,55 @@ private struct LexoraCustomizationSheet: View {
       }
       .padding(16)
     }
-    .frame(width: 680, height: 700)
+    .frame(width: 700, height: 760)
     .background(LexoraBackdrop())
+  }
+
+  @ViewBuilder
+  private var documentPreview: some View {
+    let preview = VStack(alignment: .leading, spacing: 5) {
+      HStack(alignment: .firstTextBaseline) {
+        Text("vocabulary")
+          .font(.system(size: min(max(draft.word, 10), 26), weight: .bold, design: .rounded))
+        Spacer()
+        if !draft.minimalMode {
+          Text("B1–B2   freq 72.4")
+            .font(.system(size: min(max(draft.related, 8), 13), weight: .medium))
+            .foregroundStyle(.secondary)
+        }
+      }
+      if !draft.minimalMode {
+        Text("US /voʊˈkæbjələri/   UK /vəˈkæbjələri/")
+          .font(.system(size: min(max(draft.phonetic, 8), 15)))
+          .foregroundStyle(.secondary)
+        Text("The words used in a language or by a particular person.")
+          .font(.system(size: min(max(draft.definition, 8), 15)))
+      }
+      Text(draft.minimalMode ? "词汇；词汇量；用词；术语；字汇" : "词汇；词汇量；某人或某一领域所使用的全部词语。")
+        .font(.system(size: min(max(draft.definition, 8), 15), weight: .semibold))
+        .foregroundStyle(Color.accentColor)
+        .lineLimit(draft.minimalMode ? 3 : 4)
+      if !draft.minimalMode {
+        Text(localized("近义词：lexicon · terminology", "Synonyms: lexicon · terminology"))
+          .font(.system(size: min(max(draft.related, 8), 13)))
+      }
+    }
+    .padding(14)
+    .frame(maxWidth: .infinity, minHeight: 112, alignment: .topLeading)
+
+    if #available(macOS 26.0, *) {
+      GlassEffectContainer(spacing: 8) {
+        preview.glassEffect(
+          .clear,
+          in: RoundedRectangle(cornerRadius: 12, style: .continuous)
+        )
+      }
+    } else {
+      preview.background(
+        .ultraThinMaterial,
+        in: RoundedRectangle(cornerRadius: 12, style: .continuous)
+      )
+    }
   }
 
   @ViewBuilder
@@ -644,6 +709,31 @@ private struct NavigationItem {
   let en: String
   let symbol: String
   let selectedSymbol: String
+}
+
+private struct NativeAppMark: View {
+  private var mark: some View {
+    Image(nsImage: NSApp.applicationIconImage)
+      .resizable()
+      .scaledToFit()
+      .frame(width: 36, height: 36)
+      .clipShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
+      .frame(width: 46, height: 46)
+  }
+
+  var body: some View {
+    if #available(macOS 26.0, *) {
+      mark.glassEffect(
+        .clear,
+        in: RoundedRectangle(cornerRadius: 12, style: .continuous)
+      )
+    } else {
+      mark.background(
+        .ultraThinMaterial,
+        in: RoundedRectangle(cornerRadius: 12, style: .continuous)
+      )
+    }
+  }
 }
 
 private struct LexoraBackdrop: View {

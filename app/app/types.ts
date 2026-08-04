@@ -47,6 +47,7 @@ export type GeneratedBook = {
   createdAt: number;
   wordCount: number;
   previewWords: string[];
+  words?: string[];
   format: BookFormat;
   mime: string;
   size: number;
@@ -112,4 +113,3 @@ export const defaultSettings: AppSettings = {
   serverAcceleration: true,
   developerMode: false,
 };
-
