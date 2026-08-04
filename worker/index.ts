@@ -301,7 +301,7 @@ const worker = {
       }
       headers.set(
         "cache-control",
-        /-v\d+\.\d+\.\d+\./.test(key)
+        /-v\d+\.\d+\.\d+(?:[-.])/.test(key)
           ? "public, max-age=31536000, immutable"
           : "no-cache",
       );
