@@ -309,6 +309,70 @@ const worker = {
     };
 
     if (
+      url.pathname.startsWith("/api/admin/downloads-multipart/") &&
+      (request.method === "POST" ||
+        request.method === "PUT" ||
+        request.method === "DELETE")
+    ) {
+      const token =
+        request.headers.get("x-lexora-upload-token") ??
+        request.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
+      if (!env.DOWNLOAD_UPLOAD_TOKEN || token !== env.DOWNLOAD_UPLOAD_TOKEN) {
+        return new Response("Unauthorized", { status: 401 });
+      }
+      if (!env.DOWNLOADS) {
+        return new Response("Download storage is unavailable", { status: 503 });
+      }
+      const key = decodeURIComponent(
+        url.pathname.slice("/api/admin/downloads-multipart/".length),
+      );
+      if (!key || key.includes("/") || key.includes("..")) {
+        return new Response("Invalid upload", { status: 400 });
+      }
+
+      const uploadId = url.searchParams.get("uploadId");
+      if (!uploadId) {
+        if (request.method !== "POST") {
+          return new Response("Missing uploadId", { status: 400 });
+        }
+        const upload = await env.DOWNLOADS.createMultipartUpload(key, {
+          httpMetadata: {
+            contentType:
+              request.headers.get("content-type") ?? "application/octet-stream",
+            contentDisposition: `attachment; filename="${key}"`,
+          },
+        });
+        return Response.json({ key: upload.key, uploadId: upload.uploadId });
+      }
+
+      const upload = env.DOWNLOADS.resumeMultipartUpload(key, uploadId);
+      if (request.method === "DELETE") {
+        await upload.abort();
+        return Response.json({ ok: true, aborted: key });
+      }
+      if (request.method === "PUT") {
+        const partNumber = Number(url.searchParams.get("partNumber"));
+        if (
+          !Number.isInteger(partNumber) ||
+          partNumber < 1 ||
+          partNumber > 10000 ||
+          !request.body
+        ) {
+          return new Response("Invalid multipart part", { status: 400 });
+        }
+        const part = await upload.uploadPart(partNumber, request.body);
+        return Response.json({ partNumber: part.partNumber, etag: part.etag });
+      }
+
+      const payload = await request.json<{ parts?: R2UploadedPart[] }>();
+      if (!Array.isArray(payload.parts) || payload.parts.length === 0) {
+        return new Response("Multipart parts are required", { status: 400 });
+      }
+      const completed = await upload.complete(payload.parts);
+      return Response.json({ ok: true, key: completed.key });
+    }
+
+    if (
       url.pathname.startsWith("/api/admin/downloads/") &&
       (request.method === "PUT" || request.method === "DELETE")
     ) {
