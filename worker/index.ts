@@ -293,7 +293,11 @@ const worker = {
       } else {
         headers.delete("content-disposition");
       }
-      if (key === "version.json" || key.endsWith("manifest.json") || key === "beta-version.json") {
+      const isManifest =
+        key === "version.json" ||
+        key === "beta-version.json" ||
+        key.endsWith("manifest.json");
+      if (isManifest) {
         // Existing clients rely on the response charset when decoding Chinese
         // release notes. R2's default application/octet-stream would make the
         // Dart HTTP client decode them as Latin-1.
@@ -301,7 +305,9 @@ const worker = {
       }
       headers.set(
         "cache-control",
-        /-v\d+\.\d+\.\d+(?:[-.])/.test(key)
+        isManifest
+          ? "no-store, max-age=0"
+          : /-v\d+\.\d+\.\d+(?:[-.])/.test(key)
           ? "public, max-age=31536000, immutable"
           : "no-cache",
       );
