@@ -147,10 +147,12 @@
 .learningPrivacy i { width: .45rem; height: .45rem; border-radius: 50%; background: #32b579; box-shadow: 0 0 0 .22rem rgba(50, 181, 121, .12); }
 
 .unifiedContent { grid-column: 2; grid-row: 2; min-width: 0; min-height: calc(100dvh - 5.5rem); }
-.learningWorkspace { width: min(76rem, 100%); margin: 0 auto; padding: 2rem clamp(1rem, 3.5vw, 3.4rem) 4rem; }
+.learningWorkspace { width: min(76rem, 100%); margin: 0 auto; padding: 1.2rem clamp(1rem, 3.5vw, 3.4rem) 4rem; }
 .learningHeader { display: flex; align-items: flex-end; justify-content: space-between; gap: 1.5rem; margin-bottom: 1.25rem; }
-.learningHeader h1 { margin: .58rem 0 .3rem; font-size: clamp(2.15rem, 4.8vw, 3.8rem); line-height: 1; letter-spacing: -.055em; }
+.learningTitleRow { display: flex; align-items: center; flex-wrap: wrap; gap: .72rem; }
+.learningHeader h1 { margin: 0; font-size: clamp(2.15rem, 4.8vw, 3.8rem); line-height: 1; letter-spacing: -.055em; }
 .learningHeader p { max-width: 42rem; margin: 0; color: var(--muted); line-height: 1.6; }
+.learningTitleRow + p { margin-top: .45rem; }
 .learningPrivacy { padding: .65rem .8rem; border: 1px solid var(--line); border-radius: .8rem; background: rgba(255, 255, 255, .7); }
 
 .learningTabs {
@@ -578,9 +580,11 @@
   .sidebarToggle { display: none !important; }
   .unifiedContent { min-height: calc(100dvh - 3.6rem); padding-bottom: calc(5rem + env(safe-area-inset-bottom)); }
   .globalError { position: fixed; top: max(.6rem, env(safe-area-inset-top)); left: .8rem; right: .8rem; width: auto; }
-  .learningWorkspace { padding: 1.35rem .9rem 2.5rem; }
+  .learningWorkspace { padding: .72rem .9rem 2.5rem; }
   .learningHeader { align-items: flex-start; margin-bottom: 1rem; }
   .learningHeader h1 { font-size: 2.45rem; }
+  .learningTitleRow { gap: .55rem; }
+  .learningTitleRow .betaPill { padding: .3rem .58rem; font-size: .66rem; }
   .learningHeader p { font-size: .88rem; }
   .learningTabs {
     top: 3.55rem;

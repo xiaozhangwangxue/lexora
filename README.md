@@ -10,7 +10,7 @@
   [![License](https://img.shields.io/github/license/xiaozhangwangxue/lexora?style=flat-square)](LICENSE)
   [![Platforms](https://img.shields.io/badge/platform-Android%20%7C%20macOS%20%7C%20Windows%20%7C%20Linux-10131d?style=flat-square)](#下载与安装)
 
-  [官方网站](https://lexora.12323456.xyz) · [安装网页版](https://lexora.12323456.xyz/app) · [免费词汇书生成器](https://lexora.12323456.xyz/vocabulary-book-generator) · [下载应用](https://lexora.12323456.xyz/#download) · [捐款支持](https://lexora.12323456.xyz/donate) · [English](README.en.md)
+  [官方网站](https://lexora.12323456.xyz) · [安装网页版](https://lexora.12323456.xyz/app) · [体验学习 Beta](https://lexora.12323456.xyz/app/beta) · [免费词汇书生成器](https://lexora.12323456.xyz/vocabulary-book-generator) · [下载应用](https://lexora.12323456.xyz/#download) · [捐款支持](https://lexora.12323456.xyz/donate) · [English](README.en.md)
 </div>
 
 <p align="center">
@@ -35,6 +35,9 @@ Lexora 现已在原有查词、词汇书生成与文档阅读能力之外，加�
 - 五种题型：英译中、中译英、拼写、例句填空和固定搭配填空，资料不足时安全回退。
 - 真实学习记录：每次评分同时更新复习状态和追加日志，支持今日队列、会话恢复、薄弱词、连续学习与统计。
 - 多维词条：多释义、多例句、多来源、固定搭配、四级标签、重点标记和完整编辑。
+- 灵活学习内容：可组合已生成的个人词汇书、历史词条和可下载的四级、六级、考研、KET、PET、雅思及专四专八参考包。
+- 清楚的本地管理：自定义清理补全、预设词库、离线词典或网页资源缓存，并逐项显示真实占用空间。
+- 安全更新：Beta 会同时检查 Beta 与正式版本，始终提示更合适的新版本。
 - 本地优先：网页端使用版本化本地存储和恢复副本；桌面与移动应用使用应用文档目录和本地恢复副本。
 - macOS：原生 SwiftUI 窗口、侧栏和文档设置面板使用系统材质与 Liquid Glass，并尊重“减少动态效果”。
 

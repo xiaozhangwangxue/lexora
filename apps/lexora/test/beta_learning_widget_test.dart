@@ -108,7 +108,7 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.text('当前到期复习'), findsOneWidget);
-    expect(find.byType(NavigationBar), findsOneWidget);
+    expect(find.byKey(const ValueKey('beta-mobile-tabs')), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 }

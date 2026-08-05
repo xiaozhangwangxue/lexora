@@ -246,7 +246,7 @@ jobs:
           if [[ "$RELEASE_VERSION" == *-beta* ]]; then
             node tool/finalize_update_manifest.mjs public/beta-version.json beta-version.json lexora-*
             node tool/upload_release_artifacts.mjs lexora-* beta-version.json
-            node tool/prune_r2_release_objects.mjs --keep v4.1.0-beta.2 v4.0.4 v3.1.0
+            node tool/prune_r2_release_objects.mjs --keep v4.1.0-beta.3 v4.0.4 v3.1.0
           else
             node tool/finalize_update_manifest.mjs public/version.json update-version.json lexora-*
             node tool/upload_release_artifacts.mjs lexora-* update-version.json

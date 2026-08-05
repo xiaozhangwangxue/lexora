@@ -39,7 +39,7 @@ test("server-renders the finished Lexora landing page", async () => {
   assert.match(html, new RegExp(manifest.verifiedDownloads.android.filename));
   assert.match(html, new RegExp(manifest.verifiedDownloads.macos.filename));
   assert.match(html, new RegExp(manifest.verifiedDownloads.windows.filename));
-  assert.match(html, /Beta\s*(?:<!-- -->)?v4\.1\.0-beta\.2/);
+  assert.match(html, /Beta\s*(?:<!-- -->)?v4\.1\.0-beta\.3/);
   assert.match(html, /历史版本/);
   assert.match(html, /lexora-android-v3\.2\.5\.apk/);
   assert.match(html, /lexora-android-v3\.1\.0\.apk/);
@@ -167,9 +167,22 @@ test("publishes robots, sitemap, and web app manifest", async () => {
   const betaVersion = JSON.parse(
     await readFile(new URL("../public/beta-version.json", import.meta.url), "utf8"),
   );
-  assert.equal(betaVersion.version, "4.1.0-beta.2");
-  assert.equal(betaVersion.build, 30);
-  assert.match(betaVersion.verifiedDownloads.android.filename, /v4\.1\.0-beta\.2\.apk$/);
+  assert.equal(betaVersion.version, "4.1.0-beta.3");
+  assert.equal(betaVersion.build, 31);
+  assert.match(betaVersion.verifiedDownloads.android.filename, /v4\.1\.0-beta\.3\.apk$/);
+
+  const workerSource = await readFile(
+    new URL("../worker/index.ts", import.meta.url),
+    "utf8",
+  );
+  assert.match(workerSource, /url\.pathname === "\/beta-version\.json"/);
+  assert.match(workerSource, /r2Response\("beta-version\.json", false\)/);
+
+  const deployConfig = await readFile(
+    new URL("../wrangler.deploy.jsonc", import.meta.url),
+    "utf8",
+  );
+  assert.match(deployConfig, /"\/beta-version\.json"/);
 });
 
 test("server-renders the bilingual donation page", async () => {

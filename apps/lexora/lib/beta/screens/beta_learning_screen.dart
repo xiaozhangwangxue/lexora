@@ -127,42 +127,7 @@ class _BetaLearningScreenState extends State<BetaLearningScreen>
             ),
           ),
           if (!showTopNavigation)
-            NavigationBar(
-              selectedIndex: _index,
-              onDestinationSelected: _select,
-              destinations: const [
-                NavigationDestination(
-                  icon: Icon(Icons.space_dashboard_outlined),
-                  selectedIcon: Icon(Icons.space_dashboard_rounded),
-                  label: '首页',
-                ),
-                NavigationDestination(
-                  icon: Icon(Icons.school_outlined),
-                  selectedIcon: Icon(Icons.school_rounded),
-                  label: '学习',
-                ),
-                NavigationDestination(
-                  icon: Icon(Icons.replay_outlined),
-                  selectedIcon: Icon(Icons.replay_rounded),
-                  label: '复习',
-                ),
-                NavigationDestination(
-                  icon: Icon(Icons.menu_book_outlined),
-                  selectedIcon: Icon(Icons.menu_book_rounded),
-                  label: '词库',
-                ),
-                NavigationDestination(
-                  icon: Icon(Icons.insights_outlined),
-                  selectedIcon: Icon(Icons.insights_rounded),
-                  label: '统计',
-                ),
-                NavigationDestination(
-                  icon: Icon(Icons.tune_outlined),
-                  selectedIcon: Icon(Icons.tune_rounded),
-                  label: '设置',
-                ),
-              ],
-            ),
+            _MobileTabs(selectedIndex: _index, onSelected: _select),
         ],
       );
     },
@@ -323,6 +288,176 @@ class _DesktopTabs extends StatelessWidget {
                 ),
               ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _MobileTabs extends StatefulWidget {
+  const _MobileTabs({required this.selectedIndex, required this.onSelected});
+
+  final int selectedIndex;
+  final ValueChanged<int> onSelected;
+
+  @override
+  State<_MobileTabs> createState() => _MobileTabsState();
+}
+
+class _MobileTabsState extends State<_MobileTabs> {
+  final _scrollController = ScrollController();
+  final _keys = List.generate(_DesktopTabs._items.length, (_) => GlobalKey());
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _centerSelection());
+  }
+
+  @override
+  void didUpdateWidget(covariant _MobileTabs oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.selectedIndex != widget.selectedIndex) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _centerSelection());
+    }
+  }
+
+  Future<void> _centerSelection() async {
+    if (!mounted) return;
+    final itemContext = _keys[widget.selectedIndex].currentContext;
+    if (itemContext == null) return;
+    await Scrollable.ensureVisible(
+      itemContext,
+      alignment: widget.selectedIndex == 0
+          ? 0
+          : widget.selectedIndex == _DesktopTabs._items.length - 1
+          ? 1
+          : .5,
+      duration: MediaQuery.disableAnimationsOf(context)
+          ? Duration.zero
+          : const Duration(milliseconds: 180),
+      curve: const Cubic(.2, .82, .2, 1),
+    );
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final reduceMotion = MediaQuery.disableAnimationsOf(context);
+    return SafeArea(
+      key: const ValueKey('beta-mobile-tabs'),
+      top: false,
+      minimum: const EdgeInsets.fromLTRB(12, 7, 12, 9),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: theme.colorScheme.surfaceContainerLow.withValues(alpha: .94),
+          borderRadius: BorderRadius.circular(22),
+          border: Border.all(
+            color: theme.colorScheme.outlineVariant.withValues(alpha: .52),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: theme.colorScheme.shadow.withValues(alpha: .08),
+              blurRadius: 22,
+              offset: const Offset(0, 7),
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(22),
+          child: SingleChildScrollView(
+            controller: _scrollController,
+            scrollDirection: Axis.horizontal,
+            physics: const BouncingScrollPhysics(),
+            padding: const EdgeInsets.all(4),
+            child: Row(
+              children: [
+                for (var index = 0; index < _DesktopTabs._items.length; index++)
+                  SizedBox(
+                    key: _keys[index],
+                    width: index == 0 || index == _DesktopTabs._items.length - 1
+                        ? 76
+                        : 88,
+                    child: Semantics(
+                      selected: widget.selectedIndex == index,
+                      button: true,
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(17),
+                        onTap: () => widget.onSelected(index),
+                        child: AnimatedContainer(
+                          duration: reduceMotion
+                              ? Duration.zero
+                              : const Duration(milliseconds: 165),
+                          curve: const Cubic(.2, .82, .2, 1),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 8,
+                          ),
+                          decoration: BoxDecoration(
+                            color: widget.selectedIndex == index
+                                ? theme.colorScheme.surface
+                                : Colors.transparent,
+                            borderRadius: BorderRadius.circular(17),
+                            boxShadow: widget.selectedIndex == index
+                                ? [
+                                    BoxShadow(
+                                      color: theme.colorScheme.shadow
+                                          .withValues(alpha: .09),
+                                      blurRadius: 12,
+                                      offset: const Offset(0, 3),
+                                    ),
+                                  ]
+                                : const [],
+                          ),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                widget.selectedIndex == index
+                                    ? _DesktopTabs._items[index].$3
+                                    : _DesktopTabs._items[index].$2,
+                                size: 20,
+                                color: widget.selectedIndex == index
+                                    ? theme.colorScheme.primary
+                                    : theme.colorScheme.onSurfaceVariant,
+                              ),
+                              const SizedBox(height: 3),
+                              Text(
+                                switch (index) {
+                                  1 => '学习',
+                                  2 => '复习',
+                                  3 => '词库',
+                                  5 => '设置',
+                                  _ => _DesktopTabs._items[index].$1,
+                                },
+                                maxLines: 1,
+                                textAlign: TextAlign.center,
+                                overflow: TextOverflow.fade,
+                                softWrap: false,
+                                style: theme.textTheme.labelSmall?.copyWith(
+                                  color: widget.selectedIndex == index
+                                      ? theme.colorScheme.primary
+                                      : theme.colorScheme.onSurfaceVariant,
+                                  fontWeight: widget.selectedIndex == index
+                                      ? FontWeight.w700
+                                      : FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
         ),
       ),
     );

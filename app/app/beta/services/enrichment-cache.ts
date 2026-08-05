@@ -44,6 +44,15 @@ export async function enrichmentCacheCount() {
   return await transaction<number>("readonly", (store) => store.count());
 }
 
+export async function enrichmentCacheUsage() {
+  const entries = await transaction<CachedEntry[]>("readonly", (store) => store.getAll());
+  const encoder = new TextEncoder();
+  return {
+    entries: entries.length,
+    bytes: entries.reduce((total, entry) => total + encoder.encode(JSON.stringify(entry)).byteLength, 0),
+  };
+}
+
 export async function clearEnrichmentCache() {
   await transaction("readwrite", (store) => store.clear());
 }

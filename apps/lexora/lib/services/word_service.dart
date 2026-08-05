@@ -661,6 +661,19 @@ class WordService {
     await Future.wait(keys.map(preferences.remove));
   }
 
+  Future<int> persistentCacheSizeBytes() async {
+    final preferences = await SharedPreferences.getInstance();
+    var bytes = 0;
+    for (final key in preferences.getKeys().where(
+      (key) => key.startsWith('lexora.word.'),
+    )) {
+      final value = preferences.getString(key);
+      if (value == null) continue;
+      bytes += utf8.encode(key).length + utf8.encode(value).length;
+    }
+    return bytes;
+  }
+
   /// Keeps only the selected result after an explicit search.
   ///
   /// In-flight suggestion requests check the retained key before writing, so a

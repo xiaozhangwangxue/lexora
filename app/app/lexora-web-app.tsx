@@ -1,4 +1,5 @@
 "use client";
+/* eslint-disable @next/next/no-img-element -- previews use local Blob URLs and donation images use a mainland-accessible host. */
 
 import {
   ChangeEvent,
@@ -34,6 +35,7 @@ import {
   FiX,
 } from "react-icons/fi";
 import { LexoraWordmark } from "../lexora-wordmark";
+import stableReleaseManifest from "../../public/version.json";
 import { offlineLookup } from "./offline-lexicon";
 import {
   deleteGeneratedFile,
@@ -237,10 +239,12 @@ export function LexoraWebApp({
   embedded = false,
   activeTab,
   onActiveTabChange,
+  releaseLabel = `v${stableReleaseManifest.version}`,
 }: {
   embedded?: boolean;
   activeTab?: AppTab;
   onActiveTabChange?(tab: AppTab): void;
+  releaseLabel?: string;
 } = {}) {
   const [internalTab, setInternalTab] = useState<AppTab>("search");
   const tab = activeTab ?? internalTab;
@@ -435,11 +439,8 @@ export function LexoraWebApp({
         setWords={setWords}
         settings={settings}
         setSettings={setSettings}
-        records={records}
         setRecords={setRecords}
-        generatedWords={generatedWords}
         setGeneratedWords={setGeneratedWords}
-        setTab={setTab}
         notify={notify}
       />
     ),
@@ -468,6 +469,7 @@ export function LexoraWebApp({
         settings={settings}
         setSettings={setSettings}
         notify={notify}
+        releaseLabel={releaseLabel}
       />
     ),
   };
@@ -673,16 +675,21 @@ function InstallGate({
 function PageHeader({
   title,
   subtitle,
+  badge,
   action,
 }: {
   title: string;
   subtitle?: string;
+  badge?: string;
   action?: ReactNode;
 }) {
   return (
     <div className={styles.pageHeader}>
       <div>
-        <h1>{title}</h1>
+        <div className={styles.pageHeaderTitle}>
+          <h1>{title}</h1>
+          {badge && <span>{badge}</span>}
+        </div>
         {subtitle && <p>{subtitle}</p>}
       </div>
       {action}
@@ -1551,28 +1558,22 @@ function BookView({
   setWords,
   settings,
   setSettings,
-  records,
   setRecords,
-  generatedWords,
   setGeneratedWords,
-  setTab,
   notify,
 }: {
   words: WordItem[];
   setWords(v: WordItem[] | ((c: WordItem[]) => WordItem[])): void;
   settings: AppSettings;
   setSettings(v: AppSettings | ((c: AppSettings) => AppSettings)): void;
-  records: GeneratedBook[];
   setRecords(
     v: GeneratedBook[] | ((c: GeneratedBook[]) => GeneratedBook[]),
   ): void;
-  generatedWords: GeneratedWordRecord[];
   setGeneratedWords(
     v:
       | GeneratedWordRecord[]
       | ((c: GeneratedWordRecord[]) => GeneratedWordRecord[]),
   ): void;
-  setTab(v: AppTab): void;
   notify(message: string): void;
 }) {
   const [input, setInput] = useState("");
@@ -1685,7 +1686,7 @@ function BookView({
         size: blob.size,
       };
       await saveGeneratedFile(id, blob);
-      setRecords([record, ...records]);
+      setRecords((current) => [record, ...current]);
       setGeneratedWords((current) => {
         const map = new Map(current.map((item) => [item.word, item]));
         for (const item of batch) {
@@ -1724,7 +1725,10 @@ function BookView({
       }
       setCompleted(record);
     } catch (error) {
-      setWords((current) => (current.length ? current : batch));
+      setWords((current) => {
+        const existing = new Set(current.map((word) => word.term));
+        return [...batch.filter((word) => !existing.has(word.term)), ...current];
+      });
       notify(error instanceof Error ? error.message : "生成失败");
     } finally {
       setGenerating(false);
@@ -1736,6 +1740,7 @@ function BookView({
       const next = [...current];
       const from = next.findIndex((item) => item.id === dragged);
       const to = next.findIndex((item) => item.id === over);
+      if (from < 0 || to < 0) return current;
       const [item] = next.splice(from, 1);
       next.splice(to, 0, item);
       return next;
@@ -2349,7 +2354,7 @@ function RecordsView({
             <FiTrash2 /> 删除
           </button>
         </div>
-      )}{" "}
+      )}
       {!records.length ? (
         <Empty
           icon={<FiFileText />}
@@ -2363,12 +2368,10 @@ function RecordsView({
               className={styles.recordCard}
               key={record.id}
               onClick={() =>
-                multi &&
-                setSelected((current) => {
+                multi && setSelected((current) => {
                   const next = new Set(current);
-                  next.has(record.id)
-                    ? next.delete(record.id)
-                    : next.add(record.id);
+                  if (next.has(record.id)) next.delete(record.id);
+                  else next.add(record.id);
                   return next;
                 })
               }
@@ -2569,7 +2572,8 @@ function HistoryView({
   }
   function toggle(id: string) {
     const next = new Set(selected);
-    next.has(id) ? next.delete(id) : next.add(id);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
     setSelected(next);
   }
   function toggleAll() {
@@ -2817,10 +2821,12 @@ function SettingsView({
   settings,
   setSettings,
   notify,
+  releaseLabel,
 }: {
   settings: AppSettings;
   setSettings(v: AppSettings | ((c: AppSettings) => AppSettings)): void;
   notify(message: string): void;
+  releaseLabel: string;
 }) {
   const [customizing, setCustomizing] = useState(false);
   const [donate, setDonate] = useState(false);
@@ -2840,7 +2846,8 @@ function SettingsView({
     <div className={styles.page}>
       <PageHeader
         title="设置"
-        subtitle="v4.0.2 · 网页完整版"
+        badge={releaseLabel}
+        subtitle="网页完整版"
         action={
           <a
             className={`${styles.ghostButton} ${styles.desktopOnly}`}

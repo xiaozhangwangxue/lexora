@@ -4,14 +4,43 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { FiBookOpen, FiCheck, FiDatabase, FiDownload, FiExternalLink, FiHeadphones, FiInfo, FiSearch, FiSettings, FiTrash2, FiX } from "react-icons/fi";
 import { loadState } from "../../storage";
-import { clearOfflineLexiconCache } from "../../offline-lexicon";
+import { clearOfflineLexiconCache, offlineLexiconCacheBytes } from "../../offline-lexicon";
 import type { GeneratedBook, SearchRecord } from "../../types";
 import { modeLabels, type ReviewMode, type StudyMode } from "../domain/types";
 import { useBetaStore } from "../store";
-import { clearLearningPacks, fetchLearningPackManifest, installLearningPack, removeLearningPack, type LearningPack } from "../services/learning-packs";
+import { clearLearningPacks, fetchLearningPackManifest, installLearningPack, learningPackCacheUsage, removeLearningPack, type LearningPack } from "../services/learning-packs";
+import { enrichmentCacheUsage } from "../services/enrichment-cache";
 import styles from "../beta.module.css";
 
 const modes = Object.entries(modeLabels) as [ReviewMode, string][];
+
+type CacheSizes = { enrichment: number; packs: number; lexicon: number; pwa: number };
+
+function formatBytes(bytes: number | null) {
+  if (bytes === null) return "正在计算…";
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  if (bytes < 1024 * 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(2)} MB`;
+  return `${(bytes / 1024 / 1024 / 1024).toFixed(2)} GB`;
+}
+
+async function pwaCacheBytes() {
+  if (!("caches" in window)) return 0;
+  let total = 0;
+  for (const name of await caches.keys()) {
+    const cache = await caches.open(name);
+    for (const request of await cache.keys()) {
+      const response = await cache.match(request);
+      if (!response) continue;
+      try {
+        total += (await response.clone().arrayBuffer()).byteLength;
+      } catch {
+        total += Number(response.headers.get("content-length")) || 0;
+      }
+    }
+  }
+  return total;
+}
 
 export function SettingsView() {
   const {
@@ -31,6 +60,7 @@ export function SettingsView() {
   const [cacheDialogOpen, setCacheDialogOpen] = useState(false);
   const [cacheBusy, setCacheBusy] = useState(false);
   const [cacheMessage, setCacheMessage] = useState("");
+  const [cacheSizes, setCacheSizes] = useState<CacheSizes | null>(null);
   const [cacheSelection, setCacheSelection] = useState({
     enrichment: true,
     packs: false,
@@ -124,12 +154,30 @@ export function SettingsView() {
           enabledLearningSources: settings.enabledLearningSources.filter((value) => !value.startsWith("preset:")),
         });
       }
+      await refreshCacheSizes();
       setCacheMessage("所选缓存已清除，个人词条、生成记录和学习进度均已保留。");
     } catch (error) {
       setCacheMessage(error instanceof Error ? `清除失败：${error.message}` : "清除缓存失败，请重试。");
     } finally {
       setCacheBusy(false);
     }
+  }
+
+  async function refreshCacheSizes() {
+    const [enrichment, packUsage, lexicon, pwa] = await Promise.all([
+      enrichmentCacheUsage().catch(() => ({ entries: enrichmentCacheEntries, bytes: 0 })),
+      learningPackCacheUsage().catch(() => ({ packs: settings.installedLearningPacks.length, bytes: 0 })),
+      offlineLexiconCacheBytes().catch(() => 0),
+      pwaCacheBytes().catch(() => 0),
+    ]);
+    setCacheSizes({ enrichment: enrichment.bytes, packs: packUsage.bytes, lexicon, pwa });
+  }
+
+  function openCacheDialog() {
+    setCacheMessage("");
+    setCacheSizes(null);
+    setCacheDialogOpen(true);
+    void refreshCacheSizes();
   }
 
   return <div className={styles.page}>
@@ -173,7 +221,7 @@ export function SettingsView() {
     <section className={styles.settingsSection}><div className={styles.settingsTitle}><FiBookOpen /><div><h2>学习方式</h2><p>控制新词数量和题型组合</p></div></div><SettingRow label="每日新词数量" detail="只限制新词，不会隐藏到期任务"><input type="number" min="0" max="100" value={settings.dailyNewWordLimit} onChange={(event) => updateSettings({ dailyNewWordLimit: Math.max(0, Math.min(100, Number(event.target.value))) })} /></SettingRow><SettingRow label="默认学习模式" detail="综合模式会根据词条资料安全轮换"><select value={settings.defaultStudyMode} onChange={(event) => updateSettings({ defaultStudyMode: event.target.value as StudyMode })}><option value="mixed">综合模式</option>{modes.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></SettingRow><div className={styles.modeSettings}><b>启用的复习模式</b>{modes.map(([value, label]) => <label key={value}><input type="checkbox" checked={settings.enabledReviewModes.includes(value)} onChange={(event) => { const next = event.target.checked ? [...settings.enabledReviewModes, value] : settings.enabledReviewModes.filter((mode) => mode !== value); updateSettings({ enabledReviewModes: next.length ? next : ["word-to-meaning"] }); }} />{label}</label>)}</div></section>
     <section className={styles.settingsSection}><div className={styles.settingsTitle}><FiHeadphones /><div><h2>发音设置</h2><p>音频不可用时自动降级为系统朗读</p></div></div><SettingRow label="默认口音" detail="优先使用对应音频"><select value={settings.preferredAccent} onChange={(event) => updateSettings({ preferredAccent: event.target.value as "uk" | "us" })}><option value="us">美式</option><option value="uk">英式</option></select></SettingRow><SettingRow label="朗读速度" detail="适用于音频和系统语音"><select value={settings.speechRate} onChange={(event) => updateSettings({ speechRate: Number(event.target.value) as 0.75 | 1 | 1.25 })}><option value="0.75">0.75x</option><option value="1">1.0x</option><option value="1.25">1.25x</option></select></SettingRow><Toggle label="自动播放单词" detail="进入拼写卡片时播放" checked={settings.autoPlayWordAudio} onChange={(value) => updateSettings({ autoPlayWordAudio: value })} /><Toggle label="显示答案后朗读例句" detail="浏览器禁止自动播放时不会阻塞学习" checked={settings.autoPlayExampleAudio} onChange={(value) => updateSettings({ autoPlayExampleAudio: value })} /></section>
     <section className={styles.settingsSection}><div className={styles.settingsTitle}><FiSettings /><div><h2>显示设置</h2><p>保持信息明确但不过度打扰</p></div></div><Toggle label="显示下次复习时间" detail="评分按钮下展示预计间隔" checked={settings.showNextReviewTime} onChange={(value) => updateSettings({ showNextReviewTime: value })} /></section>
-    <section className={styles.settingsSection}><div className={styles.settingsTitle}><FiDatabase /><div><h2>本地数据</h2><p>补全资料与学习数据都保存在当前设备</p></div></div><dl className={styles.dataList}><dt>当前数据版本</dt><dd>schemaVersion {state.schemaVersion}</dd><dt>已保存词条</dt><dd>{state.words.length}</dd><dt>联网补全缓存</dt><dd>{enrichmentCacheEntries} 个词条</dd><dt>复习记录数量</dt><dd>{state.reviewLogs.length}</dd></dl><div className={styles.cacheActions}><button className={styles.dangerText} onClick={() => { setCacheMessage(""); setCacheDialogOpen(true); }}><FiTrash2 />自定义清除缓存</button><span>逐项选择要清除的内容；个人词条、生成记录和学习进度不在清理范围内。</span></div><p className={styles.dataSafety}><FiInfo />稳定版原数据不会被覆盖；Beta 迁移失败时会保留恢复副本。</p></section>
+    <section className={styles.settingsSection}><div className={styles.settingsTitle}><FiDatabase /><div><h2>本地数据</h2><p>补全资料与学习数据都保存在当前设备</p></div></div><dl className={styles.dataList}><dt>当前数据版本</dt><dd>schemaVersion {state.schemaVersion}</dd><dt>已保存词条</dt><dd>{state.words.length}</dd><dt>联网补全缓存</dt><dd>{enrichmentCacheEntries} 个词条</dd><dt>复习记录数量</dt><dd>{state.reviewLogs.length}</dd></dl><div className={styles.cacheActions}><button className={styles.dangerText} onClick={openCacheDialog}><FiTrash2 />自定义清除缓存</button><span>逐项选择要清除的内容；个人词条、生成记录和学习进度不在清理范围内。</span></div><p className={styles.dataSafety}><FiInfo />稳定版原数据不会被覆盖；Beta 迁移失败时会保留恢复副本。</p></section>
     <section className={styles.settingsSection}><div className={styles.settingsTitle}><FiExternalLink /><div><h2>版本入口</h2><p>稳定版和学习 Beta 相互独立</p></div></div><div className={styles.quickLinks}><Link href="/app">打开稳定版 /app <FiExternalLink /></Link><Link href="/">Lexora 官网 <FiExternalLink /></Link><a href="https://github.com/xiaozhangwangxue/lexora" target="_blank" rel="noreferrer">GitHub 源码 <FiExternalLink /></a></div></section>
 
     {pickerOpen && <div className={styles.modalBackdrop} onMouseDown={(event) => { if (event.target === event.currentTarget && !enriching) setPickerOpen(false); }}>
@@ -190,10 +238,10 @@ export function SettingsView() {
       <section className={styles.cacheDialog} role="dialog" aria-modal="true" aria-labelledby="cache-dialog-title">
         <header><div><span className={styles.betaPill}>存储管理</span><h2 id="cache-dialog-title">自定义清除缓存</h2><p>只勾选需要重新下载或重新查询的内容。你的词条、生成记录和学习进度不会被删除。</p></div><button onClick={() => setCacheDialogOpen(false)} disabled={cacheBusy} aria-label="关闭"><FiX /></button></header>
         <div className={styles.cacheChoiceList}>
-          <CacheChoice checked={cacheSelection.enrichment} onChange={(value) => setCacheSelection((current) => ({ ...current, enrichment: value }))} title="联网补全与查词缓存" detail={`${enrichmentCacheEntries} 个词条；下次使用时会重新联网补全。`} />
-          <CacheChoice checked={cacheSelection.packs} onChange={(value) => setCacheSelection((current) => ({ ...current, packs: value }))} title="已下载的预设词汇书" detail={`${settings.installedLearningPacks.length} 个；清除后可在学习设置中重新下载。`} />
-          <CacheChoice checked={cacheSelection.lexicon} onChange={(value) => setCacheSelection((current) => ({ ...current, lexicon: value }))} title="离线词典包" detail="删除极速版/完整版离线词典，不影响联网查词。" />
-          <CacheChoice checked={cacheSelection.pwa} onChange={(value) => setCacheSelection((current) => ({ ...current, pwa: value }))} title="网页离线资源" detail="删除浏览器保存的旧页面资源；当前页面刷新后会重新下载。" />
+          <CacheChoice checked={cacheSelection.enrichment} onChange={(value) => setCacheSelection((current) => ({ ...current, enrichment: value }))} title="联网补全与查词缓存" detail={`占用 ${formatBytes(cacheSizes?.enrichment ?? null)} · ${enrichmentCacheEntries} 个词条；下次使用时会重新联网补全。`} />
+          <CacheChoice checked={cacheSelection.packs} onChange={(value) => setCacheSelection((current) => ({ ...current, packs: value }))} title="已下载的预设词汇书" detail={`占用 ${formatBytes(cacheSizes?.packs ?? null)} · ${settings.installedLearningPacks.length} 个；清除后可重新下载。`} />
+          <CacheChoice checked={cacheSelection.lexicon} onChange={(value) => setCacheSelection((current) => ({ ...current, lexicon: value }))} title="离线词典包" detail={`占用 ${formatBytes(cacheSizes?.lexicon ?? null)} · 删除极速版/完整版，不影响联网查词。`} />
+          <CacheChoice checked={cacheSelection.pwa} onChange={(value) => setCacheSelection((current) => ({ ...current, pwa: value }))} title="网页离线资源" detail={`占用 ${formatBytes(cacheSizes?.pwa ?? null)} · 当前页面刷新后会重新下载。`} />
         </div>
         {cacheMessage && <p className={cacheMessage.startsWith("清除失败") ? styles.inlineError : styles.cacheSuccess} role="status">{cacheMessage}</p>}
         <footer><button className={styles.secondaryButton} onClick={() => setCacheDialogOpen(false)} disabled={cacheBusy}>关闭</button><button className={styles.primaryButton} onClick={() => void clearSelectedCaches()} disabled={cacheBusy || !Object.values(cacheSelection).some(Boolean)}>{cacheBusy ? "正在清除…" : "清除所选缓存"}</button></footer>

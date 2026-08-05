@@ -435,6 +435,11 @@ const worker = {
       if (manifest) return manifest;
     }
 
+    if (url.pathname === "/beta-version.json") {
+      const manifest = await r2Response("beta-version.json", false);
+      if (manifest) return manifest;
+    }
+
     if (url.pathname.startsWith("/updates/")) {
       const key = decodeURIComponent(url.pathname.slice("/updates/".length));
       if (!key || key.includes("/") || key.includes("..")) {

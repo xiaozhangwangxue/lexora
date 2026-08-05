@@ -81,6 +81,14 @@ export async function clearOfflineLexiconCache() {
   activeDatabase = null;
 }
 
+export async function offlineLexiconCacheBytes() {
+  const values = await Promise.all([
+    readOfflineLexicon("top20k"),
+    readOfflineLexicon("full"),
+  ]);
+  return values.reduce((total, value) => total + (value?.byteLength ?? 0), 0);
+}
+
 async function database(edition: string) {
   if (activeEdition === edition && activeDatabase) return activeDatabase;
   const data = await readOfflineLexicon(edition);
