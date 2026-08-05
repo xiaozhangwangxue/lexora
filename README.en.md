@@ -10,7 +10,7 @@
   [![License](https://img.shields.io/github/license/xiaozhangwangxue/lexora?style=flat-square)](LICENSE)
   [![Platforms](https://img.shields.io/badge/platform-Android%20%7C%20macOS%20%7C%20Windows%20%7C%20Linux-10131d?style=flat-square)](#download-and-install)
 
-  [Official website](https://lexora.12323456.xyz) · [Install web app](https://lexora.12323456.xyz/app) · [Free vocabulary book generator](https://lexora.12323456.xyz/en/vocabulary-book-generator) · [Download](https://lexora.12323456.xyz/#download) · [Donate](https://lexora.12323456.xyz/donate) · [简体中文](README.md)
+  [Official website](https://lexora.12323456.xyz) · [Install web app](https://lexora.12323456.xyz/app) · [Try Learning Beta](https://lexora.12323456.xyz/app/beta) · [Free vocabulary book generator](https://lexora.12323456.xyz/en/vocabulary-book-generator) · [Download](https://lexora.12323456.xyz/#download) · [Donate](https://lexora.12323456.xyz/donate) · [简体中文](README.md)
 </div>
 
 <p align="center">
@@ -35,6 +35,9 @@ Lexora now adds a practical CET-4 vocabulary-learning loop alongside its existin
 - Five exercise modes cover word-to-meaning, meaning-to-word, spelling, cloze, and collocations with safe fallbacks.
 - Every rating atomically updates the review state and appends a review log, powering queues, resumable sessions, weak-word detection, streaks, and statistics.
 - Rich entries support multiple meanings, examples, sources, collocations, CET-4 tags, notes, and importance markers.
+- Study sources can combine generated personal books, selected history, and downloadable CET-4, CET-6, postgraduate, KET, PET, IELTS, and TEM reference packs.
+- Selective cleanup shows the actual space used by enrichment, preset-pack, offline-dictionary, and web-resource caches.
+- Beta builds check both Beta and stable channels so learners are offered the most appropriate newer release.
 - Web data uses versioned local storage and a recovery copy; native apps use the application documents directory plus a local recovery copy.
 - The macOS window, sidebar, and document-customization sheet use native SwiftUI materials and Liquid Glass while respecting Reduce Motion.
 

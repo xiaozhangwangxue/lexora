@@ -25,12 +25,14 @@ class SettingsScreen extends StatefulWidget {
     required this.onChanged,
     required this.onOpenTypography,
     required this.onClearSearchCache,
+    required this.onGetSearchCacheSize,
   });
 
   final PdfSettings settings;
   final ValueChanged<PdfSettings> onChanged;
   final VoidCallback onOpenTypography;
   final Future<void> Function() onClearSearchCache;
+  final Future<int> Function() onGetSearchCacheSize;
 
   @override
   State<SettingsScreen> createState() => _SettingsScreenState();
@@ -46,6 +48,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Future<void> _showClearCacheDialog(BuildContext context) async {
     final strings = AppLocalizations.of(context);
+    final sizes = await Future.wait<int>([
+      widget.onGetSearchCacheSize().catchError((_) => 0),
+      UpdateService.cachedInstallerBytes(),
+      Future.value(
+        _offlineLexicon.installed.values.fold<int>(
+          0,
+          (total, lexicon) => total + lexicon.bytes,
+        ),
+      ),
+    ]);
+    if (!context.mounted) return;
     var searchCache = true;
     var installerCache = false;
     var offlineLexicons = false;
@@ -115,8 +128,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ),
                       subtitle: Text(
                         strings.isZh
-                            ? '下次查询时会重新从词典服务获取。'
-                            : 'Dictionary data will be fetched again on the next lookup.',
+                            ? '占用 ${_formatFileSize(sizes[0])}；下次查询时会重新从词典服务获取。'
+                            : '${_formatFileSize(sizes[0])} used; dictionary data will be fetched again on the next lookup.',
                       ),
                     ),
                     CheckboxListTile(
@@ -132,8 +145,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ),
                       subtitle: Text(
                         strings.isZh
-                            ? '只清除已经下载到临时目录的安装文件。'
-                            : 'Only removes installers saved in the temporary folder.',
+                            ? '占用 ${_formatFileSize(sizes[1])}；只清除临时目录中的安装文件。'
+                            : '${_formatFileSize(sizes[1])} used; only removes installers in the temporary folder.',
                       ),
                     ),
                     CheckboxListTile(
@@ -151,8 +164,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ),
                       subtitle: Text(
                         strings.isZh
-                            ? '删除极速版和完整版；联网查词不受影响。'
-                            : 'Removes Fast and Full editions; online lookup remains available.',
+                            ? '占用 ${_formatFileSize(sizes[2])}；删除极速版和完整版，联网查词不受影响。'
+                            : '${_formatFileSize(sizes[2])} used; removes Fast and Full editions without affecting online lookup.',
                       ),
                     ),
                     if (result != null) ...[
@@ -1124,6 +1137,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 }
 
 String _formatFileSize(int bytes) {
+  if (bytes < 1024) return '$bytes B';
   if (bytes >= 1024 * 1024 * 1024) {
     return '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(1)} GB';
   }

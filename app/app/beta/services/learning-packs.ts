@@ -99,3 +99,12 @@ export async function removeLearningPack(id: string) {
 export async function clearLearningPacks() {
   await withStore("readwrite", (store) => store.clear());
 }
+
+export async function learningPackCacheUsage() {
+  const packs = await withStore<PackPayload[]>("readonly", (store) => store.getAll());
+  const encoder = new TextEncoder();
+  return {
+    packs: packs.length,
+    bytes: packs.reduce((total, pack) => total + encoder.encode(JSON.stringify(pack)).byteLength, 0),
+  };
+}

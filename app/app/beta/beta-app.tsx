@@ -6,6 +6,7 @@ import { FiBarChart2, FiBookOpen, FiClock, FiFileText, FiHome, FiMenu, FiRefresh
 import { LexoraWordmark } from "../../lexora-wordmark";
 import { LexoraWebApp } from "../lexora-web-app";
 import type { AppTab } from "../types";
+import betaReleaseManifest from "../../../public/beta-version.json";
 import { BetaProvider, useBetaStore } from "./store";
 import { Dashboard } from "./components/dashboard";
 import { StudyView } from "./components/study-view";
@@ -100,7 +101,7 @@ function UnifiedLexora() {
       </nav>
       {error && <div className={styles.globalError} role="alert">{error}</div>}
       <div className={styles.unifiedContent}>
-        {stableTab ? <LexoraWebApp embedded activeTab={stableTab} onActiveTabChange={setMainTab} /> : <LearningWorkspace tab={learningTab} setTab={setLearningTab} />}
+        {stableTab ? <LexoraWebApp embedded activeTab={stableTab} onActiveTabChange={setMainTab} releaseLabel={`v${betaReleaseManifest.version}`} /> : <LearningWorkspace tab={learningTab} setTab={setLearningTab} />}
       </div>
     </section>
   </main>;
@@ -137,7 +138,7 @@ function LearningWorkspace({ tab, setTab }: { tab: LearningTab; setTab(tab: Lear
   };
   return <section className={styles.learningWorkspace}>
     <header className={styles.learningHeader}>
-      <div><span className={styles.betaPill}>间隔重复学习系统</span><h1>学习</h1><p>新词、到期复习、个人单词库、统计与学习设置都集中在这里。</p></div>
+      <div><div className={styles.learningTitleRow}><h1>学习</h1><span className={styles.betaPill}>间隔重复学习系统</span></div><p>新词、到期复习、个人单词库、统计与学习设置都集中在这里。</p></div>
       <div className={styles.learningPrivacy}><i />学习记录仅保存在当前设备</div>
     </header>
     <nav ref={tabsRef} className={styles.learningTabs} aria-label="学习功能">

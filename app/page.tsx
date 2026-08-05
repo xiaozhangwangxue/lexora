@@ -545,12 +545,12 @@ export default function Home() {
             ["01", "完整学习闭环", "今日新词与今日复习分开安排，评分会形成真实的间隔复习计划。"],
             ["02", "自由组合词库", "从生成记录、搜索历史、单独词条和可下载预设词库选择学习内容。"],
             ["03", "跨端统一体验", "网页、Android、Windows、Linux 与 macOS 使用一致的信息结构；macOS 保留原生 SwiftUI 与 Liquid Glass。"],
-            ["04", "更安全的本地管理", "双语释义补全后才进入学习，并新增可逐项选择的缓存清理。"],
+            ["04", "更安全的本地管理", "双语释义补全后才进入学习；缓存逐项显示占用大小，Beta 同时接收测试版和正式版更新。"],
           ] : [
             ["01", "A complete learning loop", "Separate new learning from due review and build a real spaced-repetition schedule from every rating."],
             ["02", "Mix your own sources", "Study generated books, search history, individual entries, and downloadable preset packs."],
             ["03", "One cross-platform structure", "Web, Android, Windows, Linux, and macOS share one information model, with native SwiftUI and Liquid Glass on macOS."],
-            ["04", "Safer local management", "Learning waits for bilingual definitions and cache cleanup is fully selectable."],
+            ["04", "Safer local management", "Learning waits for bilingual definitions, cache usage is shown per category, and Beta checks both Beta and stable updates."],
           ]).map(([number, title, body]) => <article key={number}><span>{number}</span><h3>{title}</h3><p>{body}</p></article>)}
         </div>
       </section>

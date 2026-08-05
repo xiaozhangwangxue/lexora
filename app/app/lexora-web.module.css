@@ -133,6 +133,19 @@
   letter-spacing: -0.05em;
   margin: 0;
 }
+.pageHeaderTitle {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  min-width: 0;
+}
+.pageHeaderTitle > span {
+  flex: 0 0 auto;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0;
+}
 .pageHeader p {
   font-size: 13px;
   color: var(--muted);

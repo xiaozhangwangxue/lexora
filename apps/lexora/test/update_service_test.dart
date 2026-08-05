@@ -65,6 +65,105 @@ void main() {
   });
 
   test(
+    'reports invalid manifests instead of claiming the app is current',
+    () async {
+      await _withServer(
+        (request, origin) async {
+          await _json(request.response, {'downloads': <String, Object>{}});
+        },
+        (origin, cache) async {
+          final service = UpdateService(
+            manifestUri: origin.resolve('/version.json'),
+            platformKey: 'android',
+            cacheDirectory: () async => cache,
+            isMacOS: false,
+          );
+          await expectLater(service.check(), throwsA(isA<FormatException>()));
+        },
+      );
+    },
+  );
+
+  test(
+    'beta builds compare beta and stable channels and choose the newest',
+    () async {
+      await _withServer(
+        (request, origin) async {
+          if (request.uri.path == '/beta-version.json') {
+            await _json(
+              request.response,
+              _manifest(
+                origin,
+                apkBytes,
+                sources: ['/updates/lexora-beta.apk'],
+                version: '4.1.0-beta.3',
+              ),
+            );
+          } else if (request.uri.path == '/version.json') {
+            await _json(
+              request.response,
+              _manifest(
+                origin,
+                apkBytes,
+                sources: ['/updates/lexora-stable.apk'],
+                version: '4.1.0',
+              ),
+            );
+          }
+        },
+        (origin, cache) async {
+          final service = UpdateService(
+            manifestGroups: [
+              [origin.resolve('/beta-version.json')],
+              [origin.resolve('/version.json')],
+            ],
+            platformKey: 'android',
+            cacheDirectory: () async => cache,
+            isMacOS: false,
+          );
+          final update = await service.check();
+          expect(update?.version, '4.1.0');
+          expect(
+            update?.download.urls.first.path,
+            '/updates/lexora-stable.apk',
+          );
+        },
+      );
+    },
+  );
+
+  test('beta builds still receive a newer beta when stable is older', () async {
+    await _withServer(
+      (request, origin) async {
+        final beta = request.uri.path == '/beta-version.json';
+        await _json(
+          request.response,
+          _manifest(
+            origin,
+            apkBytes,
+            sources: [
+              beta ? '/updates/lexora-beta.apk' : '/updates/lexora-stable.apk',
+            ],
+            version: beta ? '4.1.0-beta.4' : '4.0.4',
+          ),
+        );
+      },
+      (origin, cache) async {
+        final service = UpdateService(
+          manifestGroups: [
+            [origin.resolve('/beta-version.json')],
+            [origin.resolve('/version.json')],
+          ],
+          platformKey: 'android',
+          cacheDirectory: () async => cache,
+          isMacOS: false,
+        );
+        expect((await service.check())?.version, '4.1.0-beta.4');
+      },
+    );
+  });
+
+  test(
     'uses the verified R2 source before opening the Android installer',
     () async {
       var primaryRequests = 0;
@@ -402,9 +501,10 @@ Map<String, dynamic> _manifest(
   List<int> bytes, {
   String platform = 'android',
   String filename = 'lexora.apk',
+  String version = '9.9.9',
   required List<String> sources,
 }) => {
-  'version': '9.9.9',
+  'version': version,
   'releaseNotes': {
     'zh': ['测试'],
     'en': ['Test'],

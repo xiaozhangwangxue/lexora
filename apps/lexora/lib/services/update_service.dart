@@ -52,6 +52,7 @@ class UpdateService {
     http.Client? client,
     Uri? manifestUri,
     List<Uri>? manifestUris,
+    List<List<Uri>>? manifestGroups,
     String? platformKey,
     CacheDirectoryProvider? cacheDirectory,
     InstallerOpener? openInstaller,
@@ -59,11 +60,25 @@ class UpdateService {
     MacInstallerPreparer? prepareMacInstaller,
     ExternalUriLauncher? launchExternal,
     bool? isMacOS,
-  }) : assert(manifestUri == null || manifestUris == null),
+  }) : assert(
+         [
+               manifestUri != null,
+               manifestUris != null,
+               manifestGroups != null,
+             ].where((value) => value).length <=
+             1,
+       ),
        _client = client ?? http.Client(),
-       _manifestUris =
-           manifestUris ??
-           (manifestUri == null ? _defaultManifestUris : [manifestUri]),
+       _manifestGroups =
+           manifestGroups ??
+           [
+             manifestUris ??
+                 (manifestUri == null
+                     ? _defaultManifestGroups.first
+                     : [manifestUri]),
+             if (manifestUri == null && manifestUris == null)
+               ..._defaultManifestGroups.skip(1),
+           ],
        _platformKeyOverride = platformKey,
        _cacheDirectoryOverride = cacheDirectory,
        _openInstaller = openInstaller ?? _defaultOpenInstaller,
@@ -72,17 +87,17 @@ class UpdateService {
            prepareMacInstaller ?? _defaultPrepareMacInstaller,
        _launchExternal = launchExternal ?? _defaultLaunchExternal,
        _isMacOS = isMacOS ?? Platform.isMacOS {
-    if (_manifestUris.isEmpty) {
+    if (_manifestGroups.isEmpty ||
+        _manifestGroups.any((group) => group.isEmpty)) {
       throw ArgumentError.value(
-        manifestUris,
-        'manifestUris',
-        'must not be empty',
+        manifestGroups ?? manifestUris,
+        'manifestGroups',
+        'must contain at least one non-empty source group',
       );
     }
-    _activeManifestUri = _manifestUris.first;
   }
 
-  static final List<Uri> _defaultManifestUris = [
+  static final List<Uri> _stableManifestUris = [
     Uri.parse('https://lexora.12323456.xyz/version.json'),
     Uri.parse(
       'https://lexora-official.xiaozhangwangxue.workers.dev/version.json',
@@ -91,11 +106,22 @@ class UpdateService {
       'https://raw.githubusercontent.com/xiaozhangwangxue/lexora/main/public/version.json',
     ),
   ];
+  static final List<Uri> _betaManifestUris = [
+    Uri.parse('https://lexora.12323456.xyz/beta-version.json'),
+    Uri.parse(
+      'https://lexora-official.xiaozhangwangxue.workers.dev/beta-version.json',
+    ),
+    Uri.parse(
+      'https://raw.githubusercontent.com/xiaozhangwangxue/lexora/main/public/beta-version.json',
+    ),
+  ];
+  static List<List<Uri>> get _defaultManifestGroups => appVersion.contains('-')
+      ? [_betaManifestUris, _stableManifestUris]
+      : [_stableManifestUris];
   static const _cacheFolderName = 'lexora_update_installers';
   static const _nativeMacUpdate = MethodChannel('lexora/native-navigation');
   final http.Client _client;
-  final List<Uri> _manifestUris;
-  late Uri _activeManifestUri;
+  final List<List<Uri>> _manifestGroups;
   final String? _platformKeyOverride;
   final CacheDirectoryProvider? _cacheDirectoryOverride;
   final InstallerOpener _openInstaller;
@@ -108,78 +134,110 @@ class UpdateService {
     final stamp = DateTime.now().millisecondsSinceEpoch.toString();
     DeveloperLogService.instance.log(
       'update.check_started',
-      data: {'manifests': _manifestUris.map((uri) => uri.host).toList()},
+      data: {
+        'manifests': _manifestGroups
+            .expand((group) => group)
+            .map((uri) => '${uri.host}${uri.path}')
+            .toList(),
+      },
     );
-    http.Response? response;
+    UpdateInfo? bestUpdate;
+    var successfulManifests = 0;
+    var validManifests = 0;
     Object? lastError;
-    for (final manifest in _manifestUris) {
-      final uri = manifest.replace(queryParameters: {'t': stamp});
-      try {
-        final candidate = await _client
-            .get(uri)
-            .timeout(const Duration(seconds: 12));
-        if (candidate.statusCode != 200) {
-          lastError = HttpException(
-            'Update server returned ${candidate.statusCode}.',
-            uri: uri,
-          );
-          continue;
+    for (final group in _manifestGroups) {
+      http.Response? response;
+      Uri? resolvedManifest;
+      for (final manifest in group) {
+        final uri = manifest.replace(queryParameters: {'t': stamp});
+        try {
+          final candidate = await _client
+              .get(uri)
+              .timeout(const Duration(seconds: 12));
+          if (candidate.statusCode != 200) {
+            lastError = HttpException(
+              'Update server returned ${candidate.statusCode}.',
+              uri: uri,
+            );
+            continue;
+          }
+          response = candidate;
+          resolvedManifest = manifest;
+          break;
+        } catch (error) {
+          lastError = error;
         }
-        response = candidate;
-        _activeManifestUri = manifest;
-        break;
+      }
+      if (response == null || resolvedManifest == null) continue;
+      successfulManifests++;
+
+      try {
+        // R2 objects may not carry a charset. Decode bytes explicitly so
+        // Chinese release notes never fall back to Latin-1.
+        final json =
+            jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
+        final version = json['version'] as String? ?? '';
+        if (version.isEmpty) {
+          throw const FormatException('Update manifest has no version.');
+        }
+        validManifests++;
+        if (!_isNewer(version, appVersion)) continue;
+        final downloads =
+            json['downloads'] as Map<String, dynamic>? ?? const {};
+        final verifiedDownloads =
+            json['verifiedDownloads'] as Map<String, dynamic>? ?? const {};
+        final platform = _platformKeyOverride ?? _platformKey;
+        final rawDownload = verifiedDownloads[platform] ?? downloads[platform];
+        if (rawDownload == null) {
+          throw const FormatException(
+            'No installer is available for this platform.',
+          );
+        }
+        final notes =
+            json['inAppReleaseNotes'] as Map<String, dynamic>? ??
+            json['releaseNotes'] as Map<String, dynamic>? ??
+            const {};
+        final info = UpdateInfo(
+          version: version,
+          download: _parseDownload(rawDownload, resolvedManifest),
+          notesZh: _stringList(notes['zh']),
+          notesEn: _stringList(notes['en']),
+        );
+        if (bestUpdate == null ||
+            _compareVersions(info.version, bestUpdate.version) > 0) {
+          bestUpdate = info;
+        }
       } catch (error) {
         lastError = error;
       }
     }
-    if (response == null) {
+    if (successfulManifests == 0) {
       throw HttpException(
         'All update manifests failed. ${lastError ?? ''}'.trim(),
       );
     }
-    // R2 objects may not carry a charset. response.body would then use
-    // Latin-1 and corrupt Chinese release notes, so always decode JSON bytes
-    // explicitly as UTF-8.
-    final json =
-        jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
-    final version = json['version'] as String? ?? '';
-    if (version.isEmpty || !_isNewer(version, appVersion)) {
+    if (validManifests == 0) {
+      throw FormatException(
+        'All update manifests were invalid. ${lastError ?? ''}'.trim(),
+      );
+    }
+    if (bestUpdate == null) {
       DeveloperLogService.instance.log(
         'update.up_to_date',
-        data: {'current': appVersion, 'manifestVersion': version},
+        data: {'current': appVersion},
       );
       return null;
     }
-    final downloads = json['downloads'] as Map<String, dynamic>? ?? const {};
-    final verifiedDownloads =
-        json['verifiedDownloads'] as Map<String, dynamic>? ?? const {};
-    final platform = _platformKeyOverride ?? _platformKey;
-    final rawDownload = verifiedDownloads[platform] ?? downloads[platform];
-    if (rawDownload == null) {
-      throw const FormatException(
-        'No installer is available for this platform.',
-      );
-    }
-    final notes =
-        json['inAppReleaseNotes'] as Map<String, dynamic>? ??
-        json['releaseNotes'] as Map<String, dynamic>? ??
-        const {};
-    final info = UpdateInfo(
-      version: version,
-      download: _parseDownload(rawDownload),
-      notesZh: _stringList(notes['zh']),
-      notesEn: _stringList(notes['en']),
-    );
     DeveloperLogService.instance.log(
       'update.available',
       data: {
         'current': appVersion,
-        'available': version,
-        'filename': info.download.filename,
-        'sources': info.download.urls.map((uri) => uri.host).toList(),
+        'available': bestUpdate.version,
+        'filename': bestUpdate.download.filename,
+        'sources': bestUpdate.download.urls.map((uri) => uri.host).toList(),
       },
     );
-    return info;
+    return bestUpdate;
   }
 
   Future<void> downloadAndLaunch(
@@ -400,9 +458,9 @@ class UpdateService {
     }
   }
 
-  UpdateDownload _parseDownload(dynamic raw) {
+  UpdateDownload _parseDownload(dynamic raw, Uri manifestUri) {
     if (raw is String && raw.isNotEmpty) {
-      final uri = _activeManifestUri.resolve(raw);
+      final uri = manifestUri.resolve(raw);
       return UpdateDownload(urls: [uri], filename: uri.pathSegments.last);
     }
     if (raw is! Map<String, dynamic>) {
@@ -413,13 +471,13 @@ class UpdateService {
     if (rawSources is List) {
       for (final source in rawSources.whereType<String>()) {
         if (source.isNotEmpty) {
-          urls.add(_activeManifestUri.resolve(source));
+          urls.add(manifestUri.resolve(source));
         }
       }
     }
     final rawUrl = raw['url'];
     if (urls.isEmpty && rawUrl is String && rawUrl.isNotEmpty) {
-      urls.add(_activeManifestUri.resolve(rawUrl));
+      urls.add(manifestUri.resolve(rawUrl));
     }
     if (urls.isEmpty) {
       throw const FormatException('The update has no usable download source.');
@@ -443,6 +501,21 @@ class UpdateService {
       }
     } catch (_) {
       // Cache cleanup is best-effort and must never block app startup.
+    }
+  }
+
+  static Future<int> cachedInstallerBytes() async {
+    try {
+      final base = await getTemporaryDirectory();
+      final directory = Directory('${base.path}/$_cacheFolderName');
+      if (!await directory.exists()) return 0;
+      var bytes = 0;
+      await for (final entity in directory.list()) {
+        if (entity is File) bytes += await entity.length();
+      }
+      return bytes;
+    } catch (_) {
+      return 0;
     }
   }
 
@@ -521,18 +594,53 @@ class UpdateService {
       value is List ? value.whereType<String>().toList() : const [];
 
   static bool _isNewer(String candidate, String current) {
-    List<int> parts(String value) => value
-        .replaceFirst(RegExp(r'^v'), '')
-        .split('.')
-        .map((part) => int.tryParse(part) ?? 0)
-        .toList();
-    final a = parts(candidate);
-    final b = parts(current);
-    for (var index = 0; index < 3; index++) {
-      final left = index < a.length ? a[index] : 0;
-      final right = index < b.length ? b[index] : 0;
-      if (left != right) return left > right;
+    return _compareVersions(candidate, current) > 0;
+  }
+
+  static int _compareVersions(String left, String right) {
+    ({List<int> core, List<String> prerelease}) parse(String value) {
+      final match = RegExp(
+        r'^v?(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z.-]+))?',
+      ).firstMatch(value.trim());
+      if (match == null) return (core: const [0, 0, 0], prerelease: const []);
+      return (
+        core: [
+          int.parse(match.group(1)!),
+          int.parse(match.group(2)!),
+          int.parse(match.group(3)!),
+        ],
+        prerelease: match.group(4)?.split('.') ?? const [],
+      );
     }
-    return false;
+
+    final a = parse(left);
+    final b = parse(right);
+    for (var index = 0; index < 3; index++) {
+      if (a.core[index] != b.core[index]) {
+        return a.core[index].compareTo(b.core[index]);
+      }
+    }
+    if (a.prerelease.isEmpty && b.prerelease.isEmpty) return 0;
+    if (a.prerelease.isEmpty) return 1;
+    if (b.prerelease.isEmpty) return -1;
+    final count = a.prerelease.length > b.prerelease.length
+        ? a.prerelease.length
+        : b.prerelease.length;
+    for (var index = 0; index < count; index++) {
+      if (index >= a.prerelease.length) return -1;
+      if (index >= b.prerelease.length) return 1;
+      final aPart = a.prerelease[index];
+      final bPart = b.prerelease[index];
+      final aNumber = int.tryParse(aPart);
+      final bNumber = int.tryParse(bPart);
+      if (aNumber != null && bNumber != null && aNumber != bNumber) {
+        return aNumber.compareTo(bNumber);
+      }
+      if (aNumber != null && bNumber == null) return -1;
+      if (aNumber == null && bNumber != null) return 1;
+      final lexical = aPart.compareTo(bPart);
+      if (lexical != 0) return lexical;
+    }
+    return 0;
   }
 }

@@ -893,6 +893,7 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
         onChanged: _updateSettings,
         onOpenTypography: _showPdfCustomizer,
         onClearSearchCache: _wordService.clearCaches,
+        onGetSearchCacheSize: _wordService.persistentCacheSizeBytes,
       ),
     ];
     final pageContent = _isAndroid
