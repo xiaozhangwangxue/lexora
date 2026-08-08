@@ -232,7 +232,10 @@ async function handleWebApi(request: Request, env: Env, url: URL) {
         ? "/v1/web/import"
         : isSuggest
           ? "/v1/suggest"
-          : "/v1/web/lookup";
+          // The public lookup endpoint is already protected by the website's
+          // D1 quota above. It can be cached and raced across both free OCI
+          // origins, unlike the origin's per-client web endpoint.
+          : "/v1/lookup";
     const target = new URL(upstreamPath, origin);
     if (isLookup || isSuggest) target.search = url.search;
     try {
