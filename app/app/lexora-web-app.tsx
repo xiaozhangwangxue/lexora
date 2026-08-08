@@ -37,6 +37,7 @@ import {
 import { LexoraWordmark } from "../lexora-wordmark";
 import stableReleaseManifest from "../../public/version.json";
 import { offlineLookup } from "./offline-lexicon";
+import { coreDictionaryEntry } from "./dictionary-core";
 import {
   deleteGeneratedFile,
   loadState,
@@ -178,11 +179,12 @@ async function fetchJsonWithRetry<T>(
   url: string,
   init: RequestInit = {},
   attempts = 2,
+  timeoutMs = 12_000,
 ): Promise<T> {
   let lastError: unknown;
   for (let attempt = 0; attempt < attempts; attempt += 1) {
     const controller = new AbortController();
-    const timeout = window.setTimeout(() => controller.abort(), 12_000);
+    const timeout = window.setTimeout(() => controller.abort(), timeoutMs);
     try {
       const response = await fetch(url, {
         ...init,
@@ -210,6 +212,23 @@ async function fetchJsonWithRetry<T>(
   )
     throw lastError;
   throw new Error("网络连接暂时不稳定，请稍后重试");
+}
+
+async function settleWithin<T>(promise: Promise<T>, timeoutMs: number) {
+  let timeout: number | undefined;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<never>((_, reject) => {
+        timeout = window.setTimeout(
+          () => reject(new Error("本地词库响应超时")),
+          timeoutMs,
+        );
+      }),
+    ]);
+  } finally {
+    if (timeout !== undefined) window.clearTimeout(timeout);
+  }
 }
 function haptic(pattern: number | number[] = 9) {
   navigator.vibrate?.(pattern);
@@ -793,7 +812,12 @@ function SearchView({
     setLoading(true);
     setShowSuggestions(false);
     try {
-      const localEntry = await offlineLookup(normalized).catch(() => null);
+      // A damaged or very large local cache must never keep the search button
+      // spinning forever. Online lookup remains available after this deadline.
+      const localEntry = await settleWithin(
+        offlineLookup(normalized),
+        450,
+      ).catch(() => null);
       if (localEntry) {
         const displayedEntry = withDisplaySenses(localEntry);
         setEntry(displayedEntry);
@@ -828,12 +852,31 @@ function SearchView({
         logEvent("offline-lookup", { term: normalized });
         return;
       }
-      const result = await fetchJsonWithRetry<DictionaryEntry & {
+      const cloudLookup = fetchJsonWithRetry<DictionaryEntry & {
         detail?: string;
       }>(
         `/api/web/lookup?term=${encodeURIComponent(normalized)}`,
         { headers: { "x-lexora-device": deviceId() } },
+        1,
+        10_500,
       );
+      const coreLookup = fetchJsonWithRetry<unknown>(
+        `/api/dictionary/core?term=${encodeURIComponent(normalized)}`,
+        {},
+        1,
+        3_500,
+      ).then((payload) => {
+        const core = coreDictionaryEntry(payload, normalized);
+        if (!core) throw new Error(`没有找到“${normalized}”的可靠释义`);
+        return core;
+      });
+      const first = await Promise.any([
+        cloudLookup.then((value) => ({ source: "cloud" as const, value })),
+        coreLookup.then((value) => ({ source: "core" as const, value })),
+      ]).catch(() => {
+        throw new Error("词典服务暂时不可用，请稍后重试");
+      });
+      const result = first.value;
       const displayedEntry = withDisplaySenses(result);
       setEntry(displayedEntry);
       logEvent("cloud-lookup", { term: normalized, match: result.match_type });
@@ -852,9 +895,11 @@ function SearchView({
           500,
         ),
       );
+      let richEntryApplied = false;
       void withChineseDisplaySenses(displayedEntry)
         .then((translatedEntry) => {
           if (activeSearch.current !== requestId) return;
+          if (first.source === "core" && richEntryApplied) return;
           setEntry(translatedEntry);
           setSearches((current) =>
             current.map((item) =>
@@ -865,6 +910,33 @@ function SearchView({
           );
         })
         .catch(() => undefined);
+      if (first.source === "core") {
+        // The lightweight provider makes the page useful immediately. Replace
+        // it with the richer server entry when that request finishes.
+        void cloudLookup
+          .then((richEntry) =>
+            withChineseDisplaySenses(withDisplaySenses(richEntry)),
+          )
+          .then((richEntry) => {
+            if (activeSearch.current !== requestId) return;
+            richEntryApplied = true;
+            setEntry(richEntry);
+            setSearches((current) =>
+              current.map((item) =>
+                item.id === record.id
+                  ? {
+                      ...item,
+                      resolvedWord: richEntry.word,
+                      difficulty: richEntry.difficulty,
+                      frequency: richEntry.frequency,
+                      entry: richEntry,
+                    }
+                  : item,
+              ),
+            );
+          })
+          .catch(() => undefined);
+      }
     } catch (error) {
       setEntry(null);
       notify(error instanceof Error ? error.message : "查询失败");

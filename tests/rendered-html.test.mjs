@@ -183,6 +183,8 @@ test("publishes robots, sitemap, and web app manifest", async () => {
     "utf8",
   );
   assert.match(deployConfig, /"\/beta-version\.json"/);
+  assert.match(deployConfig, /"\/api\/dictionary\/\*"/);
+  assert.match(deployConfig, /"\/api\/translate\/\*"/);
 });
 
 test("server-renders the bilingual donation page", async () => {
