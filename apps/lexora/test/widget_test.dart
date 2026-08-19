@@ -620,6 +620,52 @@ void main() {
   });
 
   testWidgets(
+    'Android bottom navigation resolves every rapid tap to its requested page',
+    (tester) async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.android;
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(390, 844);
+      addTearDown(() {
+        debugDefaultTargetPlatformOverride = null;
+        tester.view.resetDevicePixelRatio();
+        tester.view.resetPhysicalSize();
+      });
+      SharedPreferences.setMockInitialValues({
+        'lexora.onboarding.completed.v1': true,
+        'lexora.release-notes.seen.$appVersion': true,
+      });
+
+      await tester.pumpWidget(const LexoraApp(locale: Locale('zh', 'CN')));
+      await pumpUi(tester);
+
+      await tester.tap(find.text('设置').last);
+      await tester.pump(const Duration(milliseconds: 16));
+      expect(find.text('文档自定义'), findsOneWidget);
+      expect(find.text('Lexora 学习 Beta'), findsNothing);
+
+      await tester.tap(find.text('生成记录').last);
+      await tester.pump(const Duration(milliseconds: 16));
+      expect(find.text('阅读、导出或分享已生成的词汇书。'), findsOneWidget);
+      expect(find.text('Lexora 学习 Beta'), findsNothing);
+
+      await tester.tap(find.text('学习').last);
+      // Deliberately issue the next destination before a frame is rendered.
+      // The latest tap must win even when no transition time is available.
+      await tester.tap(find.text('词汇书').last);
+      await tester.pump(const Duration(milliseconds: 16));
+      expect(find.text('Lexora 学习 Beta'), findsNothing);
+      expect(find.text('开始生成'), findsOneWidget);
+
+      final navigation = tester.widget<NavigationBar>(
+        find.byType(NavigationBar),
+      );
+      expect(navigation.selectedIndex, 1);
+      expect(tester.takeException(), isNull);
+      debugDefaultTargetPlatformOverride = null;
+    },
+  );
+
+  testWidgets(
     'Android resume clears focus and ignores a stale keyboard inset',
     (tester) async {
       debugDefaultTargetPlatformOverride = TargetPlatform.android;

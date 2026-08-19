@@ -90,7 +90,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('360x640 下 Beta 导航和空状态不横向溢出', (tester) async {
+  testWidgets('360x640 下 Beta 导航位于顶部且六个分区可准确切换', (tester) async {
     tester.view.devicePixelRatio = 1;
     tester.view.physicalSize = const Size(360, 640);
     addTearDown(() {
@@ -108,7 +108,34 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.text('当前到期复习'), findsOneWidget);
-    expect(find.byKey(const ValueKey('beta-mobile-tabs')), findsOneWidget);
+    final topTabs = find.byKey(const ValueKey('beta-top-tabs'));
+    expect(topTabs, findsOneWidget);
+    expect(
+      tester.getTopLeft(topTabs).dy,
+      lessThan(tester.getTopLeft(find.text('当前到期复习')).dy),
+    );
+
+    await tester.tap(find.byKey(const ValueKey('beta-top-tab-2')));
+    await tester.pumpAndSettle();
+    expect(find.text('今日复习已完成'), findsOneWidget);
+
+    await tester.ensureVisible(find.byKey(const ValueKey('beta-top-tab-3')));
+    await tester.pump();
+    await tester.tap(find.byKey(const ValueKey('beta-top-tab-3')));
+    await tester.pumpAndSettle();
+    expect(find.text('添加单词或短语'), findsOneWidget);
+
+    await tester.ensureVisible(find.byKey(const ValueKey('beta-top-tab-4')));
+    await tester.pump();
+    await tester.tap(find.byKey(const ValueKey('beta-top-tab-4')));
+    await tester.pumpAndSettle();
+    expect(find.text('学习统计'), findsOneWidget);
+
+    await tester.ensureVisible(find.byKey(const ValueKey('beta-top-tab-5')));
+    await tester.pump();
+    await tester.tap(find.byKey(const ValueKey('beta-top-tab-5')));
+    await tester.pumpAndSettle();
+    expect(find.text('想要学习的内容'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 }

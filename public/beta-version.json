@@ -1,42 +1,44 @@
 {
-  "version": "4.1.0-beta.3",
-  "build": 31,
+  "version": "4.1.0-beta.4",
+  "build": 32,
   "releaseNotes": {
     "zh": [
-      "完整词典、个人词汇书和间隔重复学习现已合并为统一的跨平台 Beta。",
-      "新增今日学习、今日复习、预设词库、学习来源选择和释义就绪门槛。",
-      "网页与应用新增可选择的缓存清理，逐项显示真实占用空间，并优化窄屏按钮、学习导航和历史切换栏。",
-      "Beta 更新器现会同时检查 Beta 与正式通道，并自动选择可用的新版本。",
-      "macOS 继续使用原生 SwiftUI、侧栏材质与克制的 Liquid Glass 交互效果。",
-      "文档自定义新增实时字体预览与极简模式。"
+      "修复 Android 底栏快速点击或跨页切换时可能错误进入学习页面的问题。",
+      "学习页面的六项独立导航已移到顶部，并在手机上以单行横向栏显示。",
+      "当前学习分区会自动滚动到合适位置，切换更直接且不会与应用底栏重叠。",
+      "修复 Android 窄屏设置标题与版本号可能溢出的问题，并恢复学习卡片完整的点击反馈。"
     ],
     "en": [
-      "The full dictionary, personal vocabulary books, and spaced repetition now share one cross-platform Beta.",
-      "Study Beta adds separate Learn and Review views, preset packs, source selection, and a content-readiness gate.",
-      "Web and app builds add selective cache cleanup with per-item storage usage plus refined narrow-screen controls, learning navigation, and history switching.",
-      "The Beta updater now checks both Beta and stable channels and chooses the newest available release.",
-      "macOS keeps a native SwiftUI shell, sidebar material, and restrained interactive Liquid Glass.",
-      "Document customization adds a live typography preview and Minimal mode."
+      "Fixes Android bottom-navigation taps that could incorrectly land on Learning during rapid or long-distance switching.",
+      "Moves all six Learning destinations to a single top navigation row on phones.",
+      "The selected Learning destination scrolls into view automatically, without competing with the app-wide bottom bar.",
+      "Fixes narrow Android Settings title overflow and restores visible touch feedback on Learning cards."
     ]
   },
   "inAppReleaseNotes": {
     "zh": [
-      "词典、个人词汇书和学习系统已合并到统一 Beta。",
-      "新增今日学习、今日复习与可下载预设词库。",
-      "学习内容可从已生成词汇书、历史选择和预设词库组合。",
-      "释义补全前不会开始复习；新增文档字体预览、极简模式和自定义缓存清理。",
-      "学习导航更紧凑流畅，缓存大小清楚可见，并可同时接收 Beta 与正式更新。"
+      "修复 Android 底栏快速点击时可能误跳到学习页面的问题。",
+      "学习页六个入口移到顶部，并改为单行横向导航。",
+      "优化小屏幕的选中项定位、设置标题排版与点击反馈。"
     ],
     "en": [
-      "Unifies the dictionary, personal vocabulary books, and learning system in one Beta.",
-      "Adds separate daily learning and review plus downloadable preset packs.",
-      "Combine generated books, selected history, and preset packs as study sources.",
-      "Review waits for bilingual enrichment; document settings add preview, Minimal mode, and selective cache cleanup.",
-      "Learning navigation is more compact and fluid, cache sizes are visible, and both Beta and stable updates are supported."
+      "Fixes Android bottom-navigation taps that could incorrectly open Learning.",
+      "Moves all six Learning destinations into one horizontal top bar.",
+      "Improves selected-tab positioning, narrow Settings layout, and touch feedback."
     ]
   },
   "releaseNoteSections": {
     "zh": [
+      {
+        "title": "4.1.0 Beta 4 Android 导航修复",
+        "items": [
+          "Android 应用底栏现在直接定位到用户点击的目标页面，不再让跨页动画经过中间页面并覆盖最终选择。",
+          "保留页面左右滑动手势；快速连续点击词汇书、生成记录、历史、学习或设置时，最终页面与选中项始终一致。",
+          "学习页的首页、今日学习、今日复习、单词库、统计和学习设置已统一移到标题下方的一行导航中。",
+          "手机端学习导航支持横向滑动并自动将当前分区移到合适位置，不再与应用底栏形成双层导航。",
+          "修复窄屏设置标题与 Beta 版本号溢出，以及学习设置卡片点击反馈被背景遮挡的问题。"
+        ]
+      },
       {
         "title": "4.1.0 Beta 3 学习系统",
         "items": [
@@ -70,6 +72,16 @@
     ],
     "en": [
       {
+        "title": "4.1.0 Beta 4 Android navigation",
+        "items": [
+          "Android bottom navigation now positions the app directly on the requested destination instead of activating intermediate PageView pages.",
+          "Horizontal page swipes remain available, while rapid taps across Books, Generated, History, Learning, and Settings always resolve to the selected destination.",
+          "Home, Learn Today, Review Today, Library, Stats, and Learning Settings now share one navigation row directly below the Learning header.",
+          "The phone layout scrolls the Learning row horizontally and keeps the active destination visible without creating a second bottom bar.",
+          "Fixes narrow Settings title and Beta version overflow plus hidden touch feedback on Learning settings cards."
+        ]
+      },
+      {
         "title": "4.1.0 Beta 3 learning system",
         "items": [
           "Adds Home, Learn Today, Review Today, Library, Stats, and Learning Settings navigation.",
@@ -102,9 +114,9 @@
     ]
   },
   "verifiedDownloads": {
-    "android": { "filename": "lexora-android-v4.1.0-beta.3.apk", "url": "/downloads/lexora-android-v4.1.0-beta.3.apk", "sources": ["/downloads/lexora-android-v4.1.0-beta.3.apk", "https://github.com/xiaozhangwangxue/lexora/releases/download/v4.1.0-beta.3/lexora-android-v4.1.0-beta.3.apk"], "size": 0, "sha256": "" },
-    "macos": { "filename": "lexora-macos-v4.1.0-beta.3.dmg", "url": "/downloads/lexora-macos-v4.1.0-beta.3.dmg", "sources": ["/downloads/lexora-macos-v4.1.0-beta.3.dmg", "https://github.com/xiaozhangwangxue/lexora/releases/download/v4.1.0-beta.3/lexora-macos-v4.1.0-beta.3.dmg"], "size": 0, "sha256": "" },
-    "windows": { "filename": "lexora-windows-v4.1.0-beta.3-setup.exe", "url": "/downloads/lexora-windows-v4.1.0-beta.3-setup.exe", "sources": ["/downloads/lexora-windows-v4.1.0-beta.3-setup.exe", "https://github.com/xiaozhangwangxue/lexora/releases/download/v4.1.0-beta.3/lexora-windows-v4.1.0-beta.3-setup.exe"], "size": 0, "sha256": "" },
-    "linux": { "filename": "lexora-linux-v4.1.0-beta.3.tar.gz", "url": "/downloads/lexora-linux-v4.1.0-beta.3.tar.gz", "sources": ["/downloads/lexora-linux-v4.1.0-beta.3.tar.gz", "https://github.com/xiaozhangwangxue/lexora/releases/download/v4.1.0-beta.3/lexora-linux-v4.1.0-beta.3.tar.gz"], "size": 0, "sha256": "" }
+    "android": { "filename": "lexora-android-v4.1.0-beta.4.apk", "url": "/downloads/lexora-android-v4.1.0-beta.4.apk", "sources": ["/downloads/lexora-android-v4.1.0-beta.4.apk", "https://github.com/xiaozhangwangxue/lexora/releases/download/v4.1.0-beta.4/lexora-android-v4.1.0-beta.4.apk"], "size": 0, "sha256": "" },
+    "macos": { "filename": "lexora-macos-v4.1.0-beta.4.dmg", "url": "/downloads/lexora-macos-v4.1.0-beta.4.dmg", "sources": ["/downloads/lexora-macos-v4.1.0-beta.4.dmg", "https://github.com/xiaozhangwangxue/lexora/releases/download/v4.1.0-beta.4/lexora-macos-v4.1.0-beta.4.dmg"], "size": 0, "sha256": "" },
+    "windows": { "filename": "lexora-windows-v4.1.0-beta.4-setup.exe", "url": "/downloads/lexora-windows-v4.1.0-beta.4-setup.exe", "sources": ["/downloads/lexora-windows-v4.1.0-beta.4-setup.exe", "https://github.com/xiaozhangwangxue/lexora/releases/download/v4.1.0-beta.4/lexora-windows-v4.1.0-beta.4-setup.exe"], "size": 0, "sha256": "" },
+    "linux": { "filename": "lexora-linux-v4.1.0-beta.4.tar.gz", "url": "/downloads/lexora-linux-v4.1.0-beta.4.tar.gz", "sources": ["/downloads/lexora-linux-v4.1.0-beta.4.tar.gz", "https://github.com/xiaozhangwangxue/lexora/releases/download/v4.1.0-beta.4/lexora-linux-v4.1.0-beta.4.tar.gz"], "size": 0, "sha256": "" }
   }
 }

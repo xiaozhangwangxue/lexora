@@ -24,18 +24,18 @@ class BetaSurface extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final radius = BorderRadius.circular(_isMacOS ? 14 : 22);
-    final content = Container(
-      padding: padding,
-      decoration: BoxDecoration(
-        color:
-            color ??
-            (_isMacOS ? scheme.surface.withValues(alpha: .68) : scheme.surface),
+    final content = Material(
+      color:
+          color ??
+          (_isMacOS ? scheme.surface.withValues(alpha: .68) : scheme.surface),
+      shape: RoundedRectangleBorder(
         borderRadius: radius,
-        border: Border.all(
+        side: BorderSide(
           color: scheme.outlineVariant.withValues(alpha: _isMacOS ? .46 : .62),
         ),
       ),
-      child: child,
+      clipBehavior: Clip.antiAlias,
+      child: Padding(padding: padding, child: child),
     );
     if (!_isMacOS) return content;
     return ClipRRect(

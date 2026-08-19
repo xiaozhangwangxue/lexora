@@ -106,6 +106,8 @@ class _BetaLearningScreenState extends State<BetaLearningScreen>
             showNavigation: showTopNavigation,
             desktop: desktop,
           ),
+          if (!showTopNavigation)
+            _MobileTabs(selectedIndex: _index, onSelected: _select),
           Expanded(
             child: AnimatedSwitcher(
               duration: MediaQuery.disableAnimationsOf(context)
@@ -126,8 +128,6 @@ class _BetaLearningScreenState extends State<BetaLearningScreen>
               child: KeyedSubtree(key: ValueKey(_index), child: pages[_index]),
             ),
           ),
-          if (!showTopNavigation)
-            _MobileTabs(selectedIndex: _index, onSelected: _select),
         ],
       );
     },
@@ -350,45 +350,47 @@ class _MobileTabsState extends State<_MobileTabs> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final reduceMotion = MediaQuery.disableAnimationsOf(context);
-    return SafeArea(
-      key: const ValueKey('beta-mobile-tabs'),
-      top: false,
-      minimum: const EdgeInsets.fromLTRB(12, 7, 12, 9),
+    return Padding(
+      key: const ValueKey('beta-top-tabs'),
+      padding: const EdgeInsets.fromLTRB(12, 0, 12, 10),
       child: DecoratedBox(
         decoration: BoxDecoration(
           color: theme.colorScheme.surfaceContainerLow.withValues(alpha: .94),
-          borderRadius: BorderRadius.circular(22),
+          borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: theme.colorScheme.outlineVariant.withValues(alpha: .52),
           ),
           boxShadow: [
             BoxShadow(
-              color: theme.colorScheme.shadow.withValues(alpha: .08),
-              blurRadius: 22,
-              offset: const Offset(0, 7),
+              color: theme.colorScheme.shadow.withValues(alpha: .055),
+              blurRadius: 14,
+              offset: const Offset(0, 4),
             ),
           ],
         ),
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(22),
+          borderRadius: BorderRadius.circular(16),
           child: SingleChildScrollView(
             controller: _scrollController,
             scrollDirection: Axis.horizontal,
-            physics: const BouncingScrollPhysics(),
+            physics: const ClampingScrollPhysics(),
             padding: const EdgeInsets.all(4),
             child: Row(
               children: [
                 for (var index = 0; index < _DesktopTabs._items.length; index++)
                   SizedBox(
                     key: _keys[index],
-                    width: index == 0 || index == _DesktopTabs._items.length - 1
-                        ? 76
-                        : 88,
+                    width: switch (index) {
+                      0 => 104,
+                      5 => 116,
+                      _ => 112,
+                    },
                     child: Semantics(
                       selected: widget.selectedIndex == index,
                       button: true,
                       child: InkWell(
-                        borderRadius: BorderRadius.circular(17),
+                        key: ValueKey('beta-top-tab-$index'),
+                        borderRadius: BorderRadius.circular(12),
                         onTap: () => widget.onSelected(index),
                         child: AnimatedContainer(
                           duration: reduceMotion
@@ -396,27 +398,28 @@ class _MobileTabsState extends State<_MobileTabs> {
                               : const Duration(milliseconds: 165),
                           curve: const Cubic(.2, .82, .2, 1),
                           padding: const EdgeInsets.symmetric(
-                            horizontal: 6,
-                            vertical: 8,
+                            horizontal: 10,
+                            vertical: 10,
                           ),
                           decoration: BoxDecoration(
                             color: widget.selectedIndex == index
                                 ? theme.colorScheme.surface
                                 : Colors.transparent,
-                            borderRadius: BorderRadius.circular(17),
+                            borderRadius: BorderRadius.circular(12),
                             boxShadow: widget.selectedIndex == index
                                 ? [
                                     BoxShadow(
                                       color: theme.colorScheme.shadow
-                                          .withValues(alpha: .09),
-                                      blurRadius: 12,
-                                      offset: const Offset(0, 3),
+                                          .withValues(alpha: .07),
+                                      blurRadius: 10,
+                                      offset: const Offset(0, 2),
                                     ),
                                   ]
                                 : const [],
                           ),
-                          child: Column(
+                          child: Row(
                             mainAxisSize: MainAxisSize.min,
+                            mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               Icon(
                                 widget.selectedIndex == index
@@ -427,26 +430,23 @@ class _MobileTabsState extends State<_MobileTabs> {
                                     ? theme.colorScheme.primary
                                     : theme.colorScheme.onSurfaceVariant,
                               ),
-                              const SizedBox(height: 3),
-                              Text(
-                                switch (index) {
-                                  1 => '学习',
-                                  2 => '复习',
-                                  3 => '词库',
-                                  5 => '设置',
-                                  _ => _DesktopTabs._items[index].$1,
-                                },
-                                maxLines: 1,
-                                textAlign: TextAlign.center,
-                                overflow: TextOverflow.fade,
-                                softWrap: false,
-                                style: theme.textTheme.labelSmall?.copyWith(
-                                  color: widget.selectedIndex == index
-                                      ? theme.colorScheme.primary
-                                      : theme.colorScheme.onSurfaceVariant,
-                                  fontWeight: widget.selectedIndex == index
-                                      ? FontWeight.w700
-                                      : FontWeight.w600,
+                              const SizedBox(width: 7),
+                              Flexible(
+                                child: Text(
+                                  index == 0
+                                      ? '学习首页'
+                                      : _DesktopTabs._items[index].$1,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.fade,
+                                  softWrap: false,
+                                  style: theme.textTheme.labelMedium?.copyWith(
+                                    color: widget.selectedIndex == index
+                                        ? theme.colorScheme.primary
+                                        : theme.colorScheme.onSurfaceVariant,
+                                    fontWeight: widget.selectedIndex == index
+                                        ? FontWeight.w700
+                                        : FontWeight.w600,
+                                  ),
                                 ),
                               ),
                             ],

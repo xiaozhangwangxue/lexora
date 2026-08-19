@@ -144,7 +144,7 @@ void main() {
             sources: [
               beta ? '/updates/lexora-beta.apk' : '/updates/lexora-stable.apk',
             ],
-            version: beta ? '4.1.0-beta.4' : '4.0.4',
+            version: beta ? '4.1.0-beta.5' : '4.0.4',
           ),
         );
       },
@@ -158,7 +158,7 @@ void main() {
           cacheDirectory: () async => cache,
           isMacOS: false,
         );
-        expect((await service.check())?.version, '4.1.0-beta.4');
+        expect((await service.check())?.version, '4.1.0-beta.5');
       },
     );
   });

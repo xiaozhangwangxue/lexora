@@ -645,11 +645,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           if (Theme.of(context).platform ==
                               TargetPlatform.android) ...[
                             const SizedBox(width: 9),
-                            Text(
-                              'v$appVersion',
-                              style: theme.textTheme.labelSmall?.copyWith(
-                                color: theme.colorScheme.onSurfaceVariant,
-                                fontWeight: FontWeight.w500,
+                            Flexible(
+                              child: Text(
+                                'v$appVersion',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: theme.textTheme.labelSmall?.copyWith(
+                                  color: theme.colorScheme.onSurfaceVariant,
+                                  fontWeight: FontWeight.w500,
+                                ),
                               ),
                             ),
                           ],
