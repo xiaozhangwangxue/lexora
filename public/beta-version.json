@@ -114,9 +114,45 @@
     ]
   },
   "verifiedDownloads": {
-    "android": { "filename": "lexora-android-v4.1.0-beta.4.apk", "url": "/downloads/lexora-android-v4.1.0-beta.4.apk", "sources": ["/downloads/lexora-android-v4.1.0-beta.4.apk", "https://github.com/xiaozhangwangxue/lexora/releases/download/v4.1.0-beta.4/lexora-android-v4.1.0-beta.4.apk"], "size": 0, "sha256": "" },
-    "macos": { "filename": "lexora-macos-v4.1.0-beta.4.dmg", "url": "/downloads/lexora-macos-v4.1.0-beta.4.dmg", "sources": ["/downloads/lexora-macos-v4.1.0-beta.4.dmg", "https://github.com/xiaozhangwangxue/lexora/releases/download/v4.1.0-beta.4/lexora-macos-v4.1.0-beta.4.dmg"], "size": 0, "sha256": "" },
-    "windows": { "filename": "lexora-windows-v4.1.0-beta.4-setup.exe", "url": "/downloads/lexora-windows-v4.1.0-beta.4-setup.exe", "sources": ["/downloads/lexora-windows-v4.1.0-beta.4-setup.exe", "https://github.com/xiaozhangwangxue/lexora/releases/download/v4.1.0-beta.4/lexora-windows-v4.1.0-beta.4-setup.exe"], "size": 0, "sha256": "" },
-    "linux": { "filename": "lexora-linux-v4.1.0-beta.4.tar.gz", "url": "/downloads/lexora-linux-v4.1.0-beta.4.tar.gz", "sources": ["/downloads/lexora-linux-v4.1.0-beta.4.tar.gz", "https://github.com/xiaozhangwangxue/lexora/releases/download/v4.1.0-beta.4/lexora-linux-v4.1.0-beta.4.tar.gz"], "size": 0, "sha256": "" }
+    "android": {
+      "filename": "lexora-android-v4.1.0-beta.4.apk",
+      "url": "/downloads/lexora-android-v4.1.0-beta.4.apk",
+      "sources": [
+        "/downloads/lexora-android-v4.1.0-beta.4.apk",
+        "https://github.com/xiaozhangwangxue/lexora/releases/download/v4.1.0-beta.4/lexora-android-v4.1.0-beta.4.apk"
+      ],
+      "size": 108109338,
+      "sha256": "3d25ab256e50d6aeb61b837312ee3343c51673bee822442daafd5036b9e9d40e"
+    },
+    "macos": {
+      "filename": "lexora-macos-v4.1.0-beta.4.dmg",
+      "url": "/downloads/lexora-macos-v4.1.0-beta.4.dmg",
+      "sources": [
+        "/downloads/lexora-macos-v4.1.0-beta.4.dmg",
+        "https://github.com/xiaozhangwangxue/lexora/releases/download/v4.1.0-beta.4/lexora-macos-v4.1.0-beta.4.dmg"
+      ],
+      "size": 50285510,
+      "sha256": "819ffa5db9b0005cb190b9a431c20262bba01f39065dfa3a2c85ba807393167f"
+    },
+    "windows": {
+      "filename": "lexora-windows-v4.1.0-beta.4-setup.exe",
+      "url": "/downloads/lexora-windows-v4.1.0-beta.4-setup.exe",
+      "sources": [
+        "/downloads/lexora-windows-v4.1.0-beta.4-setup.exe",
+        "https://github.com/xiaozhangwangxue/lexora/releases/download/v4.1.0-beta.4/lexora-windows-v4.1.0-beta.4-setup.exe"
+      ],
+      "size": 28178320,
+      "sha256": "93e580e4bf30e2a34afc0eb44e013d6dccd4d64d1c71722b5010c486dc8471d9"
+    },
+    "linux": {
+      "filename": "lexora-linux-v4.1.0-beta.4.tar.gz",
+      "url": "/downloads/lexora-linux-v4.1.0-beta.4.tar.gz",
+      "sources": [
+        "/downloads/lexora-linux-v4.1.0-beta.4.tar.gz",
+        "https://github.com/xiaozhangwangxue/lexora/releases/download/v4.1.0-beta.4/lexora-linux-v4.1.0-beta.4.tar.gz"
+      ],
+      "size": 32670864,
+      "sha256": "bb48423381759ca005a7d51b5a693dfeaab96a3a6e6d28332d43fec848104959"
+    }
   }
 }
