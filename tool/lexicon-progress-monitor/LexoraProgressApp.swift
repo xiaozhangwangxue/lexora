@@ -447,10 +447,23 @@ private struct ProgressPopover: View {
                     color: top.incomplete == 0 ? .green : .orange
                 )
                 if let terms = top.terms {
+                    let wordCount = terms["words"] ?? 0
                     MetricRow(
                         title: "构成",
-                        value: "单词 \(formatted(terms["words"] ?? 0)) · 短语 \(formatted(terms["phrases"] ?? 0))"
+                        value: "单词 \(formatted(wordCount)) · 短语 \(formatted(terms["phrases"] ?? 0))"
                     )
+                    if wordCount < 15_000 {
+                        Label(
+                            "旧候选名单，正在重建",
+                            systemImage: "arrow.triangle.2.circlepath"
+                        )
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.orange)
+                        Text("正式极速词库至少包含 15,000 个常用单词；当前构成不达标，不会被打包。")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
                 }
                 if let missing = top.missing, !missing.isEmpty {
                     Divider()
@@ -486,7 +499,7 @@ private struct ProgressPopover: View {
                         }
                     }
                 }
-                Text("只有 20,000 条全部通过释义、中文与普通单词音标/词性门禁后，才会生成正式极速包。")
+                Text("只有至少 15,000 个常用单词、总计 20,000 条内容全部通过释义、中文与普通单词音标/词性门禁后，才会生成正式极速包。")
                     .font(.caption2)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
