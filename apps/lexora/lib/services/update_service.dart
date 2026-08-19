@@ -391,7 +391,7 @@ class UpdateService {
       }
       await _verifyFile(partial, download);
       onProgress(1);
-      return partial.rename(finalFile.path);
+      return await partial.rename(finalFile.path);
     } catch (_) {
       await sink.close();
       if (await partial.exists()) await partial.delete();

@@ -268,27 +268,22 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
     if (value == _index) return;
     final previous = _index;
     _dismissAndroidHomeKeyboard(value);
-    if (_isAndroid && animate && _pageController.hasClients) {
-      setState(() => _index = value);
-      _pageController.animateToPage(
-        value,
-        duration: MediaQuery.disableAnimationsOf(context)
-            ? Duration.zero
-            : const Duration(milliseconds: 240),
-        curve: const Cubic(.32, .72, 0, 1),
-      );
-    } else {
-      setState(() => _index = value);
-      if (_isAndroid && _pageController.hasClients) {
-        _pageController.jumpToPage(value);
-      }
+    setState(() => _index = value);
+    if (_isAndroid && _pageController.hasClients) {
+      // Bottom navigation selects one destination. It must not activate every
+      // PageView between the current page and that destination. Animating
+      // 0 -> 5 used to publish the intermediate learning index (4) through
+      // onPageChanged and could leave a quick second tap on the wrong page.
+      // Direct positioning keeps taps deterministic; user swipes still use
+      // the PageView's native motion.
+      _pageController.jumpToPage(value);
     }
     if (_nativeMacShellAvailable == true) {
       unawaited(_nativeNavigation.invokeMethod<void>('pageChanged', value));
     }
     DeveloperLogService.instance.log(
       'navigation.page_changed',
-      data: {'from': previous, 'to': value, 'animated': animate},
+      data: {'from': previous, 'to': value, 'animated': animate && !_isAndroid},
     );
   }
 

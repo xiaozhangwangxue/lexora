@@ -246,22 +246,30 @@ jobs:
           if [[ "$RELEASE_VERSION" == *-beta* ]]; then
             node tool/finalize_update_manifest.mjs public/beta-version.json beta-version.json lexora-*
             node tool/upload_release_artifacts.mjs lexora-* beta-version.json
-            node tool/prune_r2_release_objects.mjs --keep v4.1.0-beta.3 v4.0.4 v3.1.0
+            node tool/prune_r2_release_objects.mjs --keep "$RELEASE_VERSION" v4.0.4 v3.1.0
           else
             node tool/finalize_update_manifest.mjs public/version.json update-version.json lexora-*
             node tool/upload_release_artifacts.mjs lexora-* update-version.json
           fi
       - name: Sync finalized checksums to the canonical manifest
-        if: ${{ !contains(github.ref_name, '-beta') }}
         run: |
           git fetch origin main
           git worktree add --detach "$RUNNER_TEMP/lexora-main" origin/main
-          cp update-version.json "$RUNNER_TEMP/lexora-main/public/version.json"
+          if [[ "$RELEASE_VERSION" == *-beta* ]]; then
+            source_manifest=beta-version.json
+            target_manifest=public/beta-version.json
+            channel=beta
+          else
+            source_manifest=update-version.json
+            target_manifest=public/version.json
+            channel=stable
+          fi
+          cp "$source_manifest" "$RUNNER_TEMP/lexora-main/$target_manifest"
           cd "$RUNNER_TEMP/lexora-main"
-          node tool/sync_release_metadata.mjs --check
+          node tool/sync_release_metadata.mjs --check --channel="$channel"
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git add public/version.json
+          git add "$target_manifest"
           if ! git diff --cached --quiet; then
             git commit -m "Sync v${RELEASE_VERSION#v} release manifest [skip ci]"
             git push origin HEAD:main
