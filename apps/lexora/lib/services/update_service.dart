@@ -429,7 +429,9 @@ class UpdateService {
         return true;
       }
 
-      if ((filename.endsWith('.apk') || filename.endsWith('.zip')) &&
+      if ((filename.endsWith('.apk') ||
+              filename.endsWith('.ipa') ||
+              filename.endsWith('.zip')) &&
           !(matches(const [0x50, 0x4b, 0x03, 0x04]) ||
               matches(const [0x50, 0x4b, 0x05, 0x06]) ||
               matches(const [0x50, 0x4b, 0x07, 0x08]))) {
@@ -584,6 +586,7 @@ class UpdateService {
 
   static String get _platformKey {
     if (Platform.isAndroid) return 'android';
+    if (Platform.isIOS) return 'ios';
     if (Platform.isMacOS) return 'macos';
     if (Platform.isWindows) return 'windows';
     if (Platform.isLinux) return 'linux';

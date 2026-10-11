@@ -60,7 +60,9 @@ class LexoraApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isApple = defaultTargetPlatform == TargetPlatform.macOS;
+    final isMacOS = defaultTargetPlatform == TargetPlatform.macOS;
+    final isIOS = defaultTargetPlatform == TargetPlatform.iOS;
+    final isApple = isMacOS || isIOS;
     final isWindows = defaultTargetPlatform == TargetPlatform.windows;
     final seed = isApple
         ? const Color(0xFF635BFF)
@@ -78,13 +80,15 @@ class LexoraApp extends StatelessWidget {
       theme: _theme(
         seed,
         Brightness.light,
-        transparent: isApple,
+        transparent: isMacOS,
+        appleTypography: isApple,
         windows: isWindows,
       ),
       darkTheme: _theme(
         seed,
         Brightness.dark,
-        transparent: isApple,
+        transparent: isMacOS,
+        appleTypography: isApple,
         windows: isWindows,
       ),
       supportedLocales: const [Locale('en'), Locale('zh')],
@@ -107,6 +111,7 @@ class LexoraApp extends StatelessWidget {
     Brightness brightness, {
     required bool transparent,
     required bool windows,
+    required bool appleTypography,
   }) {
     final scheme = ColorScheme.fromSeed(
       seedColor: seed,
@@ -137,7 +142,7 @@ class LexoraApp extends StatelessWidget {
     return ThemeData(
       useMaterial3: true,
       colorScheme: scheme,
-      fontFamily: transparent
+      fontFamily: appleTypography
           ? 'SF Pro Text'
           : windows
           ? 'Segoe UI Variable'

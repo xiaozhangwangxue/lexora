@@ -1,14 +1,22 @@
 {
-  "version": "4.1.0-beta.4",
-  "build": 32,
+  "version": "4.1.0-beta.5",
+  "build": 33,
   "releaseNotes": {
     "zh": [
+      "新增 iPhone 与 iPad 版本，完整保留查词、个人词汇书、学习、历史和文档导出功能。",
+      "单词搜索与词汇书整理改用 Cloudflare 边缘词库批量查询，中国大陆网络下也能更快获得中英文核心结果。",
+      "一次可并行准备最多 36 个词条，减少大批量词汇书生成前的等待。",
+      "iOS 使用原生 SwiftUI 窗口与导航，并加入 Liquid Glass、弹性滚动和轻量触觉反馈。",
       "修复 Android 底栏快速点击或跨页切换时可能错误进入学习页面的问题。",
       "学习页面的六项独立导航已移到顶部，并在手机上以单行横向栏显示。",
       "当前学习分区会自动滚动到合适位置，切换更直接且不会与应用底栏重叠。",
       "修复 Android 窄屏设置标题与版本号可能溢出的问题，并恢复学习卡片完整的点击反馈。"
     ],
     "en": [
+      "Adds iPhone and iPad builds with dictionary, personal vocabulary books, learning, history, and document export.",
+      "Routes search and vocabulary-book preparation through a batched Cloudflare edge dictionary for faster bilingual results, including mainland China networks.",
+      "Prepares up to 36 entries in parallel to reduce waiting before large document exports.",
+      "Uses a native SwiftUI window and navigation on iOS with Liquid Glass, elastic scrolling, and subtle haptics.",
       "Fixes Android bottom-navigation taps that could incorrectly land on Learning during rapid or long-distance switching.",
       "Moves all six Learning destinations to a single top navigation row on phones.",
       "The selected Learning destination scrolls into view automatically, without competing with the app-wide bottom bar.",
@@ -17,11 +25,17 @@
   },
   "inAppReleaseNotes": {
     "zh": [
+      "新增 iPhone 与 iPad 版本，完整支持查词、学习和词汇书导出。",
+      "中英文词典结果改由 Cloudflare 边缘批量返回，搜索和生成前准备明显加快。",
+      "iOS 窗口与导航改用原生 SwiftUI，并加入 Liquid Glass、弹性滚动和触觉反馈。",
       "修复 Android 底栏快速点击时可能误跳到学习页面的问题。",
       "学习页六个入口移到顶部，并改为单行横向导航。",
       "优化小屏幕的选中项定位、设置标题排版与点击反馈。"
     ],
     "en": [
+      "Adds iPhone and iPad builds with dictionary, learning, and vocabulary-book export.",
+      "Returns bilingual dictionary data in Cloudflare edge batches for faster search and document preparation.",
+      "Moves the iOS window and navigation to native SwiftUI with Liquid Glass, elastic scrolling, and haptics.",
       "Fixes Android bottom-navigation taps that could incorrectly open Learning.",
       "Moves all six Learning destinations into one horizontal top bar.",
       "Improves selected-tab positioning, narrow Settings layout, and touch feedback."
@@ -29,6 +43,18 @@
   },
   "releaseNoteSections": {
     "zh": [
+      {
+        "title": "4.1.0 Beta 5 iOS 与高速边缘词典",
+        "items": [
+          "首次提供 iPhone 与 iPad IPA；窗口、iPhone 底栏和 iPad 侧栏由原生 SwiftUI 承载，并在支持的系统上使用 Liquid Glass。",
+          "iOS 完整支持独立词典搜索、个人词汇书、生成记录、搜索历史、间隔重复学习、设置和多格式文档导出。",
+          "普通查询不再依赖甲骨文云词典服务；客户端只连接 Lexora 的 Cloudflare 域名，更适合中国大陆网络环境。",
+          "759,561 条带中文释义的 ECDICT 数据被切分为可按需读取的边缘词库，常用词的英文与中文核心结果可同时返回。",
+          "搜索和词汇书整理以每组 12 条、最多三组并行的方式预取，单轮最多准备 36 个词条。",
+          "文档服务直接接收客户端已解析词条，不再为每个单词重复执行服务器数据库查询。",
+          "iOS IPA 为公开自签名包，需要使用 AltStore、Sideloadly、AutoSign 或其他可信签名工具安装。"
+        ]
+      },
       {
         "title": "4.1.0 Beta 4 Android 导航修复",
         "items": [
@@ -71,6 +97,18 @@
       }
     ],
     "en": [
+      {
+        "title": "4.1.0 Beta 5 iOS and fast edge dictionary",
+        "items": [
+          "Introduces an iPhone and iPad IPA whose window, iPhone tab bar, and iPad sidebar are hosted by native SwiftUI with Liquid Glass on supported systems.",
+          "iOS includes dictionary search, personal vocabulary books, generated files, search history, spaced-repetition learning, settings, and multi-format export.",
+          "Normal lookup no longer depends on the Oracle dictionary service; clients contact only Lexora's Cloudflare domain for better reachability in mainland China.",
+          "759,561 ECDICT entries with Chinese definitions are split into range-addressable edge shards so common English and Chinese core results arrive together.",
+          "Search and vocabulary-book preparation prefetch groups of 12 with up to three concurrent groups, preparing as many as 36 entries per wave.",
+          "The document service accepts resolved entries and no longer repeats a server-side database lookup for every word.",
+          "The public iOS IPA is unsigned and must be installed through AltStore, Sideloadly, AutoSign, or another trusted signing tool."
+        ]
+      },
       {
         "title": "4.1.0 Beta 4 Android navigation",
         "items": [
@@ -115,44 +153,54 @@
   },
   "verifiedDownloads": {
     "android": {
-      "filename": "lexora-android-v4.1.0-beta.4.apk",
-      "url": "/downloads/lexora-android-v4.1.0-beta.4.apk",
+      "filename": "lexora-android-v4.1.0-beta.5.apk",
+      "url": "/downloads/lexora-android-v4.1.0-beta.5.apk",
       "sources": [
-        "/downloads/lexora-android-v4.1.0-beta.4.apk",
-        "https://github.com/xiaozhangwangxue/lexora/releases/download/v4.1.0-beta.4/lexora-android-v4.1.0-beta.4.apk"
+        "/downloads/lexora-android-v4.1.0-beta.5.apk",
+        "https://github.com/xiaozhangwangxue/lexora/releases/download/v4.1.0-beta.5/lexora-android-v4.1.0-beta.5.apk"
       ],
-      "size": 108109338,
-      "sha256": "3d25ab256e50d6aeb61b837312ee3343c51673bee822442daafd5036b9e9d40e"
+      "size": 0,
+      "sha256": ""
+    },
+    "ios": {
+      "filename": "lexora-ios-v4.1.0-beta.5.ipa",
+      "url": "/downloads/lexora-ios-v4.1.0-beta.5.ipa",
+      "sources": [
+        "/downloads/lexora-ios-v4.1.0-beta.5.ipa",
+        "https://github.com/xiaozhangwangxue/lexora/releases/download/v4.1.0-beta.5/lexora-ios-v4.1.0-beta.5.ipa"
+      ],
+      "size": 0,
+      "sha256": ""
     },
     "macos": {
-      "filename": "lexora-macos-v4.1.0-beta.4.dmg",
-      "url": "/downloads/lexora-macos-v4.1.0-beta.4.dmg",
+      "filename": "lexora-macos-v4.1.0-beta.5.dmg",
+      "url": "/downloads/lexora-macos-v4.1.0-beta.5.dmg",
       "sources": [
-        "/downloads/lexora-macos-v4.1.0-beta.4.dmg",
-        "https://github.com/xiaozhangwangxue/lexora/releases/download/v4.1.0-beta.4/lexora-macos-v4.1.0-beta.4.dmg"
+        "/downloads/lexora-macos-v4.1.0-beta.5.dmg",
+        "https://github.com/xiaozhangwangxue/lexora/releases/download/v4.1.0-beta.5/lexora-macos-v4.1.0-beta.5.dmg"
       ],
-      "size": 50285510,
-      "sha256": "819ffa5db9b0005cb190b9a431c20262bba01f39065dfa3a2c85ba807393167f"
+      "size": 0,
+      "sha256": ""
     },
     "windows": {
-      "filename": "lexora-windows-v4.1.0-beta.4-setup.exe",
-      "url": "/downloads/lexora-windows-v4.1.0-beta.4-setup.exe",
+      "filename": "lexora-windows-v4.1.0-beta.5-setup.exe",
+      "url": "/downloads/lexora-windows-v4.1.0-beta.5-setup.exe",
       "sources": [
-        "/downloads/lexora-windows-v4.1.0-beta.4-setup.exe",
-        "https://github.com/xiaozhangwangxue/lexora/releases/download/v4.1.0-beta.4/lexora-windows-v4.1.0-beta.4-setup.exe"
+        "/downloads/lexora-windows-v4.1.0-beta.5-setup.exe",
+        "https://github.com/xiaozhangwangxue/lexora/releases/download/v4.1.0-beta.5/lexora-windows-v4.1.0-beta.5-setup.exe"
       ],
-      "size": 28178320,
-      "sha256": "93e580e4bf30e2a34afc0eb44e013d6dccd4d64d1c71722b5010c486dc8471d9"
+      "size": 0,
+      "sha256": ""
     },
     "linux": {
-      "filename": "lexora-linux-v4.1.0-beta.4.tar.gz",
-      "url": "/downloads/lexora-linux-v4.1.0-beta.4.tar.gz",
+      "filename": "lexora-linux-v4.1.0-beta.5.tar.gz",
+      "url": "/downloads/lexora-linux-v4.1.0-beta.5.tar.gz",
       "sources": [
-        "/downloads/lexora-linux-v4.1.0-beta.4.tar.gz",
-        "https://github.com/xiaozhangwangxue/lexora/releases/download/v4.1.0-beta.4/lexora-linux-v4.1.0-beta.4.tar.gz"
+        "/downloads/lexora-linux-v4.1.0-beta.5.tar.gz",
+        "https://github.com/xiaozhangwangxue/lexora/releases/download/v4.1.0-beta.5/lexora-linux-v4.1.0-beta.5.tar.gz"
       ],
-      "size": 32670864,
-      "sha256": "bb48423381759ca005a7d51b5a693dfeaab96a3a6e6d28332d43fec848104959"
+      "size": 0,
+      "sha256": ""
     }
   }
 }

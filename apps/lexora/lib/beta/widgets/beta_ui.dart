@@ -16,28 +16,30 @@ class BetaSurface extends StatelessWidget {
   final EdgeInsetsGeometry padding;
   final Color? color;
 
-  bool get _isMacOS =>
+  bool get _isApple =>
       Platform.isMacOS ||
-      debugDefaultTargetPlatformOverride == TargetPlatform.macOS;
+      Platform.isIOS ||
+      debugDefaultTargetPlatformOverride == TargetPlatform.macOS ||
+      debugDefaultTargetPlatformOverride == TargetPlatform.iOS;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final radius = BorderRadius.circular(_isMacOS ? 14 : 22);
+    final radius = BorderRadius.circular(_isApple ? 16 : 22);
     final content = Material(
       color:
           color ??
-          (_isMacOS ? scheme.surface.withValues(alpha: .68) : scheme.surface),
+          (_isApple ? scheme.surface.withValues(alpha: .72) : scheme.surface),
       shape: RoundedRectangleBorder(
         borderRadius: radius,
         side: BorderSide(
-          color: scheme.outlineVariant.withValues(alpha: _isMacOS ? .46 : .62),
+          color: scheme.outlineVariant.withValues(alpha: _isApple ? .46 : .62),
         ),
       ),
       clipBehavior: Clip.antiAlias,
       child: Padding(padding: padding, child: child),
     );
-    if (!_isMacOS) return content;
+    if (!_isApple) return content;
     return ClipRRect(
       borderRadius: radius,
       child: BackdropFilter(
