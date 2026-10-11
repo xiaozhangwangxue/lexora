@@ -159,8 +159,8 @@
         "/downloads/lexora-android-v4.1.0-beta.5.apk",
         "https://github.com/xiaozhangwangxue/lexora/releases/download/v4.1.0-beta.5/lexora-android-v4.1.0-beta.5.apk"
       ],
-      "size": 0,
-      "sha256": ""
+      "size": 110228339,
+      "sha256": "4b1345528b8d1f4b4dfa180c97e0f9bc4246e1d9241523ebca9b3ce19bfdc78c"
     },
     "ios": {
       "filename": "lexora-ios-v4.1.0-beta.5.ipa",
@@ -169,8 +169,8 @@
         "/downloads/lexora-ios-v4.1.0-beta.5.ipa",
         "https://github.com/xiaozhangwangxue/lexora/releases/download/v4.1.0-beta.5/lexora-ios-v4.1.0-beta.5.ipa"
       ],
-      "size": 0,
-      "sha256": ""
+      "size": 32197431,
+      "sha256": "084fe520a4388fb1f1df623a5632e57a9d7378a1eabf59f93c46fe31416e058a"
     },
     "macos": {
       "filename": "lexora-macos-v4.1.0-beta.5.dmg",
@@ -179,8 +179,8 @@
         "/downloads/lexora-macos-v4.1.0-beta.5.dmg",
         "https://github.com/xiaozhangwangxue/lexora/releases/download/v4.1.0-beta.5/lexora-macos-v4.1.0-beta.5.dmg"
       ],
-      "size": 0,
-      "sha256": ""
+      "size": 50819418,
+      "sha256": "331bbe68f6601634a54f0985c79448014a1ab032dcde7d4a9c44f5e77f1c864f"
     },
     "windows": {
       "filename": "lexora-windows-v4.1.0-beta.5-setup.exe",
@@ -189,8 +189,8 @@
         "/downloads/lexora-windows-v4.1.0-beta.5-setup.exe",
         "https://github.com/xiaozhangwangxue/lexora/releases/download/v4.1.0-beta.5/lexora-windows-v4.1.0-beta.5-setup.exe"
       ],
-      "size": 0,
-      "sha256": ""
+      "size": 28337625,
+      "sha256": "4a421a5b0430eb9ceb3f87f74a9eb5f2e9921bb657129113d6fcc8e3772f9d9a"
     },
     "linux": {
       "filename": "lexora-linux-v4.1.0-beta.5.tar.gz",
@@ -199,8 +199,8 @@
         "/downloads/lexora-linux-v4.1.0-beta.5.tar.gz",
         "https://github.com/xiaozhangwangxue/lexora/releases/download/v4.1.0-beta.5/lexora-linux-v4.1.0-beta.5.tar.gz"
       ],
-      "size": 0,
-      "sha256": ""
+      "size": 32939809,
+      "sha256": "0f09744478fbfa4d0c0fc31efcd2b17e1e5e95dde310117543587859a71ae01c"
     }
   }
 }
