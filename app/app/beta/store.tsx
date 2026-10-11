@@ -9,6 +9,7 @@ import { localDateKey } from "./domain/time";
 import { createReviewState } from "./domain/scheduler";
 import { loadLearningPack } from "./services/learning-packs";
 import { clearEnrichmentCache, enrichmentCacheCount, readEnrichmentCache, writeEnrichmentCache } from "./services/enrichment-cache";
+import { coreDictionaryEntry } from "../dictionary-core";
 
 type GeneratedBookSelection = {
   id: string;
@@ -170,9 +171,10 @@ export function BetaProvider({ children }: { children: ReactNode }) {
           try {
             let raw = await readEnrichmentCache(word.normalizedText);
             if (!raw) {
-              const response = await fetch(`/api/web/lookup?term=${encodeURIComponent(word.text)}`, { cache: "no-store", headers: { "x-lexora-device": betaDeviceId() } });
+              const response = await fetch(`/api/dictionary/full?term=${encodeURIComponent(word.text)}`, { cache: "no-store" });
               if (!response.ok) return null;
-              raw = await response.json();
+              raw = coreDictionaryEntry(await response.json(), word.text);
+              if (!raw) return null;
               await writeEnrichmentCache(word.normalizedText, raw);
             }
             const enriched = dictionaryEntryToWord(raw, word.text);
@@ -293,13 +295,6 @@ export function BetaProvider({ children }: { children: ReactNode }) {
     return !word || !isStudyReady(word);
   }).length, enrichmentCacheEntries, saveWord, importDictionaryWord, deleteWord, toggleImportant, updateSettings, startStudy, reloadLearningPacks, refreshEnrichment, confirmAddedTerms, selectGeneratedBook, clearLocalEnrichmentCache, revealItem, submitReview, refreshCompletedSession }), [state, loaded, error, activeSession, packWords, libraryWords, enriching, enrichmentCompleted, enrichmentTotal, enrichmentCacheEntries, saveWord, importDictionaryWord, deleteWord, toggleImportant, updateSettings, startStudy, reloadLearningPacks, refreshEnrichment, confirmAddedTerms, selectGeneratedBook, clearLocalEnrichmentCache, revealItem, submitReview, refreshCompletedSession]);
   return <BetaStore.Provider value={value}>{children}</BetaStore.Provider>;
-}
-
-function betaDeviceId() {
-  const key = "lexora-beta-device-id";
-  let value = localStorage.getItem(key);
-  if (!value) { value = crypto.randomUUID(); localStorage.setItem(key, value); }
-  return value;
 }
 
 export function useBetaStore() {

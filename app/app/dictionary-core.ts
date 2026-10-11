@@ -33,6 +33,23 @@ function datamuseFrequency(value: UnknownRecord) {
   return Number.isFinite(frequency) ? frequency : undefined;
 }
 
+function datamuseTag(value: UnknownRecord, prefix: string) {
+  return (
+    (Array.isArray(value.tags) ? value.tags : [])
+      .map(text)
+      .find((item) => item.startsWith(prefix))
+      ?.slice(prefix.length)
+      .trim() ?? ""
+  );
+}
+
+function datamusePartOfSpeech(value: UnknownRecord) {
+  const tags = (Array.isArray(value.tags) ? value.tags : []).map(text);
+  return (
+    tags.find((item) => ["n", "v", "adj", "adv", "u"].includes(item)) ?? ""
+  );
+}
+
 /** Convert the lightweight edge response into the same shape as the open lexicon. */
 export function coreDictionaryEntry(
   payload: unknown,
@@ -63,9 +80,9 @@ export function coreDictionaryEntry(
   const fallbackDefinition = datamuseDefinition(exact);
   if (senses.length === 0 && fallbackDefinition) {
     senses.push({
-      part_of_speech: "definition",
+      part_of_speech: datamusePartOfSpeech(exact) || "definition",
       definitions: [fallbackDefinition],
-      definitions_zh: [],
+      definitions_zh: [text(source.definition_zh)],
     });
   }
   const definition = senses[0]?.definitions[0] ?? fallbackDefinition;
@@ -73,18 +90,48 @@ export function coreDictionaryEntry(
 
   const phonetics = rows(dictionary.phonetics);
   const fallbackPhonetic = text(dictionary.phonetic);
+  const datamusePhonetic = datamuseTag(exact, "ipa_pron:");
   const phoneticFor = (accent: "us" | "uk") =>
     text(
       phonetics.find((item) =>
         text(item.audio).toLowerCase().includes(`-${accent}`),
       )?.text,
-    ) || fallbackPhonetic;
+    ) ||
+    fallbackPhonetic ||
+    datamusePhonetic;
   const examples = unique(
     meanings.flatMap((meaning) =>
       rows(meaning.definitions).map((item) => text(item.example)),
     ),
     8,
   );
+  const relatedRows = rows(source.related);
+  const relatedEntries = relatedRows
+    .map((item) => ({
+      word: text(item.word),
+      definition: datamuseDefinition(item),
+    }))
+    .filter((item) => item.word && item.definition);
+  const relationshipWords = (value: unknown) =>
+    rows(value).map((item) => text(item.word));
+  const synonyms = unique([
+    ...meanings.flatMap((meaning) =>
+      Array.isArray(meaning.synonyms) ? meaning.synonyms.map(text) : [],
+    ),
+    ...relationshipWords(source.synonyms),
+  ]);
+  const antonyms = unique([
+    ...meanings.flatMap((meaning) =>
+      Array.isArray(meaning.antonyms) ? meaning.antonyms.map(text) : [],
+    ),
+    ...relationshipWords(source.antonyms),
+  ]);
+  const phraseEntries = relatedEntries
+    .filter((item) => item.word.includes(" "))
+    .slice(0, 8);
+  const wordEntries = relatedEntries
+    .filter((item) => !item.word.includes(" "))
+    .slice(0, 8);
 
   return {
     word: text(dictionary.word) || text(exact.word) || normalized,
@@ -97,17 +144,14 @@ export function coreDictionaryEntry(
     us_phonetic: phoneticFor("us"),
     uk_phonetic: phoneticFor("uk"),
     definition,
-    synonyms: unique(
-      meanings.flatMap((meaning) =>
-        Array.isArray(meaning.synonyms) ? meaning.synonyms.map(text) : [],
-      ),
-    ),
-    antonyms: unique(
-      meanings.flatMap((meaning) =>
-        Array.isArray(meaning.antonyms) ? meaning.antonyms.map(text) : [],
-      ),
-    ),
+    definition_zh: text(source.definition_zh),
+    synonyms,
+    antonyms,
     examples,
+    phrases: phraseEntries.map((item) => item.word),
+    phrase_entries: phraseEntries,
+    related_words: wordEntries.map((item) => item.word),
+    related_entries: wordEntries,
     senses,
   };
 }

@@ -69,3 +69,36 @@ test("Datamuse 精确结果可在主词典暂时失败时兜底", () => {
 test("没有可靠英文释义时不伪造词条", () => {
   assert.equal(coreDictionaryEntry({ dictionary: null, exact: [] }, "missing"), null);
 });
+
+test("批量直连结果保留短语、联想词和关系词", () => {
+  const entry = coreDictionaryEntry(
+    {
+      dictionary: [
+        {
+          word: "word",
+          meanings: [
+            {
+              partOfSpeech: "noun",
+              definitions: [{ definition: "A unit of language." }],
+              synonyms: ["term"],
+              antonyms: ["silence"],
+            },
+          ],
+        },
+      ],
+      exact: [{ word: "word", tags: ["f:413.2"] }],
+      related: [
+        { word: "word for word", defs: ["adv\tusing exactly the same words"] },
+        { word: "lexeme", defs: ["n\ta lexical unit"] },
+      ],
+      synonyms: [{ word: "expression" }],
+      antonyms: [{ word: "quiet" }],
+    },
+    "word",
+  );
+  assert.ok(entry);
+  assert.deepEqual(entry.phrases, ["word for word"]);
+  assert.deepEqual(entry.related_words, ["lexeme"]);
+  assert.deepEqual(entry.synonyms, ["term", "expression"]);
+  assert.deepEqual(entry.antonyms, ["silence", "quiet"]);
+});

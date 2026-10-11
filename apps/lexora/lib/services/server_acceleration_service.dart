@@ -12,9 +12,9 @@ class ServerAccelerationService extends ChangeNotifier
   ServerAccelerationService._();
 
   static final instance = ServerAccelerationService._();
-  static const preferenceKey = 'lexora.server-acceleration.enabled.v1';
+  static const preferenceKey = 'lexora.direct-batch-acceleration.enabled.v2';
 
-  bool _enabled = false;
+  bool _enabled = true;
   bool _initialized = false;
   Future<void>? _initializing;
 
@@ -30,7 +30,7 @@ class ServerAccelerationService extends ChangeNotifier
 
   Future<void> _load() async {
     final preferences = await SharedPreferences.getInstance();
-    final value = preferences.getBool(preferenceKey) ?? false;
+    final value = preferences.getBool(preferenceKey) ?? true;
     if (_enabled == value) return;
     _enabled = value;
     notifyListeners();
