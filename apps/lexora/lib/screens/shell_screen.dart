@@ -468,7 +468,7 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
       final result = await _wordService.lookupAll(
         terms,
         exampleCount: settings.exampleAmount.count,
-        maxConcurrency: 4,
+        maxConcurrency: 12,
         onProgress: _generationProgress.updateLookup,
       );
       if (result.entries.isEmpty) {

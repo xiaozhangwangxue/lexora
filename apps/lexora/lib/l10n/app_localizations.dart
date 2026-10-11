@@ -110,14 +110,14 @@ class AppLocalizations {
   String get customize => isZh ? '自定义文档' : 'Customize document';
   String get pdfSettings => isZh ? '文档自定义' : 'Document customization';
   String get serverAcceleration =>
-      isZh ? 'Lexora 服务器加速' : 'Lexora server acceleration';
+      isZh ? 'Cloudflare 直连批量加速' : 'Cloudflare direct batch acceleration';
   String get serverAccelerationHint => isZh
-      ? '优先通过 Cloudflare 中转从 Lexora 双服务器获取词条数据，可加快查词和生成词汇书；不可用时会自动回退到原有词典来源。'
-      : 'Prefer Lexora’s dual-server data through the Cloudflare relay for faster searches and vocabulary-book generation. Existing dictionary sources remain automatic fallbacks.';
+      ? '将多个单词合并为一次请求，由 Cloudflare 直接并行查询公开词典；不经过甲骨文云，不可用时会自动回退到原有词典来源。'
+      : 'Combines words into one request and queries public dictionaries directly at Cloudflare, without Oracle Cloud. Existing providers remain automatic fallbacks.';
   String get serverAccelerationEnabled =>
-      isZh ? '已开启服务器加速' : 'Server acceleration is on';
+      isZh ? '已开启直连批量加速' : 'Direct batch acceleration is on';
   String get serverAccelerationDisabled =>
-      isZh ? '使用原有词典来源' : 'Using existing dictionary sources';
+      isZh ? '逐个查询原有词典来源' : 'Querying providers one term at a time';
   String get offlineLexicon => isZh ? '离线极速词库' : 'Offline fast lexicon';
   String get offlineLexiconHint => isZh
       ? '可选下载 2 万词极速版或完整词库。安装后优先在本机查询，断网也能显示已有完整数据；未命中时仍会自动使用云端和原有词典来源。'

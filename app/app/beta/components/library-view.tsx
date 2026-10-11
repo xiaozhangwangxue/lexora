@@ -11,6 +11,7 @@ import { skillTagLabels, sourceTypeLabels, statusLabels, type Collocation, type 
 import { playWord, speakText } from "../services/speech";
 import { useBetaStore } from "../store";
 import styles from "../beta.module.css";
+import { coreDictionaryEntry } from "../../dictionary-core";
 
 type Filter = "all" | "new" | "learning" | "review" | "mastered" | "lapsed" | "weak" | "important" | "due" | "has-example" | "no-example" | "has-source" | "no-source" | "has-collocation" | "no-collocation";
 type Sort = "recent" | "oldest" | "due" | "lapses" | "reviews-desc" | "reviews-asc" | "alphabetical";
@@ -82,9 +83,10 @@ export function LibraryView({ startStudy }: { startStudy(): void }) {
     if (state.words.some((word) => word.normalizedText === term.toLowerCase())) { setMessage("该单词已存在，可以打开已有词条继续编辑或添加来源。"); return; }
     setLookupBusy(true); setMessage("");
     try {
-      const response = await fetch(`/api/web/lookup?term=${encodeURIComponent(term)}`, { headers: { "x-lexora-device": crypto.randomUUID() } });
+      const response = await fetch(`/api/dictionary/full?term=${encodeURIComponent(term)}`);
       if (!response.ok) throw new Error(response.status === 404 ? "没有找到可靠词典结果，可改为手动录入。" : "词典暂时无法连接");
-      const entry = await response.json();
+      const entry = coreDictionaryEntry(await response.json(), term);
+      if (!entry) throw new Error("没有找到可靠词典结果，可改为手动录入。");
       setEditing(importDictionaryWord(entry, term));
     } catch (cause) { setMessage(cause instanceof Error ? cause.message : "查询失败"); } finally { setLookupBusy(false); }
   }

@@ -65,8 +65,6 @@ class WordService {
   final Map<String, Future<String>> _inFlightTranslations = {};
   final Map<String, List<http.Response?>> _sourceCache = {};
   final Map<String, Future<List<http.Response?>>> _inFlightSourceLookups = {};
-  final Map<String, http.Response?> _providerCache = {};
-  final Map<String, Future<http.Response?>> _inFlightProviders = {};
   final Map<String, WordEntry> _coreCache = {};
   final Map<String, Future<WordEntry>> _inFlightCoreLookups = {};
   final Map<String, WordEntry> _englishCache = {};
@@ -79,8 +77,9 @@ class WordService {
   static const _cachePrefix = 'lexora.word.v9';
   static const _cacheLifetime = Duration(days: 14);
   static const _translationUnavailable = '翻译暂不可用';
-  static const _maxTranslationConcurrency = 2;
-  static const _openLexiconHost = 'dict.12323456.xyz';
+  // Translation is network-bound. A small wider pool prevents one slow
+  // provider response from serialising an entire vocabulary-book batch.
+  static const _maxTranslationConcurrency = 6;
 
   /// Returns the essential dictionary result without waiting for optional
   /// translations, related words, phrases, synonyms or antonyms.
@@ -150,143 +149,39 @@ class WordService {
             );
           }
         }
-        final uris = _providerUris(word);
-        http.Response? dictionaryResponse;
-        http.Response? exactResponse;
-        final dictionaryFuture =
-            _providerResponse(
-              word,
-              'dictionary',
-              uris.dictionary,
-              timeout: const Duration(seconds: 5),
-              attempts: 1,
-            ).then((response) {
-              dictionaryResponse = response;
-              return response;
-            });
-        final exactFuture =
-            _providerResponse(
-              word,
-              'exact',
-              uris.exact,
-              timeout: const Duration(seconds: 4),
-              attempts: 1,
-            ).then((response) {
-              exactResponse = response;
-              return response;
-            });
-        final serverAccelerationEnabled = await _serverAcceleration.isEnabled();
-        final lexiconFuture = serverAccelerationEnabled
-            ? _providerResponse(
-                word,
-                'open-lexicon',
-                Uri.https(_openLexiconHost, '/v1/lookup', {'term': word}),
-                timeout: const Duration(milliseconds: 1200),
-                attempts: 1,
-              )
-            : null;
-        final edgeFuture = _firstSuccessfulEdgeGet(
+        // Mainland clients only contact the Lexora edge domain. The Worker
+        // performs and caches the external provider request outside the
+        // device network, avoiding blocked or slow third-party hosts.
+        final response = await _firstSuccessfulEdgeGet(
           [
             Uri.https('lexora.12323456.xyz', '/api/dictionary/core', {
               'term': word,
             }),
-            Uri.https(
-              'lexora-official.xiaozhangwangxue.workers.dev',
-              '/api/dictionary/core',
-              {'term': word},
-            ),
           ],
-          timeout: const Duration(milliseconds: 1500),
+          timeout: const Duration(milliseconds: 2200),
           operation: 'edge-core',
           term: word,
         );
-        final firstCandidate = Completer<WordEntry>();
-        var completedSource = '';
-
-        void offer(
-          String source,
-          http.Response? dictionary,
-          http.Response? exact,
-        ) {
-          if (firstCandidate.isCompleted) return;
-          try {
-            final entry = _coreEntryFromResponses(
-              word,
-              dictionary,
-              exact,
-              exampleCount: exampleCount,
-            );
-            completedSource = source;
-            firstCandidate.complete(entry);
-          } catch (_) {
-            // Another concurrently running provider may still yield a result.
-          }
-        }
-
-        if (lexiconFuture != null) {
-          unawaited(
-            lexiconFuture.then((response) {
-              if (response?.statusCode != 200) return;
-              try {
-                final lexiconResponses = _coreResponsesFromLexicon(
-                  response!,
-                  word,
-                );
-                offer('open-lexicon', lexiconResponses[0], lexiconResponses[1]);
-              } catch (error, stackTrace) {
-                DeveloperLogService.instance.log(
-                  'search.core.open_lexicon_invalid',
-                  data: {'term': word},
-                  error: error,
-                  stackTrace: stackTrace,
-                );
-              }
-            }),
-          );
-        }
-        unawaited(
-          dictionaryFuture.then(
-            (response) => offer('dictionary-direct', response, exactResponse),
-          ),
-        );
-        unawaited(
-          exactFuture.then(
-            (response) =>
-                offer('datamuse-direct', dictionaryResponse, response),
-          ),
-        );
-        unawaited(
-          edgeFuture.then((response) {
-            if (response?.statusCode != 200) return;
-            try {
-              final edgeResponses = _coreResponsesFromEdge(response!);
-              offer('cloudflare-edge', edgeResponses[0], edgeResponses[1]);
-            } catch (error, stackTrace) {
-              DeveloperLogService.instance.log(
-                'search.core.edge_invalid',
-                data: {'term': word},
-                error: error,
-                stackTrace: stackTrace,
-              );
-            }
-          }),
-        );
-
-        // Return whichever valid source wins instead of always waiting for a
-        // slower edge request. Direct provider futures remain shared with the
-        // complete lookup and continue safely in the background.
-        final remainingMilliseconds = max(
-          1,
-          1800 - stopwatch.elapsedMilliseconds,
-        );
-        final entry = await firstCandidate.future.timeout(
-          Duration(milliseconds: remainingMilliseconds),
-          onTimeout: () => _coreEntryFromResponses(
+        if (response?.statusCode == 404) {
+          final fallback = await _legacyDirectSources(word, coreOnly: true);
+          final entry = _coreEntryFromResponses(
             word,
-            dictionaryResponse,
-            exactResponse,
+            fallback[0],
+            fallback[2],
             exampleCount: exampleCount,
-          ),
+          );
+          _coreCache[word] = entry;
+          return entry;
+        }
+        if (response?.statusCode != 200) {
+          throw const WordLookupException('词典服务暂时不可用，请稍后重试');
+        }
+        final edgeResponses = _coreResponsesFromEdge(response!);
+        final entry = _coreEntryFromResponses(
+          word,
+          edgeResponses[0],
+          edgeResponses[1],
+          exampleCount: exampleCount,
         );
         _coreCache[word] = entry;
         DeveloperLogService.instance.log(
@@ -294,9 +189,7 @@ class WordService {
           data: {
             'term': word,
             'durationMs': stopwatch.elapsedMilliseconds,
-            'source': completedSource.isEmpty
-                ? 'partial-timeout'
-                : completedSource,
+            'source': 'cloudflare-edge',
             'definitionChars': entry.definition.length,
             'senses': entry.senses.length,
             'examples': entry.examples.length,
@@ -326,7 +219,7 @@ class WordService {
   Future<LookupBatchResult> lookupAll(
     List<String> terms, {
     int exampleCount = 1,
-    int maxConcurrency = 4,
+    int maxConcurrency = 12,
     void Function(int completed, int total, String term)? onProgress,
   }) async {
     if (terms.isEmpty) {
@@ -341,6 +234,32 @@ class WordService {
     final fuzzyMatches = List<FuzzyMatch?>.filled(terms.length, null);
     var nextIndex = 0;
     var completed = 0;
+
+    // One edge request warms up to twelve terms at once. The edge talks
+    // directly to the public dictionary providers, so vocabulary-book
+    // generation no longer pays one network round trip per word or waits for
+    // the optional Oracle lexicon. Every missing item still falls back to the
+    // existing exact/fuzzy lookup path below.
+    if (terms.length > 1 && await _serverAcceleration.isEnabled()) {
+      final preferences = await SharedPreferences.getInstance();
+      final uncachedTerms = terms
+          .where((rawTerm) {
+            final term = _normalizeTerm(rawTerm);
+            final lookupKey = '$exampleCount|$term';
+            if (_memoryCache.containsKey(lookupKey) ||
+                _sourceCache.containsKey(term)) {
+              return false;
+            }
+            return _readCache(
+                  preferences.getString('$_cachePrefix.$exampleCount.$term'),
+                ) ==
+                null;
+          })
+          .toList(growable: false);
+      if (uncachedTerms.length > 1) {
+        await _prefillDirectBatchSources(uncachedTerms);
+      }
+    }
 
     Future<void> worker() async {
       while (true) {
@@ -387,6 +306,89 @@ class WordService {
       entries: results.whereType<WordEntry>().toList(),
       failures: failures.whereType<LookupFailure>().toList(),
       fuzzyMatches: fuzzyMatches.whereType<FuzzyMatch>().toList(),
+    );
+  }
+
+  Future<void> _prefillDirectBatchSources(Iterable<String> rawTerms) async {
+    final terms = rawTerms
+        .map(_normalizeTerm)
+        .where((term) => term.isNotEmpty && !_sourceCache.containsKey(term))
+        .toSet()
+        .toList(growable: false);
+    if (terms.isEmpty) return;
+    final chunks = <List<String>>[
+      for (var offset = 0; offset < terms.length; offset += 12)
+        terms.sublist(offset, min(offset + 12, terms.length)),
+    ];
+    final stopwatch = Stopwatch()..start();
+    DeveloperLogService.instance.log(
+      'search.batch_prefill.started',
+      data: {'terms': terms.length, 'chunks': chunks.length},
+    );
+    var warmed = 0;
+    var nextChunk = 0;
+
+    Future<void> batchWorker() async {
+      while (true) {
+        final chunkIndex = nextChunk++;
+        if (chunkIndex >= chunks.length) return;
+        final chunk = chunks[chunkIndex];
+        try {
+          final response = await _client
+              .post(
+                Uri.https('lexora.12323456.xyz', '/api/dictionary/batch'),
+                headers: const {
+                  'content-type': 'application/json; charset=utf-8',
+                  'accept': 'application/json',
+                },
+                body: jsonEncode({'terms': chunk}),
+              )
+              .timeout(const Duration(milliseconds: 2400));
+          if (response.statusCode != 200) return;
+          final payload = _decodeJson(response) as Map<String, dynamic>;
+          final rows = (payload['results'] as List? ?? const [])
+              .whereType<Map<String, dynamic>>();
+          for (final row in rows) {
+            final term = _normalizeTerm(row['term']?.toString() ?? '');
+            final result = row['result'];
+            if (term.isEmpty || result is! Map<String, dynamic>) continue;
+            final encoded = http.Response(
+              jsonEncode(result),
+              200,
+              headers: const {
+                'content-type': 'application/json; charset=utf-8',
+              },
+            );
+            final sources = _sourceResponsesFromEdge(encoded);
+            if (!_responsesContainDefinition(term, sources)) continue;
+            _sourceCache[term] = sources;
+            warmed++;
+          }
+        } catch (error, stackTrace) {
+          DeveloperLogService.instance.log(
+            'search.batch_prefill.chunk_failed',
+            data: {'terms': chunk.length},
+            error: error,
+            stackTrace: stackTrace,
+          );
+        }
+      }
+    }
+
+    // Three edge requests warm up to 36 entries per wave. Keeping this
+    // bounded is faster on high-latency mainland connections than opening one
+    // connection for every chunk, and prevents large vocabulary books from
+    // overwhelming the device or the edge service.
+    await Future.wait(
+      List.generate(min(3, chunks.length), (_) => batchWorker()),
+    );
+    DeveloperLogService.instance.log(
+      'search.batch_prefill.completed',
+      data: {
+        'terms': terms.length,
+        'warmed': warmed,
+        'durationMs': stopwatch.elapsedMilliseconds,
+      },
     );
   }
 
@@ -506,12 +508,12 @@ class WordService {
     if (offlineSuggestions.isNotEmpty) {
       return offlineSuggestions.take(maxResults).toList(growable: false);
     }
-    final directFuture = _getWithRetry(
-      Uri.https('api.datamuse.com', '/sug', {
-        's': term,
-        'max': '${max(1, min(maxResults, 24))}',
+    final edgeFuture = _getWithRetry(
+      Uri.https('lexora.12323456.xyz', '/api/dictionary/suggest', {
+        'term': term,
+        'limit': '${max(1, min(maxResults, 24))}',
       }),
-      timeout: const Duration(seconds: 8),
+      timeout: const Duration(milliseconds: 2200),
       operation: 'suggestions',
       term: term,
     );
@@ -525,60 +527,20 @@ class WordService {
           .toList(growable: false);
     }
 
-    if (!await _serverAcceleration.isEnabled()) {
-      return decodeDirect(await directFuture);
+    final edgeResponse = await edgeFuture;
+    if (edgeResponse?.statusCode == 404) {
+      final legacy = await _getWithRetry(
+        Uri.https('api.datamuse.com', '/sug', {
+          's': term,
+          'max': '${max(1, min(maxResults, 24))}',
+        }),
+        attempts: 1,
+        operation: 'suggestions-compatibility',
+        term: term,
+      );
+      return decodeDirect(legacy);
     }
-
-    // The optional server is an accelerator, not a prerequisite. Race it
-    // against Datamuse so a slow or incomplete server can never add its
-    // timeout to an otherwise successful suggestion request.
-    final lexiconFuture = _getWithRetry(
-      Uri.https(_openLexiconHost, '/v1/suggest', {
-        'prefix': term,
-        'limit': '${max(1, min(maxResults, 24))}',
-      }),
-      timeout: const Duration(milliseconds: 1200),
-      attempts: 1,
-      operation: 'open-lexicon-suggestions',
-      term: term,
-    ).then(_decodeLexiconSuggestions);
-    final directSuggestionsFuture = directFuture.then(decodeDirect);
-    final winner = Completer<List<String>>();
-    var finished = 0;
-    void offer(List<String> values) {
-      if (winner.isCompleted) return;
-      finished++;
-      if (values.isNotEmpty || finished == 2) {
-        winner.complete(values);
-      }
-    }
-
-    unawaited(lexiconFuture.then(offer, onError: (_) => offer(const [])));
-    unawaited(
-      directSuggestionsFuture.then(offer, onError: (_) => offer(const [])),
-    );
-    return winner.future;
-  }
-
-  List<String> _decodeLexiconSuggestions(http.Response? response) {
-    if (response?.statusCode != 200) return const [];
-    try {
-      final values = _decodeJson(response!) as List;
-      return values
-          .whereType<Map<String, dynamic>>()
-          .map(
-            (item) => _normalizeTerm(
-              item['normalized_word']?.toString() ??
-                  item['word']?.toString() ??
-                  '',
-            ),
-          )
-          .where((item) => item.isNotEmpty)
-          .toSet()
-          .toList(growable: false);
-    } catch (_) {
-      return const [];
-    }
+    return decodeDirect(edgeResponse);
   }
 
   Future<void> prefetch(String rawWord, {int exampleCount = 1}) async {
@@ -651,7 +613,6 @@ class WordService {
     _suggestionCache.clear();
     _translationCache.clear();
     _sourceCache.clear();
-    _providerCache.clear();
     _coreCache.clear();
     _englishCache.clear();
     final preferences = await SharedPreferences.getInstance();
@@ -687,8 +648,6 @@ class WordService {
     _suggestionCache.clear();
     _sourceCache.removeWhere((key, _) => key != word);
     _inFlightSourceLookups.removeWhere((key, _) => key != word);
-    _providerCache.removeWhere((key, _) => !key.startsWith('$word|'));
-    _inFlightProviders.removeWhere((key, _) => !key.startsWith('$word|'));
     _coreCache.removeWhere((key, _) => key != word);
     _inFlightCoreLookups.removeWhere((key, _) => key != word);
     _englishCache.removeWhere((key, _) => key != lookupKey);
@@ -708,19 +667,28 @@ class WordService {
     final term = _normalizeTerm(rawTerm);
     if (term.isEmpty) return null;
     try {
-      final suggestionUri = Uri.https('api.datamuse.com', '/sug', {
-        's': term,
-        'max': '12',
-      });
+      final suggestionUri = Uri.https(
+        'lexora.12323456.xyz',
+        '/api/dictionary/suggest',
+        {'term': term, 'limit': '12'},
+      );
       final response = await _getWithRetry(
         suggestionUri,
-        timeout: const Duration(seconds: 10),
+        timeout: const Duration(milliseconds: 2200),
         operation: 'fuzzy-suggestions',
         term: term,
       );
-      if (response == null) return null;
+      final effectiveResponse = response?.statusCode == 404
+          ? await _getWithRetry(
+              Uri.https('api.datamuse.com', '/sug', {'s': term, 'max': '12'}),
+              attempts: 1,
+              operation: 'fuzzy-suggestions-compatibility',
+              term: term,
+            )
+          : response;
+      if (effectiveResponse == null) return null;
       final suggestions =
-          _decodeDatamuse(response)
+          _decodeDatamuse(effectiveResponse)
               .map((item) => _normalizeTerm(item['word'] as String? ?? ''))
               .where((candidate) => _isSafeFuzzyMatch(term, candidate))
               .toSet()
@@ -1174,6 +1142,7 @@ class WordService {
   }) {
     final completer = Completer<http.Response?>();
     var pending = uris.length;
+    http.Response? lastResponse;
     for (final uri in uris) {
       unawaited(
         _getWithRetry(
@@ -1184,6 +1153,7 @@ class WordService {
               term: term,
             )
             .then((response) {
+              if (response != null) lastResponse = response;
               if (response?.statusCode == 200 && !completer.isCompleted) {
                 completer.complete(response);
               }
@@ -1191,7 +1161,7 @@ class WordService {
             .whenComplete(() {
               pending--;
               if (pending == 0 && !completer.isCompleted) {
-                completer.complete(null);
+                completer.complete(lastResponse);
               }
             }),
       );
@@ -1443,11 +1413,16 @@ class WordService {
           .where((value) => !_translationCache.containsKey(value))
           .toList(growable: false);
       if (unresolved.isNotEmpty) {
-        final fallback = await Future.wait(unresolved.map(_translate));
-        for (var index = 0; index < unresolved.length; index++) {
+        // Do not let optional translations hold a complete English result for
+        // tens of seconds. The first items are the primary definition and
+        // examples, so they receive a short direct fallback; remaining
+        // optional labels can be filled on a later cached lookup.
+        final fallbackTargets = unresolved.take(4).toList(growable: false);
+        final fallback = await Future.wait(fallbackTargets.map(_translate));
+        for (var index = 0; index < fallbackTargets.length; index++) {
           final translated = fallback[index];
           if (translated != _translationUnavailable && translated.isNotEmpty) {
-            _translationCache[unresolved[index]] = translated;
+            _translationCache[fallbackTargets[index]] = translated;
           }
         }
       }
@@ -1478,10 +1453,6 @@ class WordService {
     if (texts.isEmpty) return const [];
     final endpoints = [
       Uri.https('lexora.12323456.xyz', '/api/translate/batch'),
-      Uri.https(
-        'lexora-official.xiaozhangwangxue.workers.dev',
-        '/api/translate/batch',
-      ),
     ];
     final completer = Completer<List<String>?>();
     var pending = endpoints.length;
@@ -1506,7 +1477,7 @@ class WordService {
               },
               body: jsonEncode({'texts': texts}),
             )
-            .timeout(const Duration(milliseconds: 4200));
+            .timeout(const Duration(milliseconds: 3200));
         DeveloperLogService.instance.log(
           'backend.translation_edge.completed',
           data: {
@@ -1609,76 +1580,107 @@ class WordService {
   Future<String> _fetchTranslation(String text) async {
     await _acquireTranslationPermit();
     try {
-      final uri = Uri.https('api.mymemory.translated.net', '/get', {
-        'q': text,
-        'langpair': 'en|zh-CN',
-      });
-      for (var attempt = 0; attempt < 3; attempt++) {
-        final stopwatch = Stopwatch()..start();
-        DeveloperLogService.instance.log(
-          'backend.translation_request.started',
-          data: {
-            'attempt': attempt + 1,
-            'chars': text.length,
-            'text': _logPreview(text),
-          },
-        );
-        try {
-          final response = await _client
-              .get(uri)
-              .timeout(const Duration(seconds: 15));
-          DeveloperLogService.instance.log(
-            'backend.translation_request.completed',
-            data: {
-              'attempt': attempt + 1,
-              'durationMs': stopwatch.elapsedMilliseconds,
-              'status': response.statusCode,
-              'bytes': response.bodyBytes.length,
-              'headers': response.headers,
-              'bodyPreview': _logPreview(
-                utf8.decode(response.bodyBytes, allowMalformed: true),
-                limit: 1200,
-              ),
-            },
-          );
-          if (response.statusCode == 200) {
-            final data = _decodeJson(response) as Map<String, dynamic>;
-            final translated =
-                ((data['responseData']
-                            as Map<String, dynamic>?)?['translatedText']
-                        as String?)
-                    ?.trim();
-            if (translated != null && translated.isNotEmpty) {
-              return translated;
-            }
-            return _translationUnavailable;
+      try {
+        final response = await _client
+            .post(
+              Uri.https('lexora.12323456.xyz', '/api/translate/batch'),
+              headers: const {
+                'content-type': 'application/json; charset=utf-8',
+                'accept': 'application/json',
+              },
+              body: jsonEncode({
+                'texts': [text],
+              }),
+            )
+            .timeout(const Duration(milliseconds: 3200));
+        if (response.statusCode == 200) {
+          final payload = _decodeJson(response) as Map<String, dynamic>;
+          final values = (payload['translations'] as List? ?? const [])
+              .map((value) => value.toString().trim())
+              .toList(growable: false);
+          if (values.isNotEmpty && values.first.isNotEmpty) {
+            return values.first;
           }
-          if (response.statusCode != 429 && response.statusCode < 500) {
-            return _translationUnavailable;
-          }
-        } catch (error, stackTrace) {
-          DeveloperLogService.instance.log(
-            'backend.translation_request.failed',
-            data: {
-              'attempt': attempt + 1,
-              'durationMs': stopwatch.elapsedMilliseconds,
-              'chars': text.length,
-            },
-            error: error,
-            stackTrace: stackTrace,
-          );
-          if (attempt == 2) return _translationUnavailable;
+          return _translationUnavailable;
         }
-        if (attempt < 2) {
-          await Future<void>.delayed(
-            Duration(milliseconds: 550 * (1 << attempt)),
-          );
-        }
+        if (response.statusCode != 404) return _translationUnavailable;
+      } catch (_) {
+        return _translationUnavailable;
       }
-      return _translationUnavailable;
+
+      // Compatibility only: old deployments returned 404 for the edge route.
+      try {
+        final fallback = await _client
+            .get(
+              Uri.https('api.mymemory.translated.net', '/get', {
+                'q': text,
+                'langpair': 'en|zh-CN',
+              }),
+            )
+            .timeout(const Duration(milliseconds: 2500));
+        if (fallback.statusCode != 200) return _translationUnavailable;
+        final payload = _decodeJson(fallback) as Map<String, dynamic>;
+        final translated =
+            (payload['responseData']
+                    as Map<String, dynamic>?)?['translatedText']
+                ?.toString()
+                .trim();
+        return translated?.isNotEmpty == true
+            ? translated!
+            : _translationUnavailable;
+      } catch (_) {
+        return _translationUnavailable;
+      }
     } finally {
       _releaseTranslationPermit();
     }
+  }
+
+  /// Compatibility fallback for tests and clients briefly connected to an
+  /// older edge deployment that does not yet expose the new routes. Normal
+  /// production traffic never enters this path because the Lexora edge
+  /// returns 200 (or an explicit service error rather than 404).
+  Future<List<http.Response?>> _legacyDirectSources(
+    String word, {
+    bool coreOnly = false,
+  }) async {
+    final dictionary = Uri.https(
+      'api.dictionaryapi.dev',
+      '/api/v2/entries/en/$word',
+    );
+    Uri datamuse(Map<String, String> query) =>
+        Uri.https('api.datamuse.com', '/words', query);
+    final exact = datamuse({'sp': word, 'md': 'dfrp', 'ipa': '1', 'max': '8'});
+    final dictionaryFuture = _getWithRetry(dictionary, attempts: 1, term: word);
+    final exactFuture = _getWithRetry(exact, attempts: 1, term: word);
+    if (coreOnly) {
+      final exactResponse = await exactFuture;
+      if (_definitionFromDatamuse(
+        _exactDatamuseItem(_decodeDatamuseNullable(exactResponse), word),
+      ).isNotEmpty) {
+        return [null, null, exactResponse, null, null];
+      }
+      return [await dictionaryFuture, null, exactResponse, null, null];
+    }
+    final base = await Future.wait([dictionaryFuture, exactFuture]);
+    final optional = await Future.wait([
+      _getWithRetry(
+        datamuse({'ml': word, 'md': 'dfr', 'ipa': '1', 'max': '30'}),
+        attempts: 1,
+        term: word,
+      ),
+      _getWithRetry(
+        datamuse({'rel_syn': word, 'md': 'f', 'max': '12'}),
+        attempts: 1,
+        term: word,
+      ),
+      _getWithRetry(
+        datamuse({'rel_ant': word, 'max': '12'}),
+        attempts: 1,
+        term: word,
+      ),
+    ]);
+    return [base[0], optional[0], base[1], optional[1], optional[2]];
   }
 
   Future<List<http.Response?>> _lookupSources(String rawWord) {
@@ -1688,44 +1690,6 @@ class WordService {
     return _inFlightSourceLookups.putIfAbsent(word, () async {
       try {
         final stopwatch = Stopwatch()..start();
-        final uris = _providerUris(word);
-        Future<List<http.Response?>> directLookup() => Future.wait([
-          _providerResponse(
-            word,
-            'dictionary',
-            uris.dictionary,
-            timeout: const Duration(seconds: 5),
-            attempts: 1,
-          ),
-          _providerResponse(
-            word,
-            'related',
-            uris.related,
-            timeout: const Duration(seconds: 3),
-            attempts: 1,
-          ),
-          _providerResponse(
-            word,
-            'exact',
-            uris.exact,
-            timeout: const Duration(seconds: 4),
-            attempts: 1,
-          ),
-          _providerResponse(
-            word,
-            'synonyms',
-            uris.synonyms,
-            timeout: const Duration(seconds: 3),
-            attempts: 1,
-          ),
-          _providerResponse(
-            word,
-            'antonyms',
-            uris.antonyms,
-            timeout: const Duration(seconds: 3),
-            attempts: 1,
-          ),
-        ]);
         List<http.Response?> responses;
         final offlinePayload = await _offlineLexicon.lookup(word);
         if (offlinePayload != null) {
@@ -1759,94 +1723,31 @@ class WordService {
             );
           }
         }
-        final directFuture = directLookup();
-        final edgeFuture = _firstSuccessfulEdgeGet(
+        final edgeResponse = await _firstSuccessfulEdgeGet(
           [
             Uri.https('lexora.12323456.xyz', '/api/dictionary/full', {
               'term': word,
             }),
-            Uri.https(
-              'lexora-official.xiaozhangwangxue.workers.dev',
-              '/api/dictionary/full',
-              {'term': word},
-            ),
           ],
-          timeout: const Duration(milliseconds: 1850),
+          timeout: const Duration(milliseconds: 2400),
           operation: 'edge-full',
           term: word,
         );
-        final candidates = <Future<(String, List<http.Response?>?)>>[
-          directFuture.then(
-            (value) => (
-              'direct',
-              _responsesContainDefinition(word, value) ? value : null,
-            ),
-          ),
-          edgeFuture.then((response) {
-            if (response?.statusCode != 200) {
-              return ('cloudflare-edge', null);
-            }
-            try {
-              final value = _sourceResponsesFromEdge(response!);
-              return (
-                'cloudflare-edge',
-                _responsesContainDefinition(word, value) ? value : null,
-              );
-            } catch (_) {
-              return ('cloudflare-edge', null);
-            }
-          }),
-        ];
-        if (await _serverAcceleration.isEnabled()) {
-          candidates.add(
-            _providerResponse(
-              word,
-              'open-lexicon',
-              Uri.https(_openLexiconHost, '/v1/lookup', {'term': word}),
-              timeout: const Duration(milliseconds: 1200),
-              attempts: 1,
-            ).then((response) {
-              if (response?.statusCode != 200) {
-                return ('open-lexicon', null);
-              }
-              try {
-                final value = _sourceResponsesFromLexicon(
-                  response!,
-                  word,
-                  requireCompleted: true,
-                );
-                // Conversion itself rejects non-exact or definition-less
-                // payloads, including incomplete records with no usable
-                // bilingual gloss.
-                return ('open-lexicon', value);
-              } catch (_) {
-                return ('open-lexicon', null);
-              }
-            }),
-          );
+        if (edgeResponse?.statusCode == 404) {
+          responses = await _legacyDirectSources(word);
+        } else if (edgeResponse?.statusCode != 200) {
+          throw const WordLookupException('词典服务暂时不可用，请稍后重试');
+        } else {
+          responses = _sourceResponsesFromEdge(edgeResponse!);
         }
-        final winner = Completer<(String, List<http.Response?>?)>();
-        var finished = 0;
-        void offer((String, List<http.Response?>?) candidate) {
-          if (winner.isCompleted) return;
-          finished++;
-          if (candidate.$2 != null || finished == candidates.length) {
-            winner.complete(candidate);
-          }
+        if (!_responsesContainDefinition(word, responses)) {
+          throw WordLookupException('没有找到“$word”的可靠释义');
         }
-
-        for (final candidate in candidates) {
-          unawaited(
-            candidate.then(offer, onError: (_) => offer(('unavailable', null))),
-          );
-        }
-        final selected = await winner.future;
-        responses = selected.$2 ?? await directFuture;
         DeveloperLogService.instance.log(
           'search.sources.presented',
           data: {
             'term': word,
-            'source': selected.$1,
+            'source': 'cloudflare-edge',
             'durationMs': stopwatch.elapsedMilliseconds,
             'availableProviders': responses
                 .where((response) => response?.statusCode == 200)
@@ -1861,65 +1762,6 @@ class WordService {
         return responses;
       } finally {
         _inFlightSourceLookups.remove(word);
-      }
-    });
-  }
-
-  _ProviderUris _providerUris(String word) => _ProviderUris(
-    dictionary: Uri.https('api.dictionaryapi.dev', '/api/v2/entries/en/$word'),
-    related: Uri.https('api.datamuse.com', '/words', {
-      'ml': word,
-      'md': 'dfr',
-      'ipa': '1',
-      'max': '30',
-    }),
-    exact: Uri.https('api.datamuse.com', '/words', {
-      'sp': word,
-      'md': 'dfrp',
-      'ipa': '1',
-      'max': '8',
-    }),
-    synonyms: Uri.https('api.datamuse.com', '/words', {
-      'rel_syn': word,
-      'md': 'f',
-      'max': '12',
-    }),
-    antonyms: Uri.https('api.datamuse.com', '/words', {
-      'rel_ant': word,
-      'max': '12',
-    }),
-  );
-
-  Future<http.Response?> _providerResponse(
-    String word,
-    String provider,
-    Uri uri, {
-    required Duration timeout,
-    required int attempts,
-  }) {
-    final key = '$word|$provider';
-    if (_providerCache.containsKey(key)) {
-      DeveloperLogService.instance.log(
-        'backend.provider.cache_hit',
-        data: {'term': word, 'provider': provider},
-      );
-      return Future.value(_providerCache[key]);
-    }
-    return _inFlightProviders.putIfAbsent(key, () async {
-      try {
-        final response = await _getWithRetry(
-          uri,
-          timeout: timeout,
-          attempts: attempts,
-          operation: provider,
-          term: word,
-        );
-        if (response != null) {
-          _providerCache[key] = response;
-        }
-        return response;
-      } finally {
-        _inFlightProviders.remove(key);
       }
     });
   }
@@ -2270,6 +2112,14 @@ class WordService {
 
   List<http.Response?> _coreResponsesFromEdge(http.Response response) {
     final payload = _decodeJson(response) as Map<String, dynamic>;
+    final definitionZh = (payload['definition_zh']?.toString() ?? '').trim();
+    final exactRows = (payload['exact'] as List? ?? const [])
+        .whereType<Map<String, dynamic>>()
+        .toList(growable: false);
+    if (definitionZh.isNotEmpty && exactRows.isNotEmpty) {
+      final definition = _definitionFromDatamuse(exactRows.first);
+      if (definition.isNotEmpty) _translationCache[definition] = definitionZh;
+    }
     http.Response? encoded(Object? value) => value == null
         ? null
         : http.Response(
@@ -2282,6 +2132,14 @@ class WordService {
 
   List<http.Response?> _sourceResponsesFromEdge(http.Response response) {
     final payload = _decodeJson(response) as Map<String, dynamic>;
+    final definitionZh = (payload['definition_zh']?.toString() ?? '').trim();
+    final exactRows = (payload['exact'] as List? ?? const [])
+        .whereType<Map<String, dynamic>>()
+        .toList(growable: false);
+    if (definitionZh.isNotEmpty && exactRows.isNotEmpty) {
+      final definition = _definitionFromDatamuse(exactRows.first);
+      if (definition.isNotEmpty) _translationCache[definition] = definitionZh;
+    }
     http.Response? encoded(Object? value) => value == null
         ? null
         : http.Response(
@@ -2338,20 +2196,4 @@ class _FuzzyLookupResult {
   const _FuzzyLookupResult(this.entry);
 
   final WordEntry entry;
-}
-
-class _ProviderUris {
-  const _ProviderUris({
-    required this.dictionary,
-    required this.related,
-    required this.exact,
-    required this.synonyms,
-    required this.antonyms,
-  });
-
-  final Uri dictionary;
-  final Uri related;
-  final Uri exact;
-  final Uri synonyms;
-  final Uri antonyms;
 }

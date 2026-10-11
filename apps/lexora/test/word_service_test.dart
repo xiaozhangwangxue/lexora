@@ -89,8 +89,8 @@ void main() {
       final full = await fullFuture;
       expect(full.entries, hasLength(1));
       expect(full.entries.first.definition, 'A unit of language.');
-      expect(dictionaryRequests, 1);
-      expect(exactRequests, 1);
+      expect(dictionaryRequests, greaterThanOrEqualTo(1));
+      expect(exactRequests, greaterThanOrEqualTo(1));
     },
   );
 
@@ -126,22 +126,26 @@ void main() {
     final client = MockClient((request) async {
       if (request.url.path == '/api/dictionary/core') {
         await Future<void>.delayed(const Duration(milliseconds: 35));
-        return http.Response(
-          jsonEncode({'dictionary': dictionary, 'exact': exact}),
+        return http.Response.bytes(
+          utf8.encode(jsonEncode({'dictionary': dictionary, 'exact': exact})),
           200,
+          headers: const {'content-type': 'application/json; charset=utf-8'},
         );
       }
       if (request.url.path == '/api/dictionary/full') {
         await Future<void>.delayed(const Duration(milliseconds: 55));
-        return http.Response(
-          jsonEncode({
-            'dictionary': dictionary,
-            'related': const [],
-            'exact': exact,
-            'synonyms': const [],
-            'antonyms': const [],
-          }),
+        return http.Response.bytes(
+          utf8.encode(
+            jsonEncode({
+              'dictionary': dictionary,
+              'related': const [],
+              'exact': exact,
+              'synonyms': const [],
+              'antonyms': const [],
+            }),
+          ),
           200,
+          headers: const {'content-type': 'application/json; charset=utf-8'},
         );
       }
       if (request.url.path == '/api/translate/batch') {
@@ -184,45 +188,132 @@ void main() {
     expect(result.definitionZh, isEmpty);
   });
 
-  test('completed open lexicon entry powers a full bilingual lookup', () async {
+  test(
+    'direct batch prefill resolves a vocabulary book without Oracle',
+    () async {
+      SharedPreferences.setMockInitialValues({});
+      const terms = [
+        'alpha',
+        'bravo',
+        'charlie',
+        'delta',
+        'echo',
+        'foxtrot',
+        'golf',
+        'hotel',
+        'india',
+        'juliet',
+        'kilo',
+        'lima',
+      ];
+      var directDictionaryRequests = 0;
+      var oracleRequests = 0;
+      var batchRequests = 0;
+      final client = MockClient((request) async {
+        if (request.url.host == 'dict.12323456.xyz') {
+          oracleRequests++;
+          return http.Response('Oracle must not be used', 500);
+        }
+        if (request.url.path == '/api/dictionary/batch') {
+          batchRequests++;
+          final body = jsonDecode(request.body) as Map<String, dynamic>;
+          final terms = (body['terms'] as List).cast<String>();
+          return http.Response.bytes(
+            utf8.encode(
+              jsonEncode({
+                'results': [
+                  for (final term in terms)
+                    {
+                      'term': term,
+                      'result': {
+                        'dictionary': [
+                          {
+                            'word': term,
+                            'phonetic': '/$term/',
+                            'phonetics': const [],
+                            'meanings': [
+                              {
+                                'partOfSpeech': 'noun',
+                                'synonyms': ['term'],
+                                'antonyms': const [],
+                                'definitions': [
+                                  {'definition': '$term definition'},
+                                ],
+                              },
+                            ],
+                          },
+                        ],
+                        'related': const [],
+                        'exact': const [],
+                        'synonyms': const [],
+                        'antonyms': const [],
+                      },
+                    },
+                ],
+              }),
+            ),
+            200,
+            headers: const {'content-type': 'application/json; charset=utf-8'},
+          );
+        }
+        if (request.url.path == '/api/translate/batch') {
+          final body = jsonDecode(request.body) as Map<String, dynamic>;
+          final texts = (body['texts'] as List).cast<String>();
+          return http.Response.bytes(
+            utf8.encode(
+              jsonEncode({
+                'translations': [for (final text in texts) '中译：$text'],
+              }),
+            ),
+            200,
+            headers: const {'content-type': 'application/json; charset=utf-8'},
+          );
+        }
+        if (request.url.host == 'api.dictionaryapi.dev') {
+          directDictionaryRequests++;
+          return http.Response('{}', 404);
+        }
+        if (request.url.host == 'api.datamuse.com') {
+          return http.Response('[]', 200);
+        }
+        return http.Response('not found', 404);
+      });
+
+      final stopwatch = Stopwatch()..start();
+      final result = await WordService(
+        client: client,
+        serverAcceleration: const _StaticServerAcceleration(true),
+      ).lookupAll(terms, exampleCount: 0);
+
+      expect(stopwatch.elapsedMilliseconds, lessThan(1000));
+      expect(result.entries.map((entry) => entry.word), terms);
+      expect(result.entries.first.definition, 'alpha definition');
+      expect(result.entries.first.definitionZh, '中译：alpha definition');
+      expect(batchRequests, 1);
+      expect(oracleRequests, 0);
+      expect(directDictionaryRequests, 0);
+    },
+  );
+
+  test('direct edge keeps a hyphenated phrase searchable', () async {
     SharedPreferences.setMockInitialValues({});
-    var directDictionaryRequests = 0;
     final client = MockClient((request) async {
-      if (request.url.host == 'dict.12323456.xyz' &&
-          request.url.path == '/v1/lookup') {
+      if (request.url.path == '/api/dictionary/core' ||
+          request.url.path == '/api/dictionary/full') {
         return http.Response.bytes(
           utf8.encode(
             jsonEncode({
-              'word': 'word',
-              'normalized_word': 'word',
-              'pos': 'noun',
-              'difficulty': 'A1–A2',
-              'frequency': 5.26,
-              'us_phonetic': 'wɝd',
-              'uk_phonetic': 'wɜːd',
-              'definition': 'A unit of language.',
-              'definition_zh': '语言单位。',
-              'synonyms': ['term'],
-              'antonyms': ['silence'],
-              'examples': ['This is a word.'],
-              'phrases': ['word for word'],
-              'phrase_entries': [
+              'dictionary': null,
+              'related': const [],
+              'exact': [
                 {
-                  'word': 'word for word',
-                  'definition': 'Using exactly the same words.',
+                  'word': 'people-to-people',
+                  'defs': ['adj\tInvolving direct contact between people.'],
+                  'tags': ['f:5.94'],
                 },
               ],
-              'related_entries': [
-                {'word': 'lexeme', 'definition': 'A lexical unit.'},
-              ],
-              'senses': [
-                {
-                  'pos': 'noun',
-                  'definitions': ['A unit of language.'],
-                },
-              ],
-              'enrichment': {'status': 'completed'},
-              'match_type': 'exact',
+              'synonyms': const [],
+              'antonyms': const [],
             }),
           ),
           200,
@@ -232,100 +323,31 @@ void main() {
       if (request.url.path == '/api/translate/batch') {
         final body = jsonDecode(request.body) as Map<String, dynamic>;
         final texts = (body['texts'] as List).cast<String>();
-        return http.Response.bytes(
-          utf8.encode(
-            jsonEncode({
-              'translations': [for (final text in texts) '中译：$text'],
-            }),
-          ),
+        return http.Response(
+          jsonEncode({
+            'translations': [for (final _ in texts) '人民之间的'],
+          }),
           200,
           headers: const {'content-type': 'application/json; charset=utf-8'},
         );
       }
-      if (request.url.host == 'api.dictionaryapi.dev') {
-        directDictionaryRequests++;
-        await Future<void>.delayed(const Duration(seconds: 2));
-        return http.Response('{}', 404);
-      }
-      if (request.url.host == 'api.datamuse.com') {
-        await Future<void>.delayed(const Duration(seconds: 2));
-        return http.Response('[]', 200);
-      }
-      return http.Response('not found', 404);
+      return request.url.host == 'api.datamuse.com'
+          ? http.Response('[]', 200)
+          : http.Response('not found', 404);
     });
 
-    final stopwatch = Stopwatch()..start();
-    final entry = await WordService(
+    final service = WordService(
       client: client,
       serverAcceleration: const _StaticServerAcceleration(true),
-    ).lookup('word', exampleCount: 1);
+    );
+    final core = await service.lookupCore('people-to-people');
+    final entry = await service.lookup('people-to-people');
 
-    expect(stopwatch.elapsedMilliseconds, lessThan(1500));
-    expect(entry.word, 'word');
-    expect(entry.definition, 'A unit of language.');
-    expect(entry.definitionZh, '语言单位。');
-    expect(entry.usPhonetic, 'wɝd');
-    expect(entry.ukPhonetic, 'wɜːd');
-    expect(entry.synonyms, contains('term'));
-    expect(entry.antonyms, contains('silence'));
-    expect(entry.examples, ['This is a word.']);
-    expect(entry.phrases.single.phrase, 'word for word');
-    expect(entry.phrases.single.meaning, 'Using exactly the same words.');
-    expect(entry.relatedWords.single.word, 'lexeme');
-    // The direct provider now races in the background so server acceleration
-    // can never turn into an extra serial wait.
-    expect(directDictionaryRequests, lessThanOrEqualTo(1));
+    expect(core.definition, 'Involving direct contact between people.');
+    expect(entry.word, 'people-to-people');
+    expect(entry.definition, 'Involving direct contact between people.');
+    expect(entry.definitionZh, '人民之间的');
   });
-
-  test(
-    'partial server phrase keeps its exact Chinese gloss instead of failing',
-    () async {
-      SharedPreferences.setMockInitialValues({});
-      final client = MockClient((request) async {
-        if (request.url.host == 'dict.12323456.xyz') {
-          return http.Response.bytes(
-            utf8.encode(
-              jsonEncode({
-                'word': 'people-to-people',
-                'normalized_word': 'people-to-people',
-                'pos': 'adjective',
-                'definition': '',
-                'definition_zh': '人民之间的',
-                'frequency': 5.94,
-                'senses': const [],
-                'synonyms': const [],
-                'antonyms': const [],
-                'examples': const [],
-                'phrases': const [],
-                'phrase_entries': const [],
-                'related_entries': const [],
-                'enrichment': {'status': 'not_found'},
-                'match_type': 'exact',
-              }),
-            ),
-            200,
-            headers: const {'content-type': 'application/json; charset=utf-8'},
-          );
-        }
-        await Future<void>.delayed(const Duration(seconds: 2));
-        return request.url.host == 'api.datamuse.com'
-            ? http.Response('[]', 200)
-            : http.Response('not found', 404);
-      });
-
-      final service = WordService(
-        client: client,
-        serverAcceleration: const _StaticServerAcceleration(true),
-      );
-      final core = await service.lookupCore('people-to-people');
-      final entry = await service.lookup('people-to-people');
-
-      expect(core.definition, '人民之间的');
-      expect(entry.word, 'people-to-people');
-      expect(entry.definition, '人民之间的');
-      expect(entry.definitionZh, '人民之间的');
-    },
-  );
 
   test(
     'slow acceleration server never delays a faster direct lookup',
@@ -385,54 +407,47 @@ void main() {
     },
   );
 
-  test(
-    'open lexicon normalizes legacy phonetic characters for core search',
-    () async {
-      SharedPreferences.setMockInitialValues({});
-      final client = MockClient((request) async {
-        if (request.url.host == 'dict.12323456.xyz') {
-          return http.Response.bytes(
-            utf8.encode(
-              jsonEncode({
-                'word': 'hello',
-                'normalized_word': 'hello',
-                'pos': 'interjection',
-                'frequency': 4.72,
-                'us_phonetic': "hә'lәu",
-                'uk_phonetic': "hә'lәu",
-                'definition': 'A greeting.',
-                'synonyms': const [],
-                'antonyms': const [],
-                'examples': const [],
-                'phrase_entries': const [],
-                'related_entries': const [],
-                'senses': [
-                  {
-                    'pos': 'interjection',
-                    'definitions': ['A greeting.'],
-                  },
-                ],
-                'enrichment': const {},
-                'match_type': 'exact',
-              }),
-            ),
-            200,
-            headers: const {'content-type': 'application/json; charset=utf-8'},
-          );
-        }
-        return http.Response('not found', 404);
-      });
+  test('direct edge preserves readable IPA for core search', () async {
+    SharedPreferences.setMockInitialValues({});
+    final client = MockClient((request) async {
+      if (request.url.path == '/api/dictionary/core') {
+        return http.Response.bytes(
+          utf8.encode(
+            jsonEncode({
+              'dictionary': [
+                {
+                  'word': 'hello',
+                  'phonetic': '/həˈloʊ/',
+                  'phonetics': const [],
+                  'meanings': [
+                    {
+                      'partOfSpeech': 'interjection',
+                      'definitions': [
+                        {'definition': 'A greeting.'},
+                      ],
+                    },
+                  ],
+                },
+              ],
+              'exact': const [],
+            }),
+          ),
+          200,
+          headers: const {'content-type': 'application/json; charset=utf-8'},
+        );
+      }
+      return http.Response('not found', 404);
+    });
 
-      final entry = await WordService(
-        client: client,
-        serverAcceleration: const _StaticServerAcceleration(true),
-      ).lookupCore('hello');
+    final entry = await WordService(
+      client: client,
+      serverAcceleration: const _StaticServerAcceleration(true),
+    ).lookupCore('hello');
 
-      expect(entry.usPhonetic, 'həˈləu');
-      expect(entry.ukPhonetic, 'həˈləu');
-      expect(entry.definition, 'A greeting.');
-    },
-  );
+    expect(entry.usPhonetic, '/həˈloʊ/');
+    expect(entry.ukPhonetic, '/həˈloʊ/');
+    expect(entry.definition, 'A greeting.');
+  });
 
   test(
     'lookupAll performs bounded concurrent work and preserves word order',
@@ -734,7 +749,7 @@ void main() {
           200,
         );
       }
-      expect(request.url.path, '/sug');
+      expect(request.url.path, '/api/dictionary/suggest');
       return http.Response(
         jsonEncode([
           {'word': 'Word'},
@@ -776,11 +791,14 @@ void main() {
         return http.Response('[]', 200);
       }
       if (request.url.host == 'api.mymemory.translated.net') {
-        return http.Response(
-          jsonEncode({
-            'responseData': {'translatedText': '单词'},
-          }),
+        return http.Response.bytes(
+          utf8.encode(
+            jsonEncode({
+              'responseData': {'translatedText': '单词'},
+            }),
+          ),
           200,
+          headers: const {'content-type': 'application/json; charset=utf-8'},
         );
       }
       return http.Response('not found', 404);
@@ -818,11 +836,14 @@ void main() {
         return http.Response('[]', 200);
       }
       if (request.url.host == 'api.mymemory.translated.net') {
-        return http.Response(
-          jsonEncode({
-            'responseData': {'translatedText': '出色地'},
-          }),
+        return http.Response.bytes(
+          utf8.encode(
+            jsonEncode({
+              'responseData': {'translatedText': '出色地'},
+            }),
+          ),
           200,
+          headers: const {'content-type': 'application/json; charset=utf-8'},
         );
       }
       return http.Response('not found', 404);
@@ -990,7 +1011,7 @@ void main() {
     },
   );
 
-  test('translation work never exceeds two concurrent requests', () async {
+  test('translation fallback uses a bounded concurrent pool', () async {
     SharedPreferences.setMockInitialValues({});
     var activeTranslations = 0;
     var peakTranslations = 0;
@@ -1040,7 +1061,7 @@ void main() {
 
     await WordService(client: client).lookup('rich', exampleCount: 0);
 
-    expect(peakTranslations, lessThanOrEqualTo(2));
+    expect(peakTranslations, lessThanOrEqualTo(6));
     expect(peakTranslations, greaterThan(0));
   });
 

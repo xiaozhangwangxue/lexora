@@ -230,6 +230,81 @@ async function settleWithin<T>(promise: Promise<T>, timeoutMs: number) {
     if (timeout !== undefined) window.clearTimeout(timeout);
   }
 }
+
+async function directBatchDictionaryEntries(terms: string[]) {
+  const normalized = [
+    ...new Set(
+      terms
+        .map((term) => term.trim().toLowerCase().replace(/\s+/g, " "))
+        .filter(Boolean),
+    ),
+  ];
+  const chunks = Array.from(
+    { length: Math.ceil(normalized.length / 12) },
+    (_, index) => normalized.slice(index * 12, index * 12 + 12),
+  );
+  const found = new Map<string, DictionaryEntry>();
+  let nextChunk = 0;
+  async function worker() {
+    while (nextChunk < chunks.length) {
+      const chunk = chunks[nextChunk++];
+      const payload = await fetchJsonWithRetry<{
+        results?: { term?: unknown; result?: unknown }[];
+      }>(
+        "/api/dictionary/batch",
+        {
+          method: "POST",
+          headers: { "content-type": "application/json; charset=utf-8" },
+          body: JSON.stringify({ terms: chunk }),
+        },
+        1,
+        3_500,
+      );
+      for (const row of payload.results || []) {
+        const term = String(row.term || "")
+          .trim()
+          .toLowerCase();
+        const entry = coreDictionaryEntry(row.result, term);
+        if (term && entry) found.set(term, entry);
+      }
+    }
+  }
+  await Promise.all(
+    Array.from({ length: Math.min(3, chunks.length) }, () => worker()),
+  );
+  const entries = normalized
+    .map((term) => found.get(term))
+    .filter((entry): entry is DictionaryEntry => Boolean(entry));
+  const translationChunks = Array.from(
+    { length: Math.ceil(entries.length / 24) },
+    (_, index) => entries.slice(index * 24, index * 24 + 24),
+  );
+  const translated = await Promise.all(
+    translationChunks.map(async (chunk) => {
+      const missingIndexes = chunk
+        .map((entry, index) =>
+          hasChinese(entry.definition_zh || "") ? -1 : index,
+        )
+        .filter((index) => index >= 0);
+      if (!missingIndexes.length) return chunk;
+      const values = await resolvedChineseTranslations(
+        missingIndexes.map((index) => readableText(chunk[index].definition)),
+      );
+      return chunk.map((entry, index) => {
+        const missingPosition = missingIndexes.indexOf(index);
+        return {
+          ...entry,
+          definition_zh:
+            missingPosition >= 0
+              ? values[missingPosition] || entry.definition_zh || ""
+              : entry.definition_zh || "",
+        };
+      });
+    }),
+  );
+  return translated.flat();
+}
+
 function haptic(pattern: number | number[] = 9) {
   navigator.vibrate?.(pattern);
 }
@@ -267,10 +342,13 @@ export function LexoraWebApp({
 } = {}) {
   const [internalTab, setInternalTab] = useState<AppTab>("search");
   const tab = activeTab ?? internalTab;
-  const setTab = useCallback((next: AppTab) => {
-    setInternalTab(next);
-    onActiveTabChange?.(next);
-  }, [onActiveTabChange]);
+  const setTab = useCallback(
+    (next: AppTab) => {
+      setInternalTab(next);
+      onActiveTabChange?.(next);
+    },
+    [onActiveTabChange],
+  );
   const [installed, setInstalled] = useState(false);
   const [mobile, setMobile] = useState(false);
   const [ios, setIos] = useState(false);
@@ -497,8 +575,14 @@ export function LexoraWebApp({
     return (
       <div className={styles.embeddedApp} data-active-tab={tab}>
         {views[tab]}
-        {!onboardingDone && <Onboarding close={() => setOnboardingDone(true)} />}
-        {toast && <div className={styles.toast} role="status">{toast}</div>}
+        {!onboardingDone && (
+          <Onboarding close={() => setOnboardingDone(true)} />
+        )}
+        {toast && (
+          <div className={styles.toast} role="status">
+            {toast}
+          </div>
+        )}
       </div>
     );
   }
@@ -643,7 +727,8 @@ function InstallGate({
         <h1>请先将 Lexora 添加到主屏幕</h1>
         <p>安装后可使用词典、词汇书、多格式导出、生成记录与历史等全部功能。</p>
         <p className={styles.installWaitNote}>
-          首次打开请等待 3–5 秒，确认上方 Lexora 图标已完整显示后再添加，避免系统保存空白图标。
+          首次打开请等待 3–5 秒，确认上方 Lexora
+          图标已完整显示后再添加，避免系统保存空白图标。
         </p>
         <ol className={styles.steps}>
           {ios ? (
@@ -772,25 +857,15 @@ function SearchView({
     if (!normalized) return;
     let cancelled = false;
     timer.current = window.setTimeout(() => {
-      const path = `/api/web/suggest?prefix=${encodeURIComponent(normalized)}&limit=12`;
-      fetchJsonWithRetry<Suggestion[]>(path, {
-        headers: { "x-lexora-device": deviceId() },
-      })
-        .catch(() =>
-          fetchJsonWithRetry<Suggestion[]>(
-            `https://dict.12323456.xyz/v1/suggest?prefix=${encodeURIComponent(normalized)}&limit=12`,
-            {},
-            1,
-          ),
-        )
+      const path = `/api/dictionary/suggest?term=${encodeURIComponent(normalized)}&limit=12`;
+      fetchJsonWithRetry<Suggestion[]>(path, {}, 1, 2_500)
         .then((values) => {
           if (cancelled) return;
           setSuggestions(
             values
               .filter(
                 (item) =>
-                  item.word &&
-                  !searched.some((old) => old.word === item.word),
+                  item.word && !searched.some((old) => old.word === item.word),
               )
               .slice(0, 8),
           );
@@ -852,14 +927,16 @@ function SearchView({
         logEvent("offline-lookup", { term: normalized });
         return;
       }
-      const cloudLookup = fetchJsonWithRetry<DictionaryEntry & {
-        detail?: string;
-      }>(
-        `/api/web/lookup?term=${encodeURIComponent(normalized)}`,
-        { headers: { "x-lexora-device": deviceId() } },
+      const cloudLookup = fetchJsonWithRetry<unknown>(
+        `/api/dictionary/full?term=${encodeURIComponent(normalized)}`,
+        {},
         1,
-        10_500,
-      );
+        3_500,
+      ).then((payload) => {
+        const result = coreDictionaryEntry(payload, normalized);
+        if (!result) throw new Error(`没有找到“${normalized}”的可靠释义`);
+        return result;
+      });
       const coreLookup = fetchJsonWithRetry<unknown>(
         `/api/dictionary/core?term=${encodeURIComponent(normalized)}`,
         {},
@@ -1166,9 +1243,7 @@ function chineseOverview(value: unknown, fallbackPos: unknown) {
   for (const rawLine of readableText(value).split(/\n+|\s*\|\s*/)) {
     const match = rawLine.trim().match(/^([a-z]{1,8})\s*[.。]?\s*(.*)$/i);
     if (match?.[1].toLowerCase() === "imp") continue;
-    const pos = match
-      ? normalizedPartOfSpeech(match[1], fallback)
-      : fallback;
+    const pos = match ? normalizedPartOfSpeech(match[1], fallback) : fallback;
     const sourceText = (match?.[2] || rawLine).trim();
     if (sourceText.length > 90) continue;
     let text = sourceText;
@@ -1183,10 +1258,7 @@ function chineseOverview(value: unknown, fallbackPos: unknown) {
   return groups;
 }
 
-function groupedSenses(
-  value: unknown,
-  fallbackPos: unknown,
-) {
+function groupedSenses(value: unknown, fallbackPos: unknown) {
   const source = Array.isArray(value)
     ? (value as Record<string, unknown>[])
     : [];
@@ -1263,7 +1335,10 @@ function displaySenses(entry: DictionaryEntry): DisplaySense[] {
       definitions_zh: [],
     };
     const definition = definitions[0].replace(/\s+\.$/, ".");
-    if (!group.definitions.includes(definition) && group.definitions.length < 3) {
+    if (
+      !group.definitions.includes(definition) &&
+      group.definitions.length < 3
+    ) {
       const translations = senseValues(
         sense.definitions_zh || sense.definition_zh,
       );
@@ -1279,100 +1354,6 @@ function displaySenses(entry: DictionaryEntry): DisplaySense[] {
 
 function withDisplaySenses(entry: DictionaryEntry): DictionaryEntry {
   return { ...entry, display_senses: displaySenses(entry) };
-}
-
-async function directChineseTranslations(texts: string[]) {
-  const translations = Array(texts.length).fill("") as string[];
-  if (!texts.length) return translations;
-  const marker = (index: number) => `[[[${index}]]]`;
-  try {
-    const payload = texts
-      .map((text, index) => `${marker(index)} ${text}`)
-      .join("\n");
-    const endpoint = new URL(
-      "https://translate.googleapis.com/translate_a/single",
-    );
-    endpoint.search = new URLSearchParams({
-      client: "gtx",
-      sl: "en",
-      tl: "zh-CN",
-      dt: "t",
-      q: payload,
-    }).toString();
-    const body = await fetchJsonWithRetry<unknown[]>(endpoint.toString(), {}, 1);
-    const chunks = Array.isArray(body[0]) ? (body[0] as unknown[][]) : [];
-    const joined = chunks.map((chunk) => readableText(chunk[0])).join("");
-    texts.forEach((_, index) => {
-      const startMarker = marker(index);
-      const start = joined.indexOf(startMarker);
-      if (start < 0) return;
-      const nextMarker = marker(index + 1);
-      const contentStart = start + startMarker.length;
-      const end = joined.indexOf(nextMarker, contentStart);
-      translations[index] = joined
-        .slice(contentStart, end < 0 ? joined.length : end)
-        .trim();
-    });
-  } catch {
-    // Mainland networks can block Google; MyMemory below remains available.
-  }
-  let missing = translations
-    .map((translation, index) =>
-      (translation.match(/[\u3400-\u9fff]/g) || []).length >= 2 ? -1 : index,
-    )
-    .filter((index) => index >= 0);
-  await Promise.all(
-    missing.map(async (index) => {
-      try {
-        const endpoint = new URL(
-          "https://translate.googleapis.com/translate_a/single",
-        );
-        endpoint.search = new URLSearchParams({
-          client: "gtx",
-          sl: "en",
-          tl: "zh-CN",
-          dt: "t",
-          q: texts[index],
-        }).toString();
-        const body = await fetchJsonWithRetry<unknown[]>(
-          endpoint.toString(),
-          {},
-          1,
-        );
-        const chunks = Array.isArray(body[0]) ? (body[0] as unknown[][]) : [];
-        const translation = chunks
-          .map((chunk) => readableText(chunk[0]))
-          .join("")
-          .trim();
-        if (hasChinese(translation)) translations[index] = translation;
-      } catch {
-        // MyMemory below remains available.
-      }
-    }),
-  );
-  missing = translations
-    .map((translation, index) => (hasChinese(translation) ? -1 : index))
-    .filter((index) => index >= 0);
-  await Promise.all(
-    missing.map(async (index) => {
-      try {
-        const endpoint = new URL("https://api.mymemory.translated.net/get");
-        endpoint.search = new URLSearchParams({
-          q: texts[index],
-          langpair: "en|zh-CN",
-        }).toString();
-        const body = await fetchJsonWithRetry<{
-          responseData?: { translatedText?: unknown };
-        }>(endpoint.toString(), {}, 1);
-        const translation = readableText(body.responseData?.translatedText);
-        if ((translation.match(/[\u3400-\u9fff]/g) || []).length >= 2)
-          translations[index] = translation;
-      } catch {
-        // English remains readable even when both translation providers fail.
-      }
-    }),
-  );
-  return translations;
 }
 
 function hasChinese(value: string) {
@@ -1398,15 +1379,7 @@ async function resolvedChineseTranslations(texts: string[]) {
   } catch {
     // Direct browser providers below keep translation non-blocking.
   }
-  if (texts.some((_, index) => !hasChinese(translations[index] || ""))) {
-    const direct = await directChineseTranslations(texts);
-    translations = texts.map((_, index) =>
-      hasChinese(translations[index] || "")
-        ? translations[index]
-        : direct[index] || "",
-    );
-  }
-  return translations;
+  return texts.map((_, index) => translations[index] || "");
 }
 
 type TranslatedLink = { word: string; translation: string };
@@ -1428,9 +1401,11 @@ function relationItems(value: unknown, limit = 8): TranslatedLink[] {
 }
 
 async function withChineseDisplaySenses(entry: DictionaryEntry) {
-  const senses = (Array.isArray(entry.display_senses)
-    ? entry.display_senses
-    : displaySenses(entry)) as DisplaySense[];
+  const senses = (
+    Array.isArray(entry.display_senses)
+      ? entry.display_senses
+      : displaySenses(entry)
+  ) as DisplaySense[];
   const requests: { sense: number; definition: number; text: string }[] = [];
   senses.forEach((sense, senseIndex) =>
     sense.definitions.forEach((text, definitionIndex) => {
@@ -1439,7 +1414,9 @@ async function withChineseDisplaySenses(entry: DictionaryEntry) {
     }),
   );
   const related = relationItems(
-    list(entry.related_words).length ? entry.related_words : entry.related_entries,
+    list(entry.related_words).length
+      ? entry.related_words
+      : entry.related_entries,
   );
   const synonyms = relationItems(entry.synonyms);
   const antonyms = relationItems(entry.antonyms);
@@ -1462,8 +1439,7 @@ async function withChineseDisplaySenses(entry: DictionaryEntry) {
       "。",
     );
     if (hasChinese(translation))
-      enriched[request.sense].definitions_zh[request.definition] =
-        translation;
+      enriched[request.sense].definitions_zh[request.definition] = translation;
   });
   missingRelations.forEach((item, index) => {
     const translation = readableText(relationTranslations[index]);
@@ -1485,10 +1461,7 @@ function ResultSections({
   entry: DictionaryEntry;
   search(term: string): void;
 }) {
-  const senses = groupedSenses(
-    entry.display_senses || entry.senses,
-    entry.pos,
-  );
+  const senses = groupedSenses(entry.display_senses || entry.senses, entry.pos);
   return (
     <div className={styles.resultBody}>
       {senses.length > 0 && (
@@ -1533,21 +1506,30 @@ function ResultSections({
       )}
       <LinkList
         title="联想词"
-        values={(entry.display_related as TranslatedLink[]) || relationItems(
-          list(entry.related_words).length
-            ? entry.related_words
-            : entry.related_entries,
-        )}
+        values={
+          (entry.display_related as TranslatedLink[]) ||
+          relationItems(
+            list(entry.related_words).length
+              ? entry.related_words
+              : entry.related_entries,
+          )
+        }
         search={search}
       />
       <LinkList
         title="近义词"
-        values={(entry.display_synonyms as TranslatedLink[]) || relationItems(entry.synonyms)}
+        values={
+          (entry.display_synonyms as TranslatedLink[]) ||
+          relationItems(entry.synonyms)
+        }
         search={search}
       />
       <LinkList
         title="反义词"
-        values={(entry.display_antonyms as TranslatedLink[]) || relationItems(entry.antonyms)}
+        values={
+          (entry.display_antonyms as TranslatedLink[]) ||
+          relationItems(entry.antonyms)
+        }
         search={search}
       />
       <TextList
@@ -1717,6 +1699,15 @@ function BookView({
     setWords([]);
     setGenerating(true);
     try {
+      // Resolve the whole book through the Cloudflare direct batch endpoint
+      // before document rendering. The document server therefore receives
+      // ready entries and no longer performs one Oracle/SQLite lookup per
+      // word, which was the dominant cost for large books.
+      const entries = await directBatchDictionaryEntries(
+        batch.map((word) => word.term),
+      );
+      if (!entries.length)
+        throw new Error("没有找到可用于生成词汇书的可靠词条");
       const response = await fetch("/api/web/generate", {
         method: "POST",
         headers: {
@@ -1726,6 +1717,7 @@ function BookView({
         body: JSON.stringify({
           title: settings.title,
           terms: batch.map((word) => word.term),
+          entries,
           fontPreset: settings.fontPreset,
           examples: settings.examples,
           format: settings.format,
@@ -1799,7 +1791,10 @@ function BookView({
     } catch (error) {
       setWords((current) => {
         const existing = new Set(current.map((word) => word.term));
-        return [...batch.filter((word) => !existing.has(word.term)), ...current];
+        return [
+          ...batch.filter((word) => !existing.has(word.term)),
+          ...current,
+        ];
       });
       notify(error instanceof Error ? error.message : "生成失败");
     } finally {
@@ -2010,7 +2005,8 @@ function BookView({
             </div>
             <h2 id="generation-complete-title">词汇书生成完成</h2>
             <p>
-              {completed.filename} 已安全保存到生成记录，可以现在分享或打开查看。
+              {completed.filename}{" "}
+              已安全保存到生成记录，可以现在分享或打开查看。
             </p>
             <div className={styles.completionActions}>
               <button onClick={() => setCompleted(null)}>忽略</button>
@@ -2076,7 +2072,8 @@ function CustomizationModal({
   const modalRef = useRef<HTMLElement>(null);
   useEffect(() => {
     const previousBodyOverflow = document.body.style.overflow;
-    const previousOverscroll = document.documentElement.style.overscrollBehavior;
+    const previousOverscroll =
+      document.documentElement.style.overscrollBehavior;
     document.body.style.overflow = "hidden";
     document.documentElement.style.overscrollBehavior = "none";
     const frame = requestAnimationFrame(() =>
@@ -2121,7 +2118,9 @@ function CustomizationModal({
         <div className={styles.modalHeader}>
           <div>
             <p>文档自定义</p>
-            <h2 id="document-customization-title">让手机阅读与纸张打印都舒服</h2>
+            <h2 id="document-customization-title">
+              让手机阅读与纸张打印都舒服
+            </h2>
           </div>
           <button onClick={close}>
             <FiX />
@@ -2172,7 +2171,9 @@ function CustomizationModal({
             <div className={styles.typographyPreview} aria-live="polite">
               <small>字体预览</small>
               <strong
-                style={{ fontSize: `${previewSize(settings.typography.word)}px` }}
+                style={{
+                  fontSize: `${previewSize(settings.typography.word)}px`,
+                }}
               >
                 serendipity
               </strong>
@@ -2440,7 +2441,8 @@ function RecordsView({
               className={styles.recordCard}
               key={record.id}
               onClick={() =>
-                multi && setSelected((current) => {
+                multi &&
+                setSelected((current) => {
                   const next = new Set(current);
                   if (next.has(record.id)) next.delete(record.id);
                   else next.add(record.id);
@@ -2610,12 +2612,12 @@ function HistoryView({
       return [...searches].sort((a, b) => {
         const comparison =
           sort === "alpha"
-          ? a.resolvedWord.localeCompare(b.resolvedWord)
-          : sort === "difficulty"
-            ? String(a.difficulty).localeCompare(String(b.difficulty))
-            : sort === "frequency"
-              ? (a.frequency || 0) - (b.frequency || 0)
-              : a.searchedAt - b.searchedAt;
+            ? a.resolvedWord.localeCompare(b.resolvedWord)
+            : sort === "difficulty"
+              ? String(a.difficulty).localeCompare(String(b.difficulty))
+              : sort === "frequency"
+                ? (a.frequency || 0) - (b.frequency || 0)
+                : a.searchedAt - b.searchedAt;
         return comparison * direction;
       });
     }
@@ -2728,16 +2730,16 @@ function HistoryView({
             value={sort}
             onChange={(event) => setSort(event.target.value)}
           >
-          <option value="time">
-            {mode === "generated" ? "生成时间" : "搜索时间"}
-          </option>
-          <option value="alpha">首字母</option>
-          <option value="difficulty">难度</option>
-          {mode === "generated" ? (
-            <option value="count">生成次数</option>
-          ) : (
-            <option value="frequency">词频</option>
-          )}
+            <option value="time">
+              {mode === "generated" ? "生成时间" : "搜索时间"}
+            </option>
+            <option value="alpha">首字母</option>
+            <option value="difficulty">难度</option>
+            {mode === "generated" ? (
+              <option value="count">生成次数</option>
+            ) : (
+              <option value="frequency">词频</option>
+            )}
           </select>
         </label>
         <button
@@ -2792,7 +2794,9 @@ function HistoryView({
                       className={styles.rowAction}
                       aria-label="删除记录"
                       onClick={() =>
-                        setSearches(searches.filter((row) => row.id !== item.id))
+                        setSearches(
+                          searches.filter((row) => row.id !== item.id),
+                        )
                       }
                     >
                       <FiX />
@@ -2985,8 +2989,8 @@ function SettingsView({
             <FiUpload /> 云端与性能
           </h2>
           <SettingRow
-            title="甲骨文云服务器加速"
-            detail="查词、词汇书和文档导出"
+            title="Cloudflare 直连批量加速"
+            detail="不经过甲骨文云；批量查询公开词典"
             action={
               <input
                 type="checkbox"

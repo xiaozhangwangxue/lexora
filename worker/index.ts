@@ -32,6 +32,16 @@ interface ExecutionContext {
   passThroughOnException(): void;
 }
 
+type EdgeDictionaryValue = [string, string, string, string, string, string];
+type EdgeDictionaryManifest = {
+  pack: string;
+  shards: Record<string, { offset: number; length: number; rows: number }>;
+};
+
+let edgeDictionaryManifestPromise:
+  | Promise<EdgeDictionaryManifest | null>
+  | undefined;
+
 const WEB_LOOKUP_DAILY_LIMIT = 10000;
 const WEB_PDF_DAILY_LIMIT = 250;
 const WEB_LOOKUP_MINUTE_LIMIT = 300;
@@ -40,6 +50,186 @@ const WEB_MAX_BODY_BYTES = 2 * 1024 * 1024;
 
 function defaultCache(): Cache {
   return (caches as CacheStorage & { readonly default: Cache }).default;
+}
+
+function edgeDictionaryPrefix(term: string): string {
+  const second = /^[a-z]$/.test(term[1] ?? "") ? term[1] : "_";
+  return `${term[0]}${second}`;
+}
+
+async function edgeDictionaryManifest(
+  env: Env,
+): Promise<EdgeDictionaryManifest | null> {
+  if (!env.DOWNLOADS) return null;
+  edgeDictionaryManifestPromise ??= (async () => {
+    try {
+      const object = await env.DOWNLOADS?.get(
+        "dictionary-edge/v1/manifest.json",
+      );
+      if (!object) {
+        console.error("edge dictionary manifest object is missing");
+        return null;
+      }
+      const value = (await object.json()) as EdgeDictionaryManifest;
+      if (!value?.pack || !value?.shards) {
+        console.error("edge dictionary manifest is invalid");
+        return null;
+      }
+      return value;
+    } catch (error) {
+      console.error("edge dictionary manifest failed", error);
+      return null;
+    }
+  })();
+  return edgeDictionaryManifestPromise;
+}
+
+async function lookupEdgeDictionary(
+  env: Env,
+  terms: string[],
+): Promise<Map<string, EdgeDictionaryValue>> {
+  const manifest = await edgeDictionaryManifest(env);
+  if (!manifest || !env.DOWNLOADS) return new Map();
+  const grouped = new Map<string, string[]>();
+  for (const term of terms) {
+    const prefix = edgeDictionaryPrefix(term);
+    grouped.set(prefix, [...(grouped.get(prefix) ?? []), term]);
+  }
+  const found = new Map<string, EdgeDictionaryValue>();
+  await Promise.all(
+    [...grouped.entries()].map(async ([prefix, requested]) => {
+      const shard = manifest.shards[prefix];
+      if (!shard) {
+        console.error("edge dictionary shard is absent", prefix);
+        return;
+      }
+      try {
+        const object = await env.DOWNLOADS?.get(
+          `dictionary-edge/v1/${manifest.pack}`,
+          { range: { offset: shard.offset, length: shard.length } },
+        );
+        if (!object?.body) return;
+        const body = object.body.pipeThrough(new DecompressionStream("gzip"));
+        const values = (await new Response(body).json()) as Record<
+          string,
+          EdgeDictionaryValue
+        >;
+        for (const term of requested) {
+          if (Array.isArray(values[term])) found.set(term, values[term]);
+        }
+      } catch (error) {
+        console.error("edge dictionary shard failed", prefix, error);
+        // Public lookups remain available if an edge shard is unavailable.
+      }
+    }),
+  );
+  return found;
+}
+
+function localExactRow(term: string, value: EdgeDictionaryValue) {
+  const [phonetic, definition, , position, , frequencyRank] = value;
+  const definitionOverrides: Record<string, { part: string; text: string }> = {
+    "people-to-people": {
+      part: "adjective",
+      text: "Involving direct contact and communication between ordinary people of different countries or cultures.",
+    },
+  };
+  const override = definitionOverrides[term];
+  const part =
+    position.split(/[\s,;/]+/).find(Boolean) ?? override?.part ?? "";
+  const definitions = (definition || override?.text || "")
+    .split(/\n+/)
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .slice(0, 5)
+    .map((item) => `${part || "definition"}\t${item}`);
+  const tags = [
+    part,
+    phonetic ? `ipa_pron:${phonetic.replace(/^\/+|\/+$/g, "")}` : "",
+    frequencyRank ? `lexora_rank:${frequencyRank}` : "",
+  ].filter(Boolean);
+  return { word: term, tags, defs: definitions };
+}
+
+function translatedTextFromGoogle(body: unknown): string {
+  if (!Array.isArray(body) || !Array.isArray(body[0])) return "";
+  return (body[0] as unknown[])
+    .map((chunk) =>
+      Array.isArray(chunk) ? String(chunk[0] ?? "") : "",
+    )
+    .join("")
+    .trim();
+}
+
+async function translateEnglishToChinese(
+  text: string,
+  allowFallbackProvider = false,
+): Promise<string> {
+  if (!text.trim()) return "";
+  const form = new URLSearchParams({
+    client: "gtx",
+    sl: "en",
+    tl: "zh-CN",
+    dt: "t",
+    q: text.trim(),
+  }).toString();
+  try {
+    const response = await fetch(
+      "https://translate.google.com/translate_a/single",
+      {
+        method: "POST",
+        headers: {
+          accept: "application/json",
+          "content-type": "application/x-www-form-urlencoded;charset=UTF-8",
+          "user-agent": "Mozilla/5.0 Lexora/4",
+        },
+        body: form,
+        signal: AbortSignal.timeout(4800),
+      },
+    );
+    if (response.ok) {
+      const translated = translatedTextFromGoogle(await response.json());
+      if (translated) return translated;
+    }
+  } catch {
+    // Fall through to the secondary provider when the subrequest budget
+    // permits it. The client itself never contacts either public provider.
+  }
+  if (allowFallbackProvider) {
+    try {
+      const endpoint = new URL("https://api.mymemory.translated.net/get");
+      endpoint.search = new URLSearchParams({
+        q: text.trim(),
+        langpair: "en|zh-CN",
+      }).toString();
+      const response = await fetch(endpoint, {
+        headers: {
+          accept: "application/json",
+          "user-agent": "Mozilla/5.0 Lexora/4",
+        },
+        signal: AbortSignal.timeout(4800),
+      });
+      if (response.ok) {
+        const body = (await response.json()) as {
+          responseStatus?: number;
+          responseData?: { translatedText?: string };
+        };
+        const translated = String(
+          body.responseData?.translatedText ?? "",
+        ).trim();
+        if (
+          Number(body.responseStatus ?? 200) === 200 &&
+          translated &&
+          !/MYMEMORY WARNING/i.test(translated)
+        ) {
+          return translated;
+        }
+      }
+    } catch {
+      // English results remain available even if translation is unavailable.
+    }
+  }
+  return "";
 }
 
 async function sha256(value: string) {
@@ -232,10 +422,10 @@ async function handleWebApi(request: Request, env: Env, url: URL) {
         ? "/v1/web/import"
         : isSuggest
           ? "/v1/suggest"
-          // The public lookup endpoint is already protected by the website's
-          // D1 quota above. It can be cached and raced across both free OCI
-          // origins, unlike the origin's per-client web endpoint.
-          : "/v1/lookup";
+          : // The public lookup endpoint is already protected by the website's
+            // D1 quota above. It can be cached and raced across both free OCI
+            // origins, unlike the origin's per-client web endpoint.
+            "/v1/lookup";
     const target = new URL(upstreamPath, origin);
     if (isLookup || isSuggest) target.search = url.search;
     try {
@@ -311,8 +501,8 @@ const worker = {
         isManifest
           ? "no-store, max-age=0"
           : /-v\d+\.\d+\.\d+(?:[-.])/.test(key)
-          ? "public, max-age=31536000, immutable"
-          : "no-cache",
+            ? "public, max-age=31536000, immutable"
+            : "no-cache",
       );
       return new Response(object.body, { headers });
     };
@@ -403,7 +593,9 @@ const worker = {
       }
       if (request.method === "DELETE") {
         if (!key.startsWith("lexora-")) {
-          return new Response("Only Lexora objects may be removed", { status: 400 });
+          return new Response("Only Lexora objects may be removed", {
+            status: 400,
+          });
         }
         await env.DOWNLOADS.delete(key);
         return Response.json({ ok: true, deleted: key });
@@ -483,10 +675,30 @@ const worker = {
       }
       const cache = defaultCache();
       const cacheKey = new Request(
-        `https://lexora-core-cache.invalid/v1/${encodeURIComponent(term)}`,
+        `https://lexora-core-cache.invalid/v3/${encodeURIComponent(term)}`,
       );
       const cached = await cache.match(cacheKey);
       if (cached) return cached;
+
+      const local = (await lookupEdgeDictionary(env, [term])).get(term);
+      if (local && localExactRow(term, local).defs.length > 0) {
+        const response = Response.json(
+          {
+            dictionary: null,
+            exact: [localExactRow(term, local)],
+            definition_zh: local[2],
+          },
+          {
+            headers: {
+              "access-control-allow-origin": "*",
+              "cache-control": "public, max-age=2592000",
+              "x-lexora-dictionary-source": "edge-ecdict",
+            },
+          },
+        );
+        ctx.waitUntil(cache.put(cacheKey, response.clone()));
+        return response;
+      }
 
       const dictionaryUrl = `https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(term)}`;
       const exactUrl = new URL("https://api.datamuse.com/words");
@@ -547,6 +759,60 @@ const worker = {
       }
     }
 
+    if (
+      url.pathname === "/api/dictionary/suggest" &&
+      request.method === "GET"
+    ) {
+      const term = (url.searchParams.get("term") ?? "")
+        .trim()
+        .toLowerCase()
+        .replace(/\s+/g, " ");
+      const limit = Math.max(
+        1,
+        Math.min(
+          24,
+          Number.parseInt(url.searchParams.get("limit") ?? "12", 10) || 12,
+        ),
+      );
+      if (!/^[a-z][a-z' -]{0,79}$/.test(term)) {
+        return Response.json({ error: "Invalid term" }, { status: 400 });
+      }
+      const cache = defaultCache();
+      const cacheKey = new Request(
+        `https://lexora-suggest-cache.invalid/v1/${encodeURIComponent(term)}?limit=${limit}`,
+      );
+      const cached = await cache.match(cacheKey);
+      if (cached) return cached;
+      try {
+        const endpoint = new URL("https://api.datamuse.com/sug");
+        endpoint.search = new URLSearchParams({
+          s: term,
+          max: String(limit),
+        }).toString();
+        const upstream = await fetch(endpoint, {
+          headers: { accept: "application/json" },
+          signal: AbortSignal.timeout(1600),
+        });
+        if (!upstream.ok) throw new Error(`Upstream ${upstream.status}`);
+        const values = (await upstream.json()) as unknown[];
+        const response = Response.json(Array.isArray(values) ? values : [], {
+          headers: {
+            "access-control-allow-origin": "*",
+            "cache-control": "public, max-age=86400",
+          },
+        });
+        ctx.waitUntil(cache.put(cacheKey, response.clone()));
+        return response;
+      } catch {
+        return Response.json([], {
+          headers: {
+            "access-control-allow-origin": "*",
+            "cache-control": "no-store",
+          },
+        });
+      }
+    }
+
     if (url.pathname === "/api/dictionary/full" && request.method === "GET") {
       const term = (url.searchParams.get("term") ?? "")
         .trim()
@@ -557,10 +823,12 @@ const worker = {
       }
       const cache = defaultCache();
       const cacheKey = new Request(
-        `https://lexora-full-cache.invalid/v1/${encodeURIComponent(term)}`,
+        `https://lexora-full-cache.invalid/v3/${encodeURIComponent(term)}`,
       );
       const cached = await cache.match(cacheKey);
       if (cached) return cached;
+
+      const localFuture = lookupEdgeDictionary(env, [term]);
 
       const requests = {
         dictionary: `https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(term)}`,
@@ -599,7 +867,11 @@ const worker = {
         }
       };
       const values = await Promise.all(Object.values(requests).map(jsonOrNull));
-      if (values.every((value) => value === null)) {
+      const local = (await localFuture).get(term);
+      if (
+        values.every((value) => value === null) &&
+        (!local || localExactRow(term, local).defs.length === 0)
+      ) {
         return Response.json(
           { error: "Dictionary providers are temporarily unavailable" },
           {
@@ -614,6 +886,12 @@ const worker = {
       const result = Object.fromEntries(
         Object.keys(requests).map((key, index) => [key, values[index]]),
       );
+      if (local) {
+        result.definition_zh = local[2];
+        if (!Array.isArray(result.exact) || result.exact.length === 0) {
+          result.exact = [localExactRow(term, local)];
+        }
+      }
       const response = Response.json(result, {
         headers: {
           "access-control-allow-origin": "*",
@@ -624,6 +902,155 @@ const worker = {
       return response;
     }
 
+    if (url.pathname === "/api/dictionary/batch" && request.method === "POST") {
+      let terms: string[] = [];
+      try {
+        const payload = (await request.json()) as { terms?: unknown };
+        terms = Array.isArray(payload.terms)
+          ? [
+              ...new Set(
+                payload.terms
+                  .map((value) =>
+                    String(value).trim().toLowerCase().replace(/\s+/g, " "),
+                  )
+                  .filter((term) => /^[a-z][a-z' -]{0,79}$/.test(term)),
+              ),
+            ].slice(0, 12)
+          : [];
+      } catch {
+        return Response.json({ error: "Invalid JSON" }, { status: 400 });
+      }
+      if (terms.length === 0) {
+        return Response.json(
+          { results: [] },
+          { headers: { "access-control-allow-origin": "*" } },
+        );
+      }
+
+      const cache = defaultCache();
+      const locals = await lookupEdgeDictionary(env, terms);
+      const lookup = async (term: string) => {
+        const cacheKey = new Request(
+          `https://lexora-batch-cache.invalid/v5/${encodeURIComponent(term)}`,
+        );
+        const cached = await cache.match(cacheKey);
+        if (cached) {
+          return { term, result: await cached.json(), cached: true };
+        }
+
+        const datamuse = (parameters: Record<string, string>) => {
+          const endpoint = new URL("https://api.datamuse.com/words");
+          endpoint.search = new URLSearchParams(parameters).toString();
+          return endpoint.toString();
+        };
+        const requests = {
+          related: datamuse({
+            ml: term,
+            md: "dfr",
+            ipa: "1",
+            max: "8",
+          }),
+          exact: datamuse({
+            sp: term,
+            md: "dfrp",
+            ipa: "1",
+            max: "3",
+          }),
+        };
+        const jsonOrNull = async (input: string) => {
+          try {
+            const response = await fetch(input, {
+              headers: { accept: "application/json" },
+              signal: AbortSignal.timeout(1450),
+            });
+            if (!response.ok) return null;
+            return response.json();
+          } catch {
+            return null;
+          }
+        };
+        const relatedFuture = jsonOrNull(requests.related);
+        const exact = await jsonOrNull(requests.exact);
+        const exactRows = Array.isArray(exact) ? exact : [];
+        const exactRow = exactRows.find(
+          (item) =>
+            String(item?.word ?? "")
+              .trim()
+              .toLowerCase() === term &&
+            Array.isArray(item?.defs) &&
+            item.defs.length > 0,
+        );
+        const local = locals.get(term);
+        const localRow = local ? localExactRow(term, local) : null;
+        const definition = String(
+          exactRow?.defs?.[0] ?? localRow?.defs?.[0] ?? "",
+        )
+          .replace(/^[a-z]+\s*[\t.]\s*/i, "")
+          .trim();
+        const [related, definitionZh] = await Promise.all([
+          relatedFuture,
+          local?.[2]
+            ? Promise.resolve(local[2])
+            : translateEnglishToChinese(definition, true),
+        ]);
+        const compactRows = (value: unknown, definitionLimit: number) =>
+          Array.isArray(value)
+            ? value.map((row) => ({
+                word: row?.word,
+                score: row?.score,
+                tags: row?.tags,
+                defs: Array.isArray(row?.defs)
+                  ? row.defs.slice(0, definitionLimit)
+                  : undefined,
+              }))
+            : value;
+        const result = {
+          dictionary: null,
+          related: compactRows(related, 2),
+          exact:
+            exactRows.length > 0
+              ? compactRows(exact, 5)
+              : localRow
+                ? [localRow]
+                : compactRows(exact, 5),
+          definition_zh: definitionZh,
+          // DictionaryAPI already carries its own synonym/antonym lists.
+          // Dedicated Datamuse relationship requests remain available on the
+          // single-term endpoint, while the batch path stays below the free
+          // Workers subrequest ceiling for twelve simultaneous terms.
+          synonyms: null,
+          antonyms: null,
+        };
+        if (exact !== null) {
+          ctx.waitUntil(
+            cache.put(
+              cacheKey,
+              Response.json(result, {
+                headers: { "cache-control": "public, max-age=604800" },
+              }),
+            ),
+          );
+        }
+        return {
+          term,
+          result: exact !== null ? result : null,
+          cached: false,
+        };
+      };
+
+      const results = await Promise.all(terms.map(lookup));
+      return Response.json(
+        { results },
+        {
+          headers: {
+            "access-control-allow-origin": "*",
+            "cache-control": "no-store",
+            "server-timing": `lexora-batch;desc=\"${terms.length} terms\"`,
+          },
+        },
+      );
+    }
+
     if (url.pathname === "/api/translate/batch" && request.method === "POST") {
       let texts: string[] = [];
       try {
@@ -632,7 +1059,7 @@ const worker = {
           ? payload.texts
               .map((value) => String(value).trim())
               .filter((value) => value.length > 0 && value.length <= 480)
-              .slice(0, 32)
+              .slice(0, 24)
           : [];
       } catch {
         return Response.json({ error: "Invalid JSON" }, { status: 400 });
@@ -653,7 +1080,7 @@ const worker = {
           .map((byte) => byte.toString(16).padStart(2, "0"))
           .join("");
         return new Request(
-          `https://lexora-translation-cache.invalid/v1/${key}`,
+          `https://lexora-translation-cache.invalid/v2/${key}`,
         );
       };
       const keys = await Promise.all(texts.map(cacheKeyFor));
@@ -665,123 +1092,16 @@ const worker = {
         .map((value, index) => (value ? -1 : index))
         .filter((index) => index >= 0);
 
-      if (missingIndexes.length > 0) {
-        // Digits and brackets survive translation more reliably than a
-        // lettered sentinel (some engines translated "LEXORA" itself).
-        const marker = (index: number) => `[[[${index}]]]`;
-        const payload = missingIndexes
-          .map((index) => `${marker(index)} ${texts[index]}`)
-          .join("\n");
-        try {
-          const endpoint = new URL(
-            "https://translate.googleapis.com/translate_a/single",
+      // One request per missing string is both faster and more reliable than
+      // parsing translated separator markers. Calls run concurrently at the
+      // edge, so mainland clients still make only one request to Lexora.
+      await Promise.all(
+        missingIndexes.map(async (index) => {
+          const translated = await translateEnglishToChinese(
+            texts[index],
+            true,
           );
-          endpoint.search = new URLSearchParams({
-            client: "gtx",
-            sl: "en",
-            tl: "zh-CN",
-            dt: "t",
-            q: payload,
-          }).toString();
-          const response = await fetch(endpoint, {
-            headers: { accept: "application/json" },
-            signal: AbortSignal.timeout(6000),
-          });
-          if (response.ok) {
-            const body = (await response.json()) as unknown[];
-            const chunks = Array.isArray(body[0])
-              ? (body[0] as unknown[][])
-              : [];
-            const joined = chunks
-              .map((chunk) => String(chunk[0] ?? ""))
-              .join("");
-            for (
-              let position = 0;
-              position < missingIndexes.length;
-              position++
-            ) {
-              const index = missingIndexes[position];
-              const startMarker = marker(index);
-              const start = joined.indexOf(startMarker);
-              if (start < 0) continue;
-              const contentStart = start + startMarker.length;
-              const nextIndex = missingIndexes[position + 1];
-              const end =
-                nextIndex === undefined
-                  ? joined.length
-                  : joined.indexOf(marker(nextIndex), contentStart);
-              const translated = joined
-                .slice(contentStart, end < 0 ? joined.length : end)
-                .trim();
-              if (translated) translations[index] = translated;
-            }
-          }
-        } catch {
-          // Individual fallback below handles providers that reject a batch.
-        }
-      }
-
-      const googleMissing = translations
-        .map((value, index) => (value ? -1 : index))
-        .filter((index) => index >= 0);
-      await Promise.all(
-        googleMissing.map(async (index) => {
-          try {
-            const endpoint = new URL(
-              "https://translate.googleapis.com/translate_a/single",
-            );
-            endpoint.search = new URLSearchParams({
-              client: "gtx",
-              sl: "en",
-              tl: "zh-CN",
-              dt: "t",
-              q: texts[index],
-            }).toString();
-            const response = await fetch(endpoint, {
-              headers: { accept: "application/json" },
-              signal: AbortSignal.timeout(6000),
-            });
-            if (!response.ok) return;
-            const body = (await response.json()) as unknown[];
-            const chunks = Array.isArray(body[0])
-              ? (body[0] as unknown[][])
-              : [];
-            const translated = chunks
-              .map((chunk) => String(chunk[0] ?? ""))
-              .join("")
-              .trim();
-            if (translated) translations[index] = translated;
-          } catch {
-            // MyMemory below remains the final fallback.
-          }
-        }),
-      );
-
-      const stillMissing = translations
-        .map((value, index) => (value ? -1 : index))
-        .filter((index) => index >= 0);
-      await Promise.all(
-        stillMissing.map(async (index) => {
-          try {
-            const endpoint = new URL("https://api.mymemory.translated.net/get");
-            endpoint.search = new URLSearchParams({
-              q: texts[index],
-              langpair: "en|zh-CN",
-            }).toString();
-            const response = await fetch(endpoint, {
-              headers: { accept: "application/json" },
-              signal: AbortSignal.timeout(8000),
-            });
-            if (!response.ok) return;
-            const body = (await response.json()) as {
-              responseData?: { translatedText?: unknown };
-            };
-            translations[index] = String(
-              body.responseData?.translatedText ?? "",
-            ).trim();
-          } catch {
-            // A missing translation never blocks the English dictionary result.
-          }
+          if (translated) translations[index] = translated;
         }),
       );
 
