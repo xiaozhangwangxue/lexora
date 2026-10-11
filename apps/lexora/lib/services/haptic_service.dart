@@ -1,12 +1,14 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
-/// Keeps Lexora's tactile feedback subtle and Android-only.
+/// Keeps Lexora's tactile feedback subtle on touch-first mobile platforms.
 class HapticService {
   const HapticService();
 
-  bool get _isAndroid =>
-      !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
+  bool get _isMobile =>
+      !kIsWeb &&
+      (defaultTargetPlatform == TargetPlatform.android ||
+          defaultTargetPlatform == TargetPlatform.iOS);
 
   Future<void> dragStarted() => _play(HapticFeedback.selectionClick);
 
@@ -17,7 +19,7 @@ class HapticService {
   Future<void> selection() => _play(HapticFeedback.selectionClick);
 
   Future<void> generationCompleted() async {
-    if (!_isAndroid) return;
+    if (!_isMobile) return;
     try {
       // Android 11+ gets the native confirmation pulse. The small tick that
       // follows also acts as a gentle fallback on older Android versions.
@@ -32,7 +34,7 @@ class HapticService {
   }
 
   Future<void> _play(Future<void> Function() feedback) async {
-    if (!_isAndroid) return;
+    if (!_isMobile) return;
     try {
       await feedback();
     } on PlatformException {

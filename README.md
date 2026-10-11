@@ -6,9 +6,9 @@
   **每一次查词，都在写你自己的词汇书。**
 
   [![Release](https://img.shields.io/github/v/release/xiaozhangwangxue/lexora?style=flat-square&color=2444c8)](https://github.com/xiaozhangwangxue/lexora/releases/latest)
-  [![Build](https://img.shields.io/github/actions/workflow/status/xiaozhangwangxue/lexora/build-release.yml?branch=main&style=flat-square&label=4-platform%20build)](https://github.com/xiaozhangwangxue/lexora/actions/workflows/build-release.yml)
+  [![Build](https://img.shields.io/github/actions/workflow/status/xiaozhangwangxue/lexora/build-release.yml?branch=main&style=flat-square&label=5-platform%20build)](https://github.com/xiaozhangwangxue/lexora/actions/workflows/build-release.yml)
   [![License](https://img.shields.io/github/license/xiaozhangwangxue/lexora?style=flat-square)](LICENSE)
-  [![Platforms](https://img.shields.io/badge/platform-Android%20%7C%20macOS%20%7C%20Windows%20%7C%20Linux-10131d?style=flat-square)](#下载与安装)
+  [![Platforms](https://img.shields.io/badge/platform-iOS%20%7C%20Android%20%7C%20macOS%20%7C%20Windows%20%7C%20Linux-10131d?style=flat-square)](#下载与安装)
 
   [官方网站](https://lexora.12323456.xyz) · [安装网页版](https://lexora.12323456.xyz/app) · [体验学习 Beta](https://lexora.12323456.xyz/app/beta) · [免费词汇书生成器](https://lexora.12323456.xyz/vocabulary-book-generator) · [下载应用](https://lexora.12323456.xyz/#download) · [捐款支持](https://lexora.12323456.xyz/donate) · [English](README.en.md)
 </div>
@@ -19,7 +19,7 @@
 
 ---
 
-Lexora 是一款支持浏览器、Android、macOS、Windows 与 Linux、可以生成个人词汇书的双语词典。搜索时会实时联想，并按词性展示英文释义、中文释义、相关词、近义词、反义词、例句与常用搭配；有价值的词可以一键加入词汇书，再排版为紧凑、清晰、适合阅读和打印的 PDF、EPUB、可编辑 DOCX、分页图片或长图。
+Lexora 是一款支持浏览器、iOS、Android、macOS、Windows 与 Linux、可以生成个人词汇书的双语词典。搜索时会实时联想，并按词性展示英文释义、中文释义、相关词、近义词、反义词、例句与常用搭配；有价值的词可以一键加入词汇书，再排版为紧凑、清晰、适合阅读和打印的 PDF、EPUB、可编辑 DOCX、分页图片或长图。
 
 网页版前端也完整开源在本仓库的 [`app/app`](app/app) 中；它通过公开的 [Lexora Open Lexicon](https://github.com/xiaozhangwangxue/lexora-open-lexicon) 服务完成查词、文件导入和词汇书生成。无需账号，但必须先从 [lexora.12323456.xyz/app](https://lexora.12323456.xyz/app) 添加到主屏幕，再从 Lexora 图标启动。
 
@@ -40,6 +40,7 @@ Lexora 现已在原有查词、词汇书生成与文档阅读能力之外，加�
 - 安全更新：Beta 会同时检查 Beta 与正式版本，始终提示更合适的新版本。
 - 本地优先：网页端使用版本化本地存储和恢复副本；桌面与移动应用使用应用文档目录和本地恢复副本。
 - macOS：原生 SwiftUI 窗口、侧栏和文档设置面板使用系统材质与 Liquid Glass，并尊重“减少动态效果”。
+- iOS：以现有 macOS 与 Android 功能为基础适配触控布局、系统回弹滚动、半透明底栏、触感反馈、通知及本地文档能力；Beta 提供可供 AltStore、Sideloadly 或 AutoSign 使用的未签名 IPA。
 
 移动浏览器会先引导用户把 Beta 添加到主屏幕，以获得独立、稳定的学习体验。Beta 不会覆盖稳定版数据，也不会把旧单词自动标记为已掌握。
 
@@ -179,6 +180,7 @@ Lexora 现已在原有查词、词汇书生成与文档阅读能力之外，加�
 
 | 平台 | 安装包 | 系统要求 | 下载 |
 | --- | --- | --- | --- |
+| iOS / iPadOS Beta | 未签名 IPA（需自行签名） | iOS / iPadOS 15+ | [官网 Beta 下载](https://lexora.12323456.xyz/#download) |
 | Android | APK | Android 8.0+ | [官网下载](https://lexora.12323456.xyz/downloads/lexora-android-v4.0.4.apk) |
 | macOS | 拖动安装 DMG | macOS 12+ | [官网下载](https://lexora.12323456.xyz/downloads/lexora-macos-v4.0.4.dmg) |
 | Windows | 安装程序 EXE（默认安装后启动） | Windows 10 / 11 | [官网下载](https://lexora.12323456.xyz/downloads/lexora-windows-v4.0.4-setup.exe) |
@@ -188,6 +190,7 @@ Lexora 现已在原有查词、词汇书生成与文档阅读能力之外，加�
 <summary><strong>首次安装被系统拦截怎么办？</strong></summary>
 
 - **Android**：允许当前浏览器或文件管理器“安装未知应用”，再选择 APK。
+- **iOS / iPadOS Beta**：下载未签名 IPA 后，使用 AltStore、Sideloadly 或 AutoSign 以自己的 Apple ID 签名并安装；它不是 App Store 签名包，不能直接点击安装。
 - **macOS**：打开 DMG，按精心设计的背景箭头将 Lexora 拖入 Applications；若被拦截，按住 Control 点击应用并选择“打开”。
 - **Windows**：双击安装程序，按向导完成安装；最后的“启动 Lexora”默认勾选。如果 SmartScreen 出现提示，选择“更多信息”→“仍要运行”。
 - **Linux**：解压后为 `lexora` 主程序添加执行权限，再启动。
@@ -249,11 +252,11 @@ apps/lexora/       Flutter 跨平台客户端
 app/               Lexora 宣传官网与捐款页面
 worker/            Cloudflare Worker、R2 下载与受保护上传通道
 wrangler.deploy.jsonc 独立 Cloudflare Worker 与官方域名路由
-.github/workflows/ 四平台构建、GitHub Release 与 R2 镜像
+.github/workflows/ 五平台构建、GitHub Release 与 R2 镜像
 docs/              架构、数据来源与隐私说明
 ```
 
-官网由 `lexora-official` Cloudflare Worker 直接提供，并通过 Worker Route 接管 `lexora.12323456.xyz/*`，不经过 ChatGPT.site。推送 `v*` 标签会分别在 Android、Linux、Windows 与 macOS 原生 runner 中执行静态检查、图标生成、Release 构建与打包，再发布 GitHub Release；配置 Cloudflare 凭据后可自动同步 R2。
+官网由 `lexora-official` Cloudflare Worker 直接提供，并通过 Worker Route 接管 `lexora.12323456.xyz/*`，不经过 ChatGPT.site。推送 `v*` 标签会分别在 iOS、Android、Linux、Windows 与 macOS 原生 runner 中执行静态检查、图标生成、Release 构建与打包，再发布 GitHub Release；配置 Cloudflare 凭据后可自动同步 R2。
 
 </details>
 

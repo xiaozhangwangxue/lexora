@@ -16,6 +16,11 @@ class NotificationService {
     if (_initialized) return;
     const settings = InitializationSettings(
       android: AndroidInitializationSettings('ic_launcher'),
+      iOS: DarwinInitializationSettings(
+        requestAlertPermission: false,
+        requestBadgePermission: false,
+        requestSoundPermission: false,
+      ),
       macOS: DarwinInitializationSettings(
         requestAlertPermission: false,
         requestBadgePermission: false,
@@ -48,6 +53,12 @@ class NotificationService {
               AndroidFlutterLocalNotificationsPlugin
             >()
             ?.requestNotificationsPermission();
+      } else if (Platform.isIOS) {
+        await _plugin
+            .resolvePlatformSpecificImplementation<
+              IOSFlutterLocalNotificationsPlugin
+            >()
+            ?.requestPermissions(alert: true, badge: false, sound: true);
       } else if (Platform.isMacOS) {
         await _plugin
             .resolvePlatformSpecificImplementation<
@@ -79,6 +90,7 @@ class NotificationService {
         priority: Priority.high,
       ),
       macOS: DarwinNotificationDetails(presentAlert: true, presentSound: true),
+      iOS: DarwinNotificationDetails(presentAlert: true, presentSound: true),
       linux: LinuxNotificationDetails(),
       windows: WindowsNotificationDetails(),
     );

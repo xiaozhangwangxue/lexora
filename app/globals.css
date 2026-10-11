@@ -130,3 +130,4 @@ footer{border-top:1px solid var(--line);min-height:120px;display:flex;align-item
 @media(max-width:760px){.navLinks a.betaNavButton{display:inline-flex!important}.betaNavButton{padding:9px 12px}.heroActions .betaHeroButton{display:flex}}
 @media(max-width:430px){.betaNavButton{font-size:12px;padding:8px 10px}.navLinks a.webAppNavButton{display:none}}
 @media(prefers-reduced-motion:reduce){.betaNavButton,.betaHeroButton{transition:none!important;transform:none!important}}
+.platformIcon-ios{color:#17191f;background:#f0f1f4}

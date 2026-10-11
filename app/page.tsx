@@ -11,7 +11,7 @@ import { LexoraWordmark } from "./lexora-wordmark";
 import { useSiteLanguage } from "./use-site-language";
 
 type SortMode = "custom" | "alphabetical" | "length" | "difficulty";
-type PlatformKey = "macos" | "windows" | "linux" | "android";
+type PlatformKey = "macos" | "windows" | "linux" | "android" | "ios";
 type DetectedPlatform = PlatformKey | "ios" | "unknown";
 type DragPreview = { word: string; x: number; y: number; width: number; grabOffsetY: number };
 
@@ -35,7 +35,14 @@ const betaPlatforms: PlatformDownload[] = stablePlatforms.map((platform) => ({
   noteZh: `${platform.noteZh} · Beta`,
   noteEn: `${platform.noteEn} · Beta`,
   file: platform.file.replace(currentVersion, betaVersion),
-}));
+})).concat({
+  key: "ios",
+  name: "iPhone / iPad",
+  noteZh: "iOS 15+ · IPA · 需要自签名",
+  noteEn: "iOS 15+ · IPA · Self-signing required",
+  Icon: FaApple,
+  file: `lexora-ios-${betaVersion}.ipa`,
+});
 
 function detectPlatform(): DetectedPlatform {
   const nav = navigator as Navigator & { userAgentData?: { platform?: string } };
@@ -65,6 +72,10 @@ const installGuides: Record<PlatformKey, { zh: string[]; en: string[] }> = {
   android: {
     zh: [`从 v0.3.0 或更高版本可直接覆盖安装 ${currentVersion}；只有 v0.2.0 需先卸载一次。`, "下载 APK，系统询问时允许浏览器安装未知来源应用。", "确认文件来自本官网后，选择“仍要安装”；安装后可关闭该权限。"],
     en: [`v0.3.0 and newer can update directly to ${currentVersion}. Only v0.2.0 requires one uninstall first.`, "Download the APK and allow your browser to install unknown apps when Android asks.", "After verifying this official site, choose Install anyway. You can revoke that permission afterward."],
+  },
+  ios: {
+    zh: ["下载 IPA 后，使用 AltStore、Sideloadly、AutoSign 或其他可信工具以自己的 Apple ID 签名。", "按照签名工具提示将应用安装到 iPhone 或 iPad。", "免费 Apple ID 签名通常需要每 7 天续签；IPA 本身不包含开发者账号或设备信息。"],
+    en: ["Download the IPA and sign it with your Apple ID through AltStore, Sideloadly, AutoSign, or another trusted tool.", "Follow the signing tool's instructions to install Lexora on your iPhone or iPad.", "Free Apple ID signatures usually need renewal every seven days; the IPA contains no developer account or device information."],
   },
 };
 
@@ -104,7 +115,9 @@ export default function Home() {
 
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => {
-      setDetectedPlatform(detectPlatform());
+      const detected = detectPlatform();
+      setDetectedPlatform(detected);
+      if (detected === "ios") setDownloadChannel("beta");
     });
     return () => window.cancelAnimationFrame(frame);
   }, []);

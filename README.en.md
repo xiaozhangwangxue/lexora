@@ -6,9 +6,9 @@
   **Every lookup builds your own vocabulary book.**
 
   [![Release](https://img.shields.io/github/v/release/xiaozhangwangxue/lexora?style=flat-square&color=2444c8)](https://github.com/xiaozhangwangxue/lexora/releases/latest)
-  [![Build](https://img.shields.io/github/actions/workflow/status/xiaozhangwangxue/lexora/build-release.yml?branch=main&style=flat-square&label=4-platform%20build)](https://github.com/xiaozhangwangxue/lexora/actions/workflows/build-release.yml)
+  [![Build](https://img.shields.io/github/actions/workflow/status/xiaozhangwangxue/lexora/build-release.yml?branch=main&style=flat-square&label=5-platform%20build)](https://github.com/xiaozhangwangxue/lexora/actions/workflows/build-release.yml)
   [![License](https://img.shields.io/github/license/xiaozhangwangxue/lexora?style=flat-square)](LICENSE)
-  [![Platforms](https://img.shields.io/badge/platform-Android%20%7C%20macOS%20%7C%20Windows%20%7C%20Linux-10131d?style=flat-square)](#download-and-install)
+  [![Platforms](https://img.shields.io/badge/platform-iOS%20%7C%20Android%20%7C%20macOS%20%7C%20Windows%20%7C%20Linux-10131d?style=flat-square)](#download-and-install)
 
   [Official website](https://lexora.12323456.xyz) · [Install web app](https://lexora.12323456.xyz/app) · [Try Learning Beta](https://lexora.12323456.xyz/app/beta) · [Free vocabulary book generator](https://lexora.12323456.xyz/en/vocabulary-book-generator) · [Download](https://lexora.12323456.xyz/#download) · [Donate](https://lexora.12323456.xyz/donate) · [简体中文](README.md)
 </div>
@@ -19,7 +19,7 @@
 
 ---
 
-Lexora is a bilingual dictionary for the web, Android, macOS, Windows, and Linux that turns useful lookups into a personal vocabulary book. It offers live suggestions, bilingual senses grouped by part of speech, related words, synonyms, antonyms, examples, and collocations. Save what matters in one tap, then export a compact PDF, EPUB, editable DOCX, page images, or one long image.
+Lexora is a bilingual dictionary for the web, iOS, Android, macOS, Windows, and Linux that turns useful lookups into a personal vocabulary book. It offers live suggestions, bilingual senses grouped by part of speech, related words, synonyms, antonyms, examples, and collocations. Save what matters in one tap, then export a compact PDF, EPUB, editable DOCX, page images, or one long image.
 
 The complete web frontend is open source in [`app/app`](app/app). It uses the public [Lexora Open Lexicon](https://github.com/xiaozhangwangxue/lexora-open-lexicon) service for lookup, file import, and document generation. No account is required, but it must first be added from [lexora.12323456.xyz/app](https://lexora.12323456.xyz/app) to the Home Screen and then launched from the Lexora icon.
 
@@ -40,6 +40,7 @@ Lexora now adds a practical CET-4 vocabulary-learning loop alongside its existin
 - Beta builds check both Beta and stable channels so learners are offered the most appropriate newer release.
 - Web data uses versioned local storage and a recovery copy; native apps use the application documents directory plus a local recovery copy.
 - The macOS window, sidebar, and document-customization sheet use native SwiftUI materials and Liquid Glass while respecting Reduce Motion.
+- iOS adapts the existing macOS and Android feature set to touch-first navigation, system bounce, a translucent bottom bar, haptics, notifications, and local documents. The Beta includes an unsigned IPA for AltStore, Sideloadly, or AutoSign.
 
 Mobile browsers are guided to install the Beta on the Home Screen for an independent, reliable learning experience. Beta data does not overwrite the stable app, and migrated words are never marked as mastered automatically.
 
@@ -179,6 +180,7 @@ Use the [official download section](https://lexora.12323456.xyz/#download) for b
 
 | Platform | Package | Requirement | Download |
 | --- | --- | --- | --- |
+| iOS / iPadOS Beta | Unsigned IPA (self-signing required) | iOS / iPadOS 15+ | [Beta download](https://lexora.12323456.xyz/#download) |
 | Android | APK | Android 8.0+ | [Official mirror](https://lexora.12323456.xyz/downloads/lexora-android-v4.0.4.apk) |
 | macOS | Drag-to-install DMG | macOS 12+ | [Official mirror](https://lexora.12323456.xyz/downloads/lexora-macos-v4.0.4.dmg) |
 | Windows | Setup EXE (launch option checked by default) | Windows 10 / 11 | [Official mirror](https://lexora.12323456.xyz/downloads/lexora-windows-v4.0.4-setup.exe) |

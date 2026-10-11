@@ -13,6 +13,7 @@ if (files.length === 0) throw new Error("No release artifacts were supplied.");
 
 const contentTypeFor = (name) => {
   if (name.endsWith(".apk")) return "application/vnd.android.package-archive";
+  if (name.endsWith(".ipa")) return "application/octet-stream";
   if (name.endsWith(".dmg")) return "application/x-apple-diskimage";
   if (name.endsWith(".exe")) return "application/vnd.microsoft.portable-executable";
   if (name.endsWith(".zip")) return "application/zip";

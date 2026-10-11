@@ -84,6 +84,8 @@ async function synchronizeReadme(path, language) {
         ? "-setup\\.exe"
         : platform === "android"
           ? "\\.apk"
+          : platform === "ios"
+            ? "\\.ipa"
           : platform === "macos"
             ? "\\.dmg"
             : "\\.tar\\.gz";

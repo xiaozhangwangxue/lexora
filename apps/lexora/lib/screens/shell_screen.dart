@@ -67,7 +67,7 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
   bool _searchShowingResult = false;
   bool _readerOpen = false;
   bool? _desktopSidebarExpandedPreference;
-  bool? _nativeMacShellAvailable;
+  bool? _nativeShellAvailable;
   Completer<void>? _resumeCompleter;
   Timer? _desktopResizeTimer;
   bool _desktopLiveResizing = false;
@@ -75,6 +75,10 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
   bool get _isAndroid =>
       Platform.isAndroid ||
       debugDefaultTargetPlatformOverride == TargetPlatform.android;
+  bool get _isIOS =>
+      Platform.isIOS ||
+      debugDefaultTargetPlatformOverride == TargetPlatform.iOS;
+  bool get _isMobile => _isAndroid || _isIOS;
   bool get _isWidgetTest => Platform.environment['FLUTTER_TEST'] == 'true';
   bool get _isDesktop =>
       Platform.isMacOS || Platform.isWindows || Platform.isLinux;
@@ -87,11 +91,11 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    if (Platform.isMacOS && !_isWidgetTest) {
+    if ((Platform.isMacOS || Platform.isIOS) && !_isWidgetTest) {
       _nativeNavigation.setMethodCallHandler(_handleNativeNavigation);
-      unawaited(_detectNativeMacShell());
+      unawaited(_detectNativeShell());
     } else {
-      _nativeMacShellAvailable = false;
+      _nativeShellAvailable = false;
     }
     _loadInitialState();
   }
@@ -99,7 +103,7 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    if (Platform.isMacOS && !_isWidgetTest) {
+    if ((Platform.isMacOS || Platform.isIOS) && !_isWidgetTest) {
       _nativeNavigation.setMethodCallHandler(null);
     }
     _pageController.dispose();
@@ -122,7 +126,7 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
     });
   }
 
-  Future<void> _detectNativeMacShell() async {
+  Future<void> _detectNativeShell() async {
     var available = false;
     try {
       available =
@@ -132,7 +136,17 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
     } on PlatformException {
       available = false;
     }
-    if (mounted) setState(() => _nativeMacShellAvailable = available);
+    if (mounted) {
+      setState(() => _nativeShellAvailable = available);
+      if (available && _onboardingCompleted != null) {
+        unawaited(
+          _nativeNavigation.invokeMethod<void>(
+            'navigationVisibility',
+            _onboardingCompleted,
+          ),
+        );
+      }
+    }
   }
 
   Future<void> _handleNativeNavigation(MethodCall call) async {
@@ -216,6 +230,14 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
         _releaseNotesPending =
             !(preferences.getBool(_releaseNotesKey) ?? false);
       });
+      if (_nativeShellAvailable == true) {
+        unawaited(
+          _nativeNavigation.invokeMethod<void>(
+            'navigationVisibility',
+            _onboardingCompleted,
+          ),
+        );
+      }
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted && _onboardingCompleted == true) {
           unawaited(_showReleaseNotesIfNeeded());
@@ -230,6 +252,11 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
     await preferences.setBool(_onboardingKey, true);
     if (mounted) {
       setState(() => _onboardingCompleted = true);
+      if (_nativeShellAvailable == true) {
+        unawaited(
+          _nativeNavigation.invokeMethod<void>('navigationVisibility', true),
+        );
+      }
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) unawaited(_showReleaseNotesIfNeeded());
       });
@@ -269,7 +296,7 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
     final previous = _index;
     _dismissAndroidHomeKeyboard(value);
     setState(() => _index = value);
-    if (_isAndroid && _pageController.hasClients) {
+    if (_isMobile && _pageController.hasClients) {
       // Bottom navigation selects one destination. It must not activate every
       // PageView between the current page and that destination. Animating
       // 0 -> 5 used to publish the intermediate learning index (4) through
@@ -278,12 +305,12 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
       // the PageView's native motion.
       _pageController.jumpToPage(value);
     }
-    if (_nativeMacShellAvailable == true) {
+    if (_nativeShellAvailable == true) {
       unawaited(_nativeNavigation.invokeMethod<void>('pageChanged', value));
     }
     DeveloperLogService.instance.log(
       'navigation.page_changed',
-      data: {'from': previous, 'to': value, 'animated': animate && !_isAndroid},
+      data: {'from': previous, 'to': value, 'animated': animate && !_isMobile},
     );
   }
 
@@ -357,7 +384,7 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
     await SystemChannels.textInput.invokeMethod<void>('TextInput.hide');
     if (!mounted) return;
     PdfSettings? updated;
-    if (Platform.isMacOS && _nativeMacShellAvailable == true) {
+    if (Platform.isMacOS && _nativeShellAvailable == true) {
       try {
         final result = await _nativeNavigation.invokeMapMethod<String, dynamic>(
           'showCustomization',
@@ -815,14 +842,21 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
     }
 
     final strings = AppLocalizations.of(context);
-    if (Platform.isMacOS && _nativeMacShellAvailable == null) {
+    if ((Platform.isMacOS || Platform.isIOS) && _nativeShellAvailable == null) {
       return const Scaffold(
         backgroundColor: Colors.transparent,
         body: SizedBox.expand(),
       );
     }
     final windowWidth = MediaQuery.sizeOf(context).width;
-    final wide = _isAndroid ? windowWidth >= 680 : windowWidth >= 520;
+    // Native SwiftUI owns iPhone/iPad navigation. Keep Flutter focused on the
+    // shared feature pages even on a wide iPad so two navigation systems are
+    // never rendered at the same time.
+    final wide = _isIOS && _nativeShellAvailable == true
+        ? false
+        : _isMobile
+        ? windowWidth >= 680
+        : windowWidth >= 520;
     final autoExpandedNavigation = windowWidth >= 820;
     final expandedNavigation =
         autoExpandedNavigation && (_desktopSidebarExpandedPreference ?? true);
@@ -891,19 +925,31 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
         onGetSearchCacheSize: _wordService.persistentCacheSizeBytes,
       ),
     ];
-    final pageContent = _isAndroid
+    final pageContent = _isMobile
         ? ColoredBox(
             color: Theme.of(context).scaffoldBackgroundColor,
             child: PageView(
               controller: _pageController,
-              physics: const _LexoraPagePhysics(
-                parent: ClampingScrollPhysics(),
+              physics: _LexoraPagePhysics(
+                parent: _isIOS
+                    ? const BouncingScrollPhysics()
+                    : const ClampingScrollPhysics(),
               ),
               clipBehavior: Clip.hardEdge,
               allowImplicitScrolling: false,
               onPageChanged: (value) {
                 _dismissAndroidHomeKeyboard(value);
-                if (_index != value) setState(() => _index = value);
+                if (_index != value) {
+                  setState(() => _index = value);
+                  if (_nativeShellAvailable == true) {
+                    unawaited(
+                      _nativeNavigation.invokeMethod<void>(
+                        'pageChanged',
+                        value,
+                      ),
+                    );
+                  }
+                }
               },
               children: [
                 for (final page in pages)
@@ -920,7 +966,7 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
     final body = Stack(
       children: [
         pageContent,
-        if (_isAndroid)
+        if (_isMobile)
           Positioned(
             top: 0,
             left: 0,
@@ -985,7 +1031,7 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
       ),
     ];
 
-    if (Platform.isMacOS && _nativeMacShellAvailable == true) {
+    if (Platform.isMacOS && _nativeShellAvailable == true) {
       return Scaffold(
         backgroundColor: Colors.transparent,
         resizeToAvoidBottomInset: true,
@@ -1069,57 +1115,69 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
       // above the live keyboard handle viewInsets locally.
       resizeToAvoidBottomInset: !_isAndroid,
       body: body,
-      extendBody: _isAndroid,
-      bottomNavigationBar: DecoratedBox(
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface.withValues(alpha: .96),
-          border: Border(
-            top: BorderSide(
-              color: Theme.of(
-                context,
-              ).colorScheme.outlineVariant.withValues(alpha: .3),
+      extendBody: _isMobile && !(_isIOS && _nativeShellAvailable == true),
+      bottomNavigationBar: _isIOS && _nativeShellAvailable == true
+          ? null
+          : ClipRect(
+              child: BackdropFilter(
+                filter: ImageFilter.blur(
+                  sigmaX: _isIOS ? 22 : 0,
+                  sigmaY: _isIOS ? 22 : 0,
+                ),
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.surface.withValues(alpha: _isIOS ? .82 : .96),
+                    border: Border(
+                      top: BorderSide(
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.outlineVariant.withValues(alpha: .3),
+                      ),
+                    ),
+                  ),
+                  child: NavigationBar(
+                    backgroundColor: Colors.transparent,
+                    shadowColor: Colors.transparent,
+                    selectedIndex: _index,
+                    onDestinationSelected: _selectPage,
+                    destinations: [
+                      NavigationDestination(
+                        icon: destinations[0].icon,
+                        selectedIcon: destinations[0].selectedIcon,
+                        label: strings.words,
+                      ),
+                      NavigationDestination(
+                        icon: destinations[1].icon,
+                        selectedIcon: destinations[1].selectedIcon,
+                        label: strings.vocabularyBookLabel,
+                      ),
+                      NavigationDestination(
+                        icon: destinations[2].icon,
+                        selectedIcon: destinations[2].selectedIcon,
+                        label: strings.generationRecords,
+                      ),
+                      NavigationDestination(
+                        icon: destinations[3].icon,
+                        selectedIcon: destinations[3].selectedIcon,
+                        label: strings.history,
+                      ),
+                      NavigationDestination(
+                        icon: destinations[4].icon,
+                        selectedIcon: destinations[4].selectedIcon,
+                        label: '学习',
+                      ),
+                      NavigationDestination(
+                        icon: destinations[5].icon,
+                        selectedIcon: destinations[5].selectedIcon,
+                        label: strings.settings,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             ),
-          ),
-        ),
-        child: NavigationBar(
-          backgroundColor: Colors.transparent,
-          shadowColor: Colors.transparent,
-          selectedIndex: _index,
-          onDestinationSelected: _selectPage,
-          destinations: [
-            NavigationDestination(
-              icon: destinations[0].icon,
-              selectedIcon: destinations[0].selectedIcon,
-              label: strings.words,
-            ),
-            NavigationDestination(
-              icon: destinations[1].icon,
-              selectedIcon: destinations[1].selectedIcon,
-              label: strings.vocabularyBookLabel,
-            ),
-            NavigationDestination(
-              icon: destinations[2].icon,
-              selectedIcon: destinations[2].selectedIcon,
-              label: strings.generationRecords,
-            ),
-            NavigationDestination(
-              icon: destinations[3].icon,
-              selectedIcon: destinations[3].selectedIcon,
-              label: strings.history,
-            ),
-            NavigationDestination(
-              icon: destinations[4].icon,
-              selectedIcon: destinations[4].selectedIcon,
-              label: '学习',
-            ),
-            NavigationDestination(
-              icon: destinations[5].icon,
-              selectedIcon: destinations[5].selectedIcon,
-              label: strings.settings,
-            ),
-          ],
-        ),
-      ),
     );
   }
 }

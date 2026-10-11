@@ -38,6 +38,11 @@ jobs:
             command: flutter build macos --release
             source: build/macos/Build/Products/Release/lexora.app
             artifact: Lexora.app
+          - platform: ios
+            os: macos-latest
+            command: flutter build ios --release --no-codesign
+            source: build/ios/iphoneos/Runner.app
+            artifact: lexora-ios.ipa
     runs-on: ${{ matrix.os }}
     defaults:
       run:
@@ -51,15 +56,15 @@ jobs:
           channel: stable
           cache: true
       - name: Select Xcode 26 for Liquid Glass
-        if: matrix.platform == 'macos'
+        if: matrix.platform == 'macos' || matrix.platform == 'ios'
         run: |
           sudo xcode-select -s /Applications/Xcode_26.3.app/Contents/Developer
-          chmod +x tool/lipo
+          if [ "${{ matrix.platform }}" = "macos" ]; then chmod +x tool/lipo; fi
       - name: Install Linux build libraries
         if: matrix.platform == 'linux'
         run: sudo apt-get update && sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev
       - name: Generate platform shells
-        run: flutter create --project-name lexora --platforms=android,linux,macos,windows .
+        run: flutter create --project-name lexora --org com.xiaozhangwangxue --platforms=android,ios,linux,macos,windows .
       - name: Enforce desktop minimum window size
         run: dart run tool/configure_desktop_window_limits.dart
       - name: Enable current MSVC compatibility for Windows plugins
@@ -113,6 +118,13 @@ jobs:
           /usr/libexec/PlistBuddy -c "Add :NSPhotoLibraryUsageDescription string Lexora needs photo library access only when you export vocabulary-book pages as images." macos/Runner/Info.plist || /usr/libexec/PlistBuddy -c "Set :NSPhotoLibraryUsageDescription Lexora needs photo library access only when you export vocabulary-book pages as images." macos/Runner/Info.plist
           /usr/libexec/PlistBuddy -c "Add :NSPhotoLibraryAddUsageDescription string Lexora saves exported vocabulary-book pages to your photo library when you choose an image format." macos/Runner/Info.plist || /usr/libexec/PlistBuddy -c "Set :NSPhotoLibraryAddUsageDescription Lexora saves exported vocabulary-book pages to your photo library when you choose an image format." macos/Runner/Info.plist
           /usr/libexec/PlistBuddy -c "Add :LexoraReleaseVersion string ${RELEASE_VERSION#v}" macos/Runner/Info.plist || /usr/libexec/PlistBuddy -c "Set :LexoraReleaseVersion ${RELEASE_VERSION#v}" macos/Runner/Info.plist
+      - name: Configure iPhone and iPad application
+        if: matrix.platform == 'ios'
+        run: |
+          sed -i '' 's/IPHONEOS_DEPLOYMENT_TARGET = 13.0/IPHONEOS_DEPLOYMENT_TARGET = 15.0/g' ios/Runner.xcodeproj/project.pbxproj
+          /usr/libexec/PlistBuddy -c "Add :ITSAppUsesNonExemptEncryption bool false" ios/Runner/Info.plist || /usr/libexec/PlistBuddy -c "Set :ITSAppUsesNonExemptEncryption false" ios/Runner/Info.plist
+          /usr/libexec/PlistBuddy -c "Add :NSPhotoLibraryAddUsageDescription string Lexora saves vocabulary-book pages to your photo library only when you choose an image export." ios/Runner/Info.plist || true
+          /usr/libexec/PlistBuddy -c "Add :NSPhotoLibraryUsageDescription string Lexora accesses your photo library only when you choose to export or share vocabulary-book pages." ios/Runner/Info.plist || true
       - run: flutter pub get
       - run: dart run flutter_launcher_icons
       - run: flutter analyze
@@ -199,6 +211,13 @@ jobs:
             "/DOutputBaseFilename=lexora-windows-$env:RELEASE_VERSION-setup" `
             "/O$PWD" `
             "packaging/windows/lexora.iss"
+      - name: Package unsigned iOS application for self-signing
+        if: matrix.platform == 'ios'
+        run: |
+          mkdir -p Payload
+          ditto "${{ matrix.source }}" Payload/Runner.app
+          zip -qry "lexora-ios-${RELEASE_VERSION}.ipa" Payload
+          unzip -t "lexora-ios-${RELEASE_VERSION}.ipa"
       - name: Stage Android build
         if: matrix.platform == 'android'
         run: cp "${{ matrix.source }}" "lexora-android-${RELEASE_VERSION}.apk"
